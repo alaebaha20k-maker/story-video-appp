@@ -222,22 +222,43 @@ class CaptionGenerator:
         # Remove or replace problematic characters
         # FFmpeg drawtext is VERY sensitive to special chars
         
-        # Replace quotes with safer alternatives
-        text = text.replace('"', "'")  # Double quotes -> single quotes
-        text = text.replace("'", "")   # Remove single quotes (they break FFmpeg)
-        text = text.replace("\\", "")  # Remove backslashes
+        # Remove ALL quotes and escapes (they break FFmpeg parsing)
+        text = text.replace("'", "")   # Single quotes
+        text = text.replace('"', "")   # Double quotes  
+        text = text.replace("`", "")   # Backticks
+        text = text.replace("\\", "")  # Backslashes
         
-        # Remove other problematic characters
-        text = text.replace(":", " ")  # Colons break filter syntax
-        text = text.replace("%", "")   # Percent signs
-        text = text.replace("[", "(")  # Brackets
-        text = text.replace("]", ")")
-        text = text.replace("{", "(")
-        text = text.replace("}", ")")
+        # Replace punctuation that breaks FFmpeg filter syntax
+        text = text.replace(":", " -")  # Colons break filter syntax
+        text = text.replace(";", ",")    # Semicolons
+        text = text.replace("%", " percent")
+        text = text.replace("&", " and ")
+        text = text.replace("|", "-")
+        text = text.replace("<", "")
+        text = text.replace(">", "")
+        text = text.replace("$", "")
+        text = text.replace("#", "")
+        text = text.replace("*", "")
+        text = text.replace("_", " ")
+        text = text.replace("@", " at ")
+        text = text.replace("!", "")   # Exclamation marks
+        text = text.replace("?", "")   # Question marks
+        text = text.replace("=", " equals ")
+        
+        # Replace all brackets/parens (they break filter syntax)
+        text = text.replace("[", "")
+        text = text.replace("]", "")
+        text = text.replace("{", "")
+        text = text.replace("}", "")
+        text = text.replace("(", "")
+        text = text.replace(")", "")
+        
+        # Clean up multiple spaces
+        text = " ".join(text.split())
         
         # Limit length (FFmpeg drawtext has limits)
-        if len(text) > 150:
-            text = text[:147] + "..."
+        if len(text) > 120:
+            text = text[:117] + "..."
         
         return text
     
