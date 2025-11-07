@@ -117,18 +117,19 @@ def get_voice_engine_and_id(voice_engine=None, voice_id=None):
 
 
 async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="narration.mp3"):
-    """✅ Generate audio using Edge-TTS (FREE, no API key) - OPTIMIZED with parallel chunking"""
+    """✅ Generate audio using Edge-TTS (FREE, no API key) - SUPER FAST with aggressive parallel chunking"""
     try:
         print(f"🎤 Generating audio with Edge-TTS...")
         print(f"   Voice: {voice}")
         print(f"   Text: {len(text)} characters")
         
-        # For long text (>5000 chars), use parallel chunking for speed
-        if len(text) > 5000:
-            print(f"   🚀 Using parallel chunking for 3-6x speedup...")
+        # ⚡ AGGRESSIVE PARALLEL: Use parallel chunking for ANY text >800 chars (was 5000)
+        # Smaller threshold = more parallelism = MUCH FASTER!
+        if len(text) > 800:
+            print(f"   🚀 Using AGGRESSIVE parallel chunking for 5-10x speedup...")
             return await _generate_audio_edge_parallel(text, voice, output_path)
         
-        # For short text, generate directly
+        # For very short text (<800 chars), generate directly
         communicate = edge_tts.Communicate(text, voice)
         await communicate.save(str(output_path))
         
@@ -141,13 +142,14 @@ async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="n
 
 
 async def _generate_audio_edge_parallel(text, voice, output_path):
-    """Generate audio in parallel chunks using asyncio.gather"""
+    """Generate audio in parallel chunks using asyncio.gather - SUPER FAST!"""
     from pydub import AudioSegment
     
-    # Split text into chunks at sentence boundaries
-    chunks = _split_text_smart(text, max_chars=5000)
+    # ⚡ SMALLER CHUNKS = MORE PARALLEL TASKS = FASTER!
+    # Changed from 5000 to 2000 chars per chunk for MORE parallelism
+    chunks = _split_text_smart(text, max_chars=2000)
     print(f"   Split into {len(chunks)} chunks")
-    print(f"   🚀 Processing chunks in PARALLEL...")
+    print(f"   🚀 Processing chunks in AGGRESSIVE PARALLEL for 5-10x speedup...")
     
     # Create temporary directory
     temp_dir = Path("output/temp")

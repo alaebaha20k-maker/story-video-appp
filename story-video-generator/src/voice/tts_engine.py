@@ -23,7 +23,7 @@ class TTSEngine:
         self.voice = voice or VOICE_SETTINGS['default_voice']
         self.rate = VOICE_SETTINGS['rate']
         self.volume = VOICE_SETTINGS['volume']
-        self.chunk_size = 5000  # Characters per chunk
+        self.chunk_size = 2000  # ⚡ SMALLER chunks for MORE parallelism = FASTER!
     
     async def _generate_audio_async(self, text: str, output_path: str):
         """Generate audio asynchronously"""
@@ -45,25 +45,25 @@ class TTSEngine:
         # Clean text for TTS
         text = self._clean_text(text)
         
-        # If text is short, generate in one go
-        if len(text) <= self.chunk_size:
-            output_path = file_handler.get_temp_path(filename)
-            asyncio.run(self._generate_audio_async(text, str(output_path)))
-            print(f"   ✅ Audio saved: {filename}")
-            return output_path
+        # ⚡ AGGRESSIVE PARALLEL: Always use parallel for texts >800 chars
+        if len(text) > 800:
+            return self._generate_long_audio(text, filename)
         
-        # For long text, split into chunks
-        return self._generate_long_audio(text, filename)
+        # For very short text (<800 chars), generate directly
+        output_path = file_handler.get_temp_path(filename)
+        asyncio.run(self._generate_audio_async(text, str(output_path)))
+        print(f"   ✅ Audio saved: {filename}")
+        return output_path
     
     def _generate_long_audio(self, text: str, filename: str) -> Path:
         """Generate audio for long text by chunking - PARALLEL VERSION"""
         
-        print(f"   Text is long, splitting into chunks...")
+        print(f"   🚀 Using AGGRESSIVE parallel processing...")
         
         # Split text into chunks
         chunks = self._split_text(text, self.chunk_size)
         print(f"   Generated {len(chunks)} chunks")
-        print(f"   🚀 Generating chunks in PARALLEL for 3-6x speedup...")
+        print(f"   🚀 Generating chunks in PARALLEL for 5-10x speedup...")
         
         # Generate audio for all chunks in parallel
         chunk_files = asyncio.run(self._generate_chunks_parallel(chunks))

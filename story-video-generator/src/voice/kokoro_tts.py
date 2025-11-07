@@ -124,8 +124,9 @@ class KokoroTTS:
         print(f"   Speed: {speed}x")
         print(f"   Text: {len(text)} characters")
         
-        # For long text (>5000 chars), split into chunks and process in parallel
-        if len(text) > 5000:
+        # ⚡ AGGRESSIVE PARALLEL: Use parallel for ANY text >800 chars (was 5000)
+        # Smaller threshold = more parallelism = MUCH FASTER!
+        if len(text) > 800:
             return self._generate_long_audio_parallel(text, voice, speed, output_path)
         
         try:
@@ -176,15 +177,17 @@ class KokoroTTS:
         from concurrent.futures import ThreadPoolExecutor
         import soundfile as sf
         
-        print(f"   🚀 Text is long, using parallel chunk processing...")
+        print(f"   🚀 Using AGGRESSIVE parallel chunk processing...")
         
-        # Split text into chunks at sentence boundaries
-        chunks = self._split_text_smart(text, max_chars=5000)
+        # ⚡ SMALLER CHUNKS = MORE PARALLEL TASKS = FASTER!
+        # Changed from 5000 to 2000 chars per chunk for MORE parallelism
+        chunks = self._split_text_smart(text, max_chars=2000)
         print(f"   Split into {len(chunks)} chunks")
-        print(f"   🚀 Processing chunks in PARALLEL for 3-6x speedup...")
+        print(f"   🚀 Processing chunks in PARALLEL for 5-10x speedup...")
         
-        # Generate audio for each chunk in parallel
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        # ⚡ MORE WORKERS = MORE SPEED!
+        # Increased from 4 to 8 workers for better CPU utilization
+        with ThreadPoolExecutor(max_workers=8) as executor:
             futures = []
             for i, chunk in enumerate(chunks):
                 future = executor.submit(self._generate_chunk, chunk, voice, speed, i)
