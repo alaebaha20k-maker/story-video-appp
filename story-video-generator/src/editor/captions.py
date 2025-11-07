@@ -160,7 +160,7 @@ class CaptionGenerator:
         audio_duration: float,
         style: str = 'simple',
         position: str = 'bottom',
-        max_captions: int = 20  # ⚡ LIMIT to prevent FFmpeg overload!
+        max_captions: int = 10  # ⚡ REDUCED to 10 for Windows command line limit!
     ) -> List[Dict]:
         """
         Generate auto captions from script text with perfect timing
@@ -218,15 +218,19 @@ class CaptionGenerator:
         return captions
     
     def _escape_text(self, text: str) -> str:
-        """Escape special characters for FFmpeg - ROBUST"""
+        """Escape special characters for FFmpeg - ULTRA ROBUST"""
         # Remove or replace problematic characters
         # FFmpeg drawtext is VERY sensitive to special chars
         
-        # Remove ALL quotes and escapes (they break FFmpeg parsing)
-        text = text.replace("'", "")   # Single quotes
-        text = text.replace('"', "")   # Double quotes  
-        text = text.replace("`", "")   # Backticks
-        text = text.replace("\\", "")  # Backslashes
+        # Remove ALL quotes, apostrophes, and escapes (ALL VARIANTS!)
+        text = text.replace("'", "")   # Straight single quote
+        text = text.replace("'", "")   # Curly left apostrophe
+        text = text.replace("'", "")   # Curly right apostrophe
+        text = text.replace('"', "")   # Straight double quote
+        text = text.replace(""", "")   # Curly left double quote
+        text = text.replace(""", "")   # Curly right double quote  
+        text = text.replace("`", "")   # Backtick
+        text = text.replace("\\", "")  # Backslash
         
         # Replace punctuation that breaks FFmpeg filter syntax
         text = text.replace(":", " -")  # Colons break filter syntax
@@ -253,12 +257,17 @@ class CaptionGenerator:
         text = text.replace("(", "")
         text = text.replace(")", "")
         
+        # Replace dashes and hyphens that could cause issues
+        text = text.replace("—", "-")  # Em dash
+        text = text.replace("–", "-")  # En dash
+        
         # Clean up multiple spaces
         text = " ".join(text.split())
         
-        # Limit length (FFmpeg drawtext has limits)
-        if len(text) > 120:
-            text = text[:117] + "..."
+        # ⚡ SHORTER LIMIT for Windows command line!
+        # Reduced from 120 to 80 to keep FFmpeg command shorter
+        if len(text) > 80:
+            text = text[:77] + "..."
         
         return text
     
