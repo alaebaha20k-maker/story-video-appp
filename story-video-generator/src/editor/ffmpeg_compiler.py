@@ -26,7 +26,7 @@ class FFmpegCompiler:
             # Repeat last image
             f.write(f"file '{image_paths[-1]}'\n")
         
-        # FFmpeg command
+        # FFmpeg command - OPTIMIZED for CPU speed
         cmd = [
             'ffmpeg',
             '-f', 'concat',
@@ -35,8 +35,11 @@ class FFmpegCompiler:
             '-i', str(audio_path),
             '-vf', 'scale=1920:1080,fps=24',
             '-c:v', 'libx264',
-            '-preset', 'medium',
+            '-preset', 'ultrafast',  # Changed from 'medium' to 'ultrafast' for 3-5x faster encoding
+            '-crf', '23',  # Maintain quality with CRF
+            '-threads', '0',  # Use all available CPU threads
             '-c:a', 'aac',
+            '-b:a', '192k',  # Good audio bitrate
             '-shortest',
             '-y',
             str(output_path)

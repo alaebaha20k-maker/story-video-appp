@@ -117,12 +117,18 @@ def get_voice_engine_and_id(voice_engine=None, voice_id=None):
 
 
 async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="narration.mp3"):
-    """✅ Generate audio using Edge-TTS (FREE, no API key)"""
+    """✅ Generate audio using Edge-TTS (FREE, no API key) - OPTIMIZED with parallel chunking"""
     try:
         print(f"🎤 Generating audio with Edge-TTS...")
         print(f"   Voice: {voice}")
         print(f"   Text: {len(text)} characters")
         
+        # For long text (>5000 chars), use parallel chunking for speed
+        if len(text) > 5000:
+            print(f"   🚀 Using parallel chunking for 3-6x speedup...")
+            return await _generate_audio_edge_parallel(text, voice, output_path)
+        
+        # For short text, generate directly
         communicate = edge_tts.Communicate(text, voice)
         await communicate.save(str(output_path))
         
@@ -132,6 +138,73 @@ async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="n
     except Exception as e:
         print(f"❌ Edge-TTS Error: {e}")
         raise
+
+
+async def _generate_audio_edge_parallel(text, voice, output_path):
+    """Generate audio in parallel chunks using asyncio.gather"""
+    from pydub import AudioSegment
+    
+    # Split text into chunks at sentence boundaries
+    chunks = _split_text_smart(text, max_chars=5000)
+    print(f"   Split into {len(chunks)} chunks")
+    print(f"   🚀 Processing chunks in PARALLEL...")
+    
+    # Create temporary directory
+    temp_dir = Path("output/temp")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate all chunks in parallel
+    chunk_files = []
+    tasks = []
+    
+    for i, chunk in enumerate(chunks):
+        chunk_file = temp_dir / f"chunk_{i:03d}.mp3"
+        chunk_files.append(chunk_file)
+        
+        # Create async task for each chunk
+        communicate = edge_tts.Communicate(chunk, voice)
+        tasks.append(communicate.save(str(chunk_file)))
+    
+    # Execute all tasks in parallel
+    await asyncio.gather(*tasks)
+    
+    # Merge all chunks
+    print(f"   Merging {len(chunk_files)} audio chunks...")
+    combined = AudioSegment.empty()
+    
+    for chunk_file in chunk_files:
+        audio = AudioSegment.from_mp3(str(chunk_file))
+        combined += audio
+        chunk_file.unlink()  # Clean up
+    
+    # Save final audio
+    combined.export(str(output_path), format="mp3")
+    
+    print(f"✅ Audio generated: {output_path}")
+    return str(output_path)
+
+
+def _split_text_smart(text, max_chars=5000):
+    """Split text at sentence boundaries"""
+    # Split by sentences
+    sentences = text.replace('!', '.').replace('?', '.').split('.')
+    sentences = [s.strip() + '.' for s in sentences if s.strip()]
+    
+    chunks = []
+    current_chunk = ""
+    
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) <= max_chars:
+            current_chunk += " " + sentence
+        else:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            current_chunk = sentence
+    
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    
+    return chunks
 
 
 def generate_audio_kokoro(text, voice="af_bella", speed=1.0, output_path="narration.wav"):

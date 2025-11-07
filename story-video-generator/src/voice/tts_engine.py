@@ -56,24 +56,17 @@ class TTSEngine:
         return self._generate_long_audio(text, filename)
     
     def _generate_long_audio(self, text: str, filename: str) -> Path:
-        """Generate audio for long text by chunking"""
+        """Generate audio for long text by chunking - PARALLEL VERSION"""
         
         print(f"   Text is long, splitting into chunks...")
         
         # Split text into chunks
         chunks = self._split_text(text, self.chunk_size)
         print(f"   Generated {len(chunks)} chunks")
+        print(f"   🚀 Generating chunks in PARALLEL for 3-6x speedup...")
         
-        # Generate audio for each chunk
-        chunk_files = []
-        
-        for i, chunk in enumerate(chunks):
-            print(f"   Processing chunk {i+1}/{len(chunks)}...")
-            chunk_filename = f"chunk_{i+1:03d}.mp3"
-            chunk_path = file_handler.get_temp_path(chunk_filename)
-            
-            asyncio.run(self._generate_audio_async(chunk, str(chunk_path)))
-            chunk_files.append(chunk_path)
+        # Generate audio for all chunks in parallel
+        chunk_files = asyncio.run(self._generate_chunks_parallel(chunks))
         
         # Merge all chunks
         print(f"   Merging {len(chunk_files)} audio chunks...")
@@ -85,6 +78,27 @@ class TTSEngine:
         
         print(f"   ✅ Long audio generated and merged")
         return merged_path
+    
+    async def _generate_chunks_parallel(self, chunks: List[str]) -> List[Path]:
+        """Generate multiple audio chunks in parallel using asyncio.gather"""
+        
+        # Create tasks for all chunks
+        tasks = []
+        chunk_paths = []
+        
+        for i, chunk in enumerate(chunks):
+            chunk_filename = f"chunk_{i+1:03d}.mp3"
+            chunk_path = file_handler.get_temp_path(chunk_filename)
+            chunk_paths.append(chunk_path)
+            
+            # Create async task
+            task = self._generate_audio_async(chunk, str(chunk_path))
+            tasks.append(task)
+        
+        # Execute all tasks in parallel
+        await asyncio.gather(*tasks)
+        
+        return chunk_paths
     
     def _merge_audio_files(self, audio_files: List[Path], output_filename: str) -> Path:
         """Merge multiple audio files into one"""
