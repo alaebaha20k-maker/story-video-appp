@@ -15,6 +15,12 @@ export const GalleryPage = () => {
 
   const loadVideos = async () => {
     try {
+      if (!supabase) {
+        console.warn('Supabase not configured - Gallery feature disabled');
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('generated_videos')
         .select('*')
@@ -31,6 +37,11 @@ export const GalleryPage = () => {
 
   const deleteVideo = async (id: string) => {
     if (!confirm('Are you sure you want to delete this video?')) return;
+
+    if (!supabase) {
+      alert('Supabase not configured');
+      return;
+    }
 
     try {
       const { error } = await supabase

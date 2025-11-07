@@ -71,17 +71,20 @@ export const GeneratorPage = () => {
 
             store.setResult(result);
 
-            try {
-              await supabase.from('generated_videos').insert({
-                topic: store.topic,
-                video_path: progress.video_path,
-                story_type: store.storyType,
-                image_style: store.imageStyle,
-                voice_id: store.voiceId,
-                duration: store.duration,
-              });
-            } catch (err) {
-              console.error('Failed to save to gallery:', err);
+            // Save to gallery if Supabase is configured
+            if (supabase) {
+              try {
+                await supabase.from('generated_videos').insert({
+                  topic: store.topic,
+                  video_path: progress.video_path,
+                  story_type: store.storyType,
+                  image_style: store.imageStyle,
+                  voice_id: store.voiceId,
+                  duration: store.duration,
+                });
+              } catch (err) {
+                console.error('Failed to save to gallery:', err);
+              }
             }
 
             toast.success('Video generated successfully!');
