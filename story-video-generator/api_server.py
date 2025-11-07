@@ -339,11 +339,19 @@ def generate_video_background(data):
         safe_topic = sanitize_filename(data.get('topic', 'video'))
         output_filename = f"{safe_topic}_video.mp4"
         
+        # Get optional filters and captions from request
+        color_filter = data.get('color_filter', 'none')
+        zoom_effect = data.get('zoom_effect', False)
+        caption = data.get('caption')  # Dict with text, style, position, etc.
+        
         video_path = compiler.create_video(
             image_paths,
             str(audio_path),
             Path(f"output/videos/{output_filename}"),
-            durations
+            durations,
+            color_filter=color_filter,
+            zoom_effect=zoom_effect,
+            caption=caption
         )
         
         progress_state['progress'] = 100
@@ -449,6 +457,8 @@ def generate_with_template_background(topic, story_type, template, research_data
         time_per_image = audio_duration / len(image_paths) if image_paths else 5
         durations = [time_per_image] * len(image_paths)
         
+        # Note: Template generation doesn't get filters/captions from request yet
+        # Can be added later if needed
         video_path = compiler.create_video(
             image_paths,
             str(audio_path),

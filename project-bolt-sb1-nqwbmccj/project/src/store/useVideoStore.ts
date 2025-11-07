@@ -26,6 +26,17 @@ interface VideoStore {
   stockKeywords: string[];
   selectedStockMedia: StockMediaItem[];
 
+  // Filters and Effects
+  colorFilter: string;
+  zoomEffect: boolean;
+  
+  // Captions
+  captionEnabled: boolean;
+  captionText: string;
+  captionStyle: string;
+  captionPosition: string;
+  captionAnimation: string;
+
   isGenerating: boolean;
   progress: GenerationProgress | null;
   result: VideoResult | null;
@@ -46,6 +57,14 @@ interface VideoStore {
   setManualImages: (images: File[]) => void;
   setStockKeywords: (keywords: string[]) => void;
   setSelectedStockMedia: (media: StockMediaItem[]) => void;
+  
+  setColorFilter: (filter: string) => void;
+  setZoomEffect: (enabled: boolean) => void;
+  setCaptionEnabled: (enabled: boolean) => void;
+  setCaptionText: (text: string) => void;
+  setCaptionStyle: (style: string) => void;
+  setCaptionPosition: (position: string) => void;
+  setCaptionAnimation: (animation: string) => void;
 
   startGeneration: () => void;
   updateProgress: (progress: GenerationProgress) => void;
@@ -70,6 +89,17 @@ export const useVideoStore = create<VideoStore>((set) => ({
   manualImages: [],
   stockKeywords: [],
   selectedStockMedia: [],
+  
+  // Filters and Effects
+  colorFilter: 'none',
+  zoomEffect: false,
+  
+  // Captions
+  captionEnabled: false,
+  captionText: '',
+  captionStyle: 'simple',
+  captionPosition: 'bottom',
+  captionAnimation: 'fade_in',
 
   isGenerating: false,
   progress: null,
@@ -91,6 +121,14 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setManualImages: (manualImages) => set({ manualImages }),
   setStockKeywords: (stockKeywords) => set({ stockKeywords }),
   setSelectedStockMedia: (selectedStockMedia) => set({ selectedStockMedia }),
+  
+  setColorFilter: (colorFilter) => set({ colorFilter }),
+  setZoomEffect: (zoomEffect) => set({ zoomEffect }),
+  setCaptionEnabled: (captionEnabled) => set({ captionEnabled }),
+  setCaptionText: (captionText) => set({ captionText }),
+  setCaptionStyle: (captionStyle) => set({ captionStyle }),
+  setCaptionPosition: (captionPosition) => set({ captionPosition }),
+  setCaptionAnimation: (captionAnimation) => set({ captionAnimation }),
 
   startGeneration: () => set({ isGenerating: true, progress: null, result: null, error: null }),
   updateProgress: (progress) => set({ progress }),

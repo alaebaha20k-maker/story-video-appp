@@ -16,6 +16,8 @@ import { GenerateButton } from '../components/GenerateButton';
 import { GenerationProgress } from '../components/GenerationProgress';
 import { VideoResult } from '../components/VideoResult';
 import { ExampleScriptUpload } from '../components/ExampleScriptUpload';
+import { VideoFilters } from '../components/VideoFilters';
+import { CaptionEditor } from '../components/CaptionEditor';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface ExampleScript {
@@ -175,6 +177,16 @@ export const GeneratorPage = () => {
         num_scenes: store.numScenes,
         characters: store.characters.filter(c => c.name && c.description),
         stock_keywords: store.stockKeywords,
+        // Filters and Effects
+        color_filter: store.colorFilter,
+        zoom_effect: store.zoomEffect,
+        // Captions
+        caption: store.captionEnabled ? {
+          text: store.captionText,
+          style: store.captionStyle,
+          position: store.captionPosition,
+          animation: store.captionAnimation,
+        } : undefined,
       });
 
       toast.dismiss();
@@ -247,6 +259,12 @@ export const GeneratorPage = () => {
       <VoiceSelector />
       
       <CharacterManager />
+      
+      {/* ✨ FILTERS AND EFFECTS */}
+      <VideoFilters />
+      
+      {/* 📝 CAPTIONS */}
+      <CaptionEditor />
 
       {/* Two Generate Buttons */}
       <div className="grid grid-cols-2 gap-4">
