@@ -1,14 +1,22 @@
 import { create } from 'zustand';
 import { GenerationProgress, VideoResult, Character } from '../types';
 
+interface StockMediaItem {
+  id: number;
+  type: 'image' | 'video';
+  thumbnail: string;
+  videoUrl?: string;
+  photographer: string;
+}
+
 interface VideoStore {
   topic: string;
   storyType: string;
   imageStyle: string;
   imageMode: string;
   voiceId: string;
-  voiceEngine: 'kokoro' | 'edge';  // ✅ NEW: Voice engine selector
-  voiceSpeed: number;              // ✅ NEW: Voice speed control (0.5-2.0)
+  voiceEngine: 'kokoro' | 'edge';
+  voiceSpeed: number;
   duration: number;
   hookIntensity: string;
   pacing: string;
@@ -16,6 +24,7 @@ interface VideoStore {
   characters: Character[];
   manualImages: File[];
   stockKeywords: string[];
+  selectedStockMedia: StockMediaItem[];
 
   isGenerating: boolean;
   progress: GenerationProgress | null;
@@ -27,8 +36,8 @@ interface VideoStore {
   setImageStyle: (style: string) => void;
   setImageMode: (mode: string) => void;
   setVoiceId: (id: string) => void;
-  setVoiceEngine: (engine: 'kokoro' | 'edge') => void;  // ✅ NEW
-  setVoiceSpeed: (speed: number) => void;               // ✅ NEW
+  setVoiceEngine: (engine: 'kokoro' | 'edge') => void;
+  setVoiceSpeed: (speed: number) => void;
   setDuration: (duration: number) => void;
   setHookIntensity: (intensity: string) => void;
   setPacing: (pacing: string) => void;
@@ -36,6 +45,7 @@ interface VideoStore {
   setCharacters: (characters: Character[]) => void;
   setManualImages: (images: File[]) => void;
   setStockKeywords: (keywords: string[]) => void;
+  setSelectedStockMedia: (media: StockMediaItem[]) => void;
 
   startGeneration: () => void;
   updateProgress: (progress: GenerationProgress) => void;
@@ -49,9 +59,9 @@ export const useVideoStore = create<VideoStore>((set) => ({
   storyType: 'scary_horror',
   imageStyle: 'cinematic',
   imageMode: 'ai_only',
-  voiceId: 'af_bella',  // ✅ Default to Kokoro voice
-  voiceEngine: 'kokoro',  // ✅ NEW: Default to Kokoro
-  voiceSpeed: 1.0,        // ✅ NEW: Normal speed
+  voiceId: 'af_bella',
+  voiceEngine: 'kokoro',
+  voiceSpeed: 1.0,
   duration: 5,
   hookIntensity: 'medium',
   pacing: 'medium',
@@ -59,6 +69,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   characters: [],
   manualImages: [],
   stockKeywords: [],
+  selectedStockMedia: [],
 
   isGenerating: false,
   progress: null,
@@ -70,8 +81,8 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setImageStyle: (imageStyle) => set({ imageStyle }),
   setImageMode: (imageMode) => set({ imageMode }),
   setVoiceId: (voiceId) => set({ voiceId }),
-  setVoiceEngine: (voiceEngine) => set({ voiceEngine }),  // ✅ NEW
-  setVoiceSpeed: (voiceSpeed) => set({ voiceSpeed: Math.max(0.5, Math.min(2.0, voiceSpeed)) }),  // ✅ NEW: Clamp 0.5-2.0
+  setVoiceEngine: (voiceEngine) => set({ voiceEngine }),
+  setVoiceSpeed: (voiceSpeed) => set({ voiceSpeed: Math.max(0.5, Math.min(2.0, voiceSpeed)) }),
   setDuration: (duration) => set({ duration }),
   setHookIntensity: (hookIntensity) => set({ hookIntensity }),
   setPacing: (pacing) => set({ pacing }),
@@ -79,6 +90,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setCharacters: (characters) => set({ characters }),
   setManualImages: (manualImages) => set({ manualImages }),
   setStockKeywords: (stockKeywords) => set({ stockKeywords }),
+  setSelectedStockMedia: (selectedStockMedia) => set({ selectedStockMedia }),
 
   startGeneration: () => set({ isGenerating: true, progress: null, result: null, error: null }),
   updateProgress: (progress) => set({ progress }),

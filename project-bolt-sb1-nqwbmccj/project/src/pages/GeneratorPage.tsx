@@ -9,6 +9,7 @@ import { ImageStyleSelector } from '../components/ImageStyleSelector';
 import { ImageModeSelector } from '../components/ImageModeSelector';
 import { ImageUpload } from '../components/ImageUpload';
 import { StockKeywords } from '../components/StockKeywords';
+import { StockMediaSelector } from '../components/StockMediaSelector';
 import { VoiceSelector } from '../components/VoiceSelector';
 import { CharacterManager } from '../components/CharacterManager';
 import { GenerateButton } from '../components/GenerateButton';
@@ -235,7 +236,12 @@ export const GeneratorPage = () => {
       <ImageModeSelector />
 
       {showUpload && <ImageUpload />}
-      {showStock && <StockKeywords />}
+      {showStock && (
+        <>
+          <StockKeywords />
+          <StockMediaSelector />
+        </>
+      )}
 
       {/* ✅ VOICE SELECTOR - NOW VISIBLE */}
       <VoiceSelector />
