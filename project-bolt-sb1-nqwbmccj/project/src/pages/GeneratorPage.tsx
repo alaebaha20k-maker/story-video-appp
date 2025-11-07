@@ -165,7 +165,7 @@ export const GeneratorPage = () => {
 
       await generateVideo({
         topic: store.topic,
-        storytype: store.storyType,
+        story_type: store.storyType,
         image_style: store.imageStyle,
         image_mode: store.imageMode,
         voice_id: store.voiceId,
