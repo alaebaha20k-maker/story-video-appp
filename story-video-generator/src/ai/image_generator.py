@@ -16,12 +16,13 @@ from src.utils.logger import logger
 
 
 class UltraImageGenerator:
-    """Generate professional images with multiple styles"""
+    """Generate professional images with FLUX.1 Schnell - highest quality"""
     
     def __init__(self, image_style: str = "cinematic_film", story_type: str = "scary_horror"):
         self.prompt_builder = create_prompt_builder(image_style, story_type)
         self.image_style = image_style
         self.story_type = story_type
+        self.model = "FLUX.1 Schnell"  # Using FLUX.1 Schnell for superior quality
     
     def register_characters(self, characters: Dict[str, str]):
         """Register characters for consistency"""
@@ -35,7 +36,7 @@ class UltraImageGenerator:
         scene_type: str = "establishing",
         characters: List[str] = None
     ) -> Optional[Dict]:
-        """Generate single scene image"""
+        """Generate single scene image using FLUX.1 Schnell"""
         
         # Build professional prompt
         prompt_data = self.prompt_builder.build_scene_prompt(
@@ -44,13 +45,25 @@ class UltraImageGenerator:
             characters
         )
         
-        logger.info(f"   Generating scene {scene_number} ({scene_type})...")
+        logger.info(f"   Generating scene {scene_number} ({scene_type}) with FLUX.1 Schnell...")
         
-        # Try Pollinations (free, fast)
+        # Use Pollinations AI with FLUX.1 Schnell model for higher quality
         try:
-            url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt_data['prompt'])}"
+            # FLUX.1 Schnell parameters for best quality
+            params = {
+                'model': 'flux',
+                'width': 1024,
+                'height': 1024,
+                'nologo': 'true',
+                'enhance': 'true'
+            }
             
-            response = requests.get(url, timeout=60)
+            # Build URL with FLUX.1 Schnell
+            base_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt_data['prompt'])}"
+            param_string = '&'.join([f"{k}={v}" for k, v in params.items()])
+            url = f"{base_url}?{param_string}"
+            
+            response = requests.get(url, timeout=90)  # Increased timeout for higher quality
             
             if response.status_code == 200:
                 filename = f"scene_{scene_number:03d}.png"
@@ -60,13 +73,14 @@ class UltraImageGenerator:
                     file_handler.temp_dir
                 )
                 
-                logger.success(f"      ✅ Generated: {filename}")
+                logger.success(f"      ✅ Generated (FLUX.1 Schnell): {filename}")
                 
                 return {
                     "filepath": str(filepath),
                     "scene_number": scene_number,
                     "prompt": prompt_data['prompt'],
-                    "style": self.image_style
+                    "style": self.image_style,
+                    "model": "FLUX.1 Schnell"
                 }
         
         except Exception as e:
@@ -82,6 +96,7 @@ class UltraImageGenerator:
         """Generate images for all scenes"""
         
         logger.info(f"🎨 Generating {len(scenes)} images...")
+        logger.info(f"   Model: {self.model} (High Quality)")
         logger.info(f"   Style: {self.image_style}")
         logger.info(f"   Niche: {self.story_type}")
         

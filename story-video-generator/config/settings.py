@@ -59,13 +59,14 @@ SCRIPT_LENGTHS = {
     }
 }
 
-# FLUX image generation settings
+# FLUX.1 Schnell image generation settings (via Pollinations AI)
 FLUX_SETTINGS = {
-    "model": "black-forest-labs/FLUX.1-schnell",
+    "model": "flux",  # FLUX.1 Schnell via Pollinations
     "width": 1024,
     "height": 1024,
-    "steps": 4,
-    "guidance_scale": 0
+    "nologo": True,
+    "enhance": True,
+    "description": "FLUX.1 Schnell - Fastest high-quality model from Black Forest Labs"
 }
 
 # Image settings

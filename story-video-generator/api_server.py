@@ -710,7 +710,7 @@ if __name__ == '__main__':
         print("🎤 Voice: Edge-TTS (FREE)")
         print("⚠️  Kokoro TTS not available")
     
-    print("🎨 Images: Pollinations AI (FREE)")
+    print("🎨 Images: Pollinations AI + FLUX.1 Schnell (HIGH QUALITY, FREE)")
     print("📝 Script: Gemini AI with Templates")
     print("="*60)
     print("\n✅ ENDPOINTS:")
