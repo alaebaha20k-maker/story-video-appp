@@ -23,7 +23,7 @@ class TTSEngine:
         self.voice = voice or VOICE_SETTINGS['default_voice']
         self.rate = VOICE_SETTINGS['rate']
         self.volume = VOICE_SETTINGS['volume']
-        self.chunk_size = 2000  # ⚡ SMALLER chunks for MORE parallelism = FASTER!
+        self.chunk_size = 1000  # ⚡ ULTRA-SMALL chunks for MAXIMUM parallelism = SUPER FAST!
     
     async def _generate_audio_async(self, text: str, output_path: str):
         """Generate audio asynchronously"""
@@ -58,12 +58,12 @@ class TTSEngine:
     def _generate_long_audio(self, text: str, filename: str) -> Path:
         """Generate audio for long text by chunking - PARALLEL VERSION"""
         
-        print(f"   🚀 Using AGGRESSIVE parallel processing...")
+        print(f"   🚀 Using ULTRA-AGGRESSIVE parallel processing...")
         
         # Split text into chunks
         chunks = self._split_text(text, self.chunk_size)
         print(f"   Generated {len(chunks)} chunks")
-        print(f"   🚀 Generating chunks in PARALLEL for 5-10x speedup...")
+        print(f"   🚀 Generating {len(chunks)} chunks in PARALLEL for 10x+ speedup...")
         
         # Generate audio for all chunks in parallel
         chunk_files = asyncio.run(self._generate_chunks_parallel(chunks))

@@ -179,9 +179,9 @@ class KokoroTTS:
         
         print(f"   🚀 Using AGGRESSIVE parallel chunk processing...")
         
-        # ⚡ SMALLER CHUNKS = MORE PARALLEL TASKS = FASTER!
-        # Changed from 5000 to 2000 chars per chunk for MORE parallelism
-        chunks = self._split_text_smart(text, max_chars=2000)
+        # ⚡ EVEN SMALLER CHUNKS = MORE PARALLEL TASKS = FASTER!
+        # Changed from 2000 to 1000 chars per chunk for MAXIMUM parallelism
+        chunks = self._split_text_smart(text, max_chars=1000)
         print(f"   Split into {len(chunks)} chunks")
         print(f"   🚀 Processing chunks in PARALLEL for 5-10x speedup...")
         
@@ -230,7 +230,7 @@ class KokoroTTS:
         else:
             raise RuntimeError(f"No audio generated for chunk {chunk_id}")
     
-    def _split_text_smart(self, text: str, max_chars: int = 5000) -> list:
+    def _split_text_smart(self, text: str, max_chars: int = 1000) -> list:
         """Split text at sentence boundaries"""
         # Split by sentences
         sentences = text.replace('!', '.').replace('?', '.').split('.')

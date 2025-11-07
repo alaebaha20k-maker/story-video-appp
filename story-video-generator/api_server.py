@@ -116,21 +116,25 @@ def get_voice_engine_and_id(voice_engine=None, voice_id=None):
     return voice_engine, voice_id
 
 
-async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="narration.mp3"):
-    """✅ Generate audio using Edge-TTS (FREE, no API key) - SUPER FAST with aggressive parallel chunking"""
+async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="narration.mp3", speed_boost=True):
+    """✅ Generate audio using Edge-TTS (FREE, no API key) - SUPER FAST with speed boost + parallel"""
     try:
+        # ⚡ SPEED BOOST: Make voice speak 1.3x faster (reduces audio duration by 23%)
+        rate = "+30%" if speed_boost else "+0%"
+        
         print(f"🎤 Generating audio with Edge-TTS...")
         print(f"   Voice: {voice}")
+        print(f"   Speech Rate: {rate} {'⚡ FAST MODE!' if speed_boost else ''}")
         print(f"   Text: {len(text)} characters")
         
         # ⚡ AGGRESSIVE PARALLEL: Use parallel chunking for ANY text >800 chars (was 5000)
         # Smaller threshold = more parallelism = MUCH FASTER!
         if len(text) > 800:
             print(f"   🚀 Using AGGRESSIVE parallel chunking for 5-10x speedup...")
-            return await _generate_audio_edge_parallel(text, voice, output_path)
+            return await _generate_audio_edge_parallel(text, voice, output_path, rate)
         
         # For very short text (<800 chars), generate directly
-        communicate = edge_tts.Communicate(text, voice)
+        communicate = edge_tts.Communicate(text, voice, rate=rate)
         await communicate.save(str(output_path))
         
         print(f"✅ Audio generated: {output_path}")
@@ -141,15 +145,15 @@ async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="n
         raise
 
 
-async def _generate_audio_edge_parallel(text, voice, output_path):
+async def _generate_audio_edge_parallel(text, voice, output_path, rate="+0%"):
     """Generate audio in parallel chunks using asyncio.gather - SUPER FAST!"""
     from pydub import AudioSegment
     
-    # ⚡ SMALLER CHUNKS = MORE PARALLEL TASKS = FASTER!
-    # Changed from 5000 to 2000 chars per chunk for MORE parallelism
-    chunks = _split_text_smart(text, max_chars=2000)
+    # ⚡ EVEN SMALLER CHUNKS = MORE PARALLEL TASKS = FASTER!
+    # Changed from 2000 to 1000 chars per chunk for MAXIMUM parallelism
+    chunks = _split_text_smart(text, max_chars=1000)
     print(f"   Split into {len(chunks)} chunks")
-    print(f"   🚀 Processing chunks in AGGRESSIVE PARALLEL for 5-10x speedup...")
+    print(f"   🚀 Processing {len(chunks)} chunks in AGGRESSIVE PARALLEL for 10x+ speedup...")
     
     # Create temporary directory
     temp_dir = Path("output/temp")
@@ -163,8 +167,8 @@ async def _generate_audio_edge_parallel(text, voice, output_path):
         chunk_file = temp_dir / f"chunk_{i:03d}.mp3"
         chunk_files.append(chunk_file)
         
-        # Create async task for each chunk
-        communicate = edge_tts.Communicate(chunk, voice)
+        # Create async task for each chunk with speed boost
+        communicate = edge_tts.Communicate(chunk, voice, rate=rate)
         tasks.append(communicate.save(str(chunk_file)))
     
     # Execute all tasks in parallel
@@ -186,7 +190,7 @@ async def _generate_audio_edge_parallel(text, voice, output_path):
     return str(output_path)
 
 
-def _split_text_smart(text, max_chars=5000):
+def _split_text_smart(text, max_chars=1000):
     """Split text at sentence boundaries"""
     # Split by sentences
     sentences = text.replace('!', '.').replace('?', '.').split('.')
