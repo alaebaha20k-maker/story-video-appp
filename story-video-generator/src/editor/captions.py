@@ -120,17 +120,15 @@ class CaptionGenerator:
         if font_file:
             filter_parts.append(f"fontfile='{font_file}'")
         
-        # Add animation
-        anim = self.ANIMATION_EFFECTS.get(animation, '')
-        if anim and duration:
-            anim = anim.format(duration=duration)
-            filter_parts.append(anim)
+        # Add animation (simplified - just use alpha for fade)
+        if animation == 'fade_in':
+            # Simple fade in over 0.5 seconds
+            filter_parts.append("alpha='if(lt(t-{},0.5),(t-{})/0.5,1)'".format(start_time, start_time))
         
-        # Add timing
-        if start_time > 0:
-            filter_parts.append(f"enable='gte(t,{start_time})'")
-        if duration:
-            filter_parts.append(f"enable='between(t,{start_time},{start_time + duration})'")
+        # Add timing - ONLY ONE enable condition!
+        if duration and start_time >= 0:
+            end_time = start_time + duration
+            filter_parts.append(f"enable='between(t,{start_time},{end_time})'")
         
         return ':'.join(filter_parts)
     
@@ -161,7 +159,8 @@ class CaptionGenerator:
         script: str,
         audio_duration: float,
         style: str = 'simple',
-        position: str = 'bottom'
+        position: str = 'bottom',
+        max_captions: int = 20  # ⚡ LIMIT to prevent FFmpeg overload!
     ) -> List[Dict]:
         """
         Generate auto captions from script text with perfect timing
@@ -171,6 +170,7 @@ class CaptionGenerator:
             audio_duration: Total audio duration in seconds
             style: Caption style (default: simple - medium size, readable)
             position: Caption position (default: bottom)
+            max_captions: Maximum number of captions (default: 20 to avoid FFmpeg issues)
         
         Returns:
             List of caption dictionaries with text, timing, style
@@ -183,6 +183,18 @@ class CaptionGenerator:
         
         if not sentences:
             return []
+        
+        # ⚡ LIMIT CAPTIONS to prevent FFmpeg command overflow!
+        # If too many sentences, combine them
+        if len(sentences) > max_captions:
+            print(f"   ⚠️  Too many sentences ({len(sentences)}), combining to {max_captions} captions")
+            # Combine sentences into groups
+            sentences_per_caption = len(sentences) // max_captions
+            combined_sentences = []
+            for i in range(0, len(sentences), sentences_per_caption):
+                combined = " ".join(sentences[i:i+sentences_per_caption])
+                combined_sentences.append(combined)
+            sentences = combined_sentences[:max_captions]
         
         # Calculate timing for each sentence
         time_per_sentence = audio_duration / len(sentences)
@@ -206,11 +218,27 @@ class CaptionGenerator:
         return captions
     
     def _escape_text(self, text: str) -> str:
-        """Escape special characters for FFmpeg"""
-        # FFmpeg drawtext special characters
-        text = text.replace("'", "\\'")
-        text = text.replace(":", "\\:")
-        text = text.replace("%", "\\%")
+        """Escape special characters for FFmpeg - ROBUST"""
+        # Remove or replace problematic characters
+        # FFmpeg drawtext is VERY sensitive to special chars
+        
+        # Replace quotes with safer alternatives
+        text = text.replace('"', "'")  # Double quotes -> single quotes
+        text = text.replace("'", "")   # Remove single quotes (they break FFmpeg)
+        text = text.replace("\\", "")  # Remove backslashes
+        
+        # Remove other problematic characters
+        text = text.replace(":", " ")  # Colons break filter syntax
+        text = text.replace("%", "")   # Percent signs
+        text = text.replace("[", "(")  # Brackets
+        text = text.replace("]", ")")
+        text = text.replace("{", "(")
+        text = text.replace("}", ")")
+        
+        # Limit length (FFmpeg drawtext has limits)
+        if len(text) > 150:
+            text = text[:147] + "..."
+        
         return text
     
     def get_available_styles(self) -> Dict[str, str]:
