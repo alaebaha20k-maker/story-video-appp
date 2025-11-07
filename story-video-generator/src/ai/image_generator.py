@@ -136,3 +136,7 @@ class UltraImageGenerator:
 def create_image_generator(image_style: str, story_type: str) -> UltraImageGenerator:
     """Create image generator with chosen styles"""
     return UltraImageGenerator(image_style, story_type)
+
+
+# Default global instance for backward compatibility
+image_generator = UltraImageGenerator()
