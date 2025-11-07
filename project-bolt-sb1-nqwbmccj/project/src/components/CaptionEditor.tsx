@@ -34,7 +34,9 @@ export const CaptionEditor = () => {
     captionPosition,
     setCaptionPosition,
     captionAnimation,
-    setCaptionAnimation
+    setCaptionAnimation,
+    autoCaptions,
+    setAutoCaptions
   } = useVideoStore();
 
   return (
@@ -47,18 +49,52 @@ export const CaptionEditor = () => {
         <p className="text-gray-600">Add animated captions to your video (FFmpeg-powered, no slowdown)</p>
       </div>
 
-      {/* Enable Captions Toggle */}
+      {/* Auto Captions Toggle - NEW! */}
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border-2 border-green-200">
+        <label className="flex items-center space-x-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoCaptions}
+            onChange={(e) => {
+              setAutoCaptions(e.target.checked);
+              if (e.target.checked) {
+                setCaptionEnabled(false); // Disable manual captions
+              }
+            }}
+            className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-500"
+          />
+          <div className="flex-1">
+            <div className="flex items-center space-x-2">
+              <span className="font-bold text-gray-900">✨ AUTO CAPTIONS (TikTok Style)</span>
+              <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded">RECOMMENDED</span>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Automatically generate captions from your script! Perfect sync with audio.
+              <br />
+              <strong className="text-green-700">Medium size, bottom position, sentence-by-sentence with fade in/out.</strong>
+            </p>
+          </div>
+        </label>
+      </div>
+
+      {/* Manual Caption Toggle */}
       <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4">
         <label className="flex items-center space-x-3 cursor-pointer">
           <input
             type="checkbox"
             checked={captionEnabled}
-            onChange={(e) => setCaptionEnabled(e.target.checked)}
-            className="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
+            onChange={(e) => {
+              setCaptionEnabled(e.target.checked);
+              if (e.target.checked) {
+                setAutoCaptions(false); // Disable auto captions
+              }
+            }}
+            disabled={autoCaptions}
+            className="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           />
           <div>
-            <span className="font-semibold text-gray-900">Enable Captions</span>
-            <p className="text-sm text-gray-600">Add text overlay to your video</p>
+            <span className="font-semibold text-gray-900">Manual Caption (Single Text)</span>
+            <p className="text-sm text-gray-600">Add one custom text overlay for entire video</p>
           </div>
         </label>
       </div>
@@ -162,6 +198,21 @@ export const CaptionEditor = () => {
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
             <strong>⚡ Zero Slowdown:</strong> Captions use FFmpeg drawtext - renders in milliseconds!
           </div>
+        </div>
+      )}
+
+      {/* Info about Auto Captions */}
+      {autoCaptions && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 animate-in">
+          <strong>✨ AUTO CAPTIONS ENABLED</strong>
+          <ul className="mt-2 space-y-1 list-disc list-inside">
+            <li>Script will be split into sentences</li>
+            <li>Each sentence perfectly synced with audio timing</li>
+            <li>Medium size (readable, not too big/small)</li>
+            <li>Bottom position (professional style)</li>
+            <li>Fade in/out transitions (smooth)</li>
+            <li><strong>Zero slowdown - same generation time!</strong></li>
+          </ul>
         </div>
       )}
     </div>

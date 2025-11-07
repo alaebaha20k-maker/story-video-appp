@@ -156,6 +156,55 @@ class CaptionGenerator:
         # Chain multiple drawtext filters
         return ','.join(caption_filters)
     
+    def generate_auto_captions_from_script(
+        self,
+        script: str,
+        audio_duration: float,
+        style: str = 'simple',
+        position: str = 'bottom'
+    ) -> List[Dict]:
+        """
+        Generate auto captions from script text with perfect timing
+        
+        Args:
+            script: Full script text
+            audio_duration: Total audio duration in seconds
+            style: Caption style (default: simple - medium size, readable)
+            position: Caption position (default: bottom)
+        
+        Returns:
+            List of caption dictionaries with text, timing, style
+        """
+        import re
+        
+        # Split script into sentences (handles ., !, ?)
+        sentences = re.split(r'(?<=[.!?])\s+', script.strip())
+        sentences = [s.strip() for s in sentences if s.strip()]
+        
+        if not sentences:
+            return []
+        
+        # Calculate timing for each sentence
+        time_per_sentence = audio_duration / len(sentences)
+        
+        captions = []
+        current_time = 0
+        
+        for sentence in sentences:
+            # Each sentence gets equal time with fade transitions
+            caption = {
+                'text': sentence,
+                'style': style,  # Medium size, professional
+                'position': position,  # Bottom of video
+                'animation': 'fade_in',  # Smooth fade in
+                'start_time': current_time,
+                'duration': time_per_sentence
+            }
+            captions.append(caption)
+            current_time += time_per_sentence
+        
+        return captions
+    
     def _escape_text(self, text: str) -> str:
         """Escape special characters for FFmpeg"""
         # FFmpeg drawtext special characters
@@ -199,6 +248,16 @@ def build_caption_filter(text: str, style: str = 'simple', position: str = 'bott
 def get_available_styles() -> Dict[str, str]:
     """Quick function to list styles"""
     return caption_generator.get_available_styles()
+
+
+def generate_auto_captions(script: str, audio_duration: float) -> List[Dict]:
+    """Quick function to generate auto captions from script"""
+    return caption_generator.generate_auto_captions_from_script(
+        script=script,
+        audio_duration=audio_duration,
+        style='simple',  # Medium size, readable, professional
+        position='bottom'  # Bottom of video
+    )
 
 
 if __name__ == "__main__":

@@ -31,6 +31,7 @@ interface VideoStore {
   zoomEffect: boolean;
   
   // Captions
+  autoCaptions: boolean;  // NEW: Auto captions from script
   captionEnabled: boolean;
   captionText: string;
   captionStyle: string;
@@ -60,6 +61,7 @@ interface VideoStore {
   
   setColorFilter: (filter: string) => void;
   setZoomEffect: (enabled: boolean) => void;
+  setAutoCaptions: (enabled: boolean) => void;  // NEW
   setCaptionEnabled: (enabled: boolean) => void;
   setCaptionText: (text: string) => void;
   setCaptionStyle: (style: string) => void;
@@ -95,6 +97,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   zoomEffect: false,
   
   // Captions
+  autoCaptions: false,  // NEW: Auto captions from script
   captionEnabled: false,
   captionText: '',
   captionStyle: 'simple',
@@ -124,6 +127,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   
   setColorFilter: (colorFilter) => set({ colorFilter }),
   setZoomEffect: (zoomEffect) => set({ zoomEffect }),
+  setAutoCaptions: (autoCaptions) => set({ autoCaptions }),  // NEW
   setCaptionEnabled: (captionEnabled) => set({ captionEnabled }),
   setCaptionText: (captionText) => set({ captionText }),
   setCaptionStyle: (captionStyle) => set({ captionStyle }),

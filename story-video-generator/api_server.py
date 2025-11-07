@@ -343,6 +343,15 @@ def generate_video_background(data):
         color_filter = data.get('color_filter', 'none')
         zoom_effect = data.get('zoom_effect', False)
         caption = data.get('caption')  # Dict with text, style, position, etc.
+        auto_captions_enabled = data.get('auto_captions', False)
+        
+        # Generate auto captions from script if enabled
+        auto_captions = None
+        if auto_captions_enabled:
+            from src.editor.captions import generate_auto_captions
+            print("📝 Generating auto captions from script...")
+            auto_captions = generate_auto_captions(result['script'], audio_duration)
+            print(f"   ✅ Auto Captions: {len(auto_captions)} sentences")
         
         video_path = compiler.create_video(
             image_paths,
@@ -351,7 +360,8 @@ def generate_video_background(data):
             durations,
             color_filter=color_filter,
             zoom_effect=zoom_effect,
-            caption=caption
+            caption=caption,
+            auto_captions=auto_captions
         )
         
         progress_state['progress'] = 100

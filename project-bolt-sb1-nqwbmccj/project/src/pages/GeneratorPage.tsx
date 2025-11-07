@@ -180,7 +180,9 @@ export const GeneratorPage = () => {
         // Filters and Effects
         color_filter: store.colorFilter,
         zoom_effect: store.zoomEffect,
-        // Captions
+        // Auto Captions (NEW!)
+        auto_captions: store.autoCaptions,
+        // Manual Captions (single text)
         caption: store.captionEnabled ? {
           text: store.captionText,
           style: store.captionStyle,

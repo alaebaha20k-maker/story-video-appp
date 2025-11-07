@@ -16,7 +16,8 @@ class FFmpegCompiler:
         durations: List[float],
         color_filter: str = 'none',
         zoom_effect: bool = False,
-        caption: Optional[Dict] = None
+        caption: Optional[Dict] = None,
+        auto_captions: Optional[List[Dict]] = None
     ):
         """Create video with FFmpeg - FAST with filters and captions!"""
         
@@ -44,8 +45,14 @@ class FFmpegCompiler:
             if color_filter_str:
                 filters.append(color_filter_str)
         
-        # Add caption if specified
-        if caption and caption.get('text'):
+        # Add auto captions (multiple timed captions) - PRIORITY
+        if auto_captions:
+            from src.editor.captions import caption_generator
+            multi_caption_filter = caption_generator.build_multi_caption_filter(auto_captions)
+            if multi_caption_filter:
+                filters.append(multi_caption_filter)
+        # Add single caption if specified (and no auto captions)
+        elif caption and caption.get('text'):
             from src.editor.captions import caption_generator
             caption_filter = caption_generator.build_caption_filter(
                 text=caption.get('text', ''),
