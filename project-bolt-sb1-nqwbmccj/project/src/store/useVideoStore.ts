@@ -80,8 +80,8 @@ export const useVideoStore = create<VideoStore>((set) => ({
   storyType: 'scary_horror',
   imageStyle: 'cinematic',
   imageMode: 'ai_only',
-  voiceId: 'af_bella',
-  voiceEngine: 'kokoro',
+  voiceId: 'ashley',  // Default Inworld AI voice
+  voiceEngine: 'inworld',
   voiceSpeed: 1.0,
   duration: 5,
   hookIntensity: 'medium',

@@ -11,13 +11,8 @@ import asyncio
 import edge_tts
 from pydub import AudioSegment
 
-# ✅ KOKORO TTS IMPORT
-try:
-    from src.voice.kokoro_tts import create_kokoro_tts
-    KOKORO_AVAILABLE = True
-except ImportError:
-    KOKORO_AVAILABLE = False
-    print("⚠️ Kokoro TTS not available - using Edge-TTS only")
+# ✅ INWORLD AI TTS - SUPER FAST & HIGH QUALITY
+INWORLD_API_KEY = os.getenv('INWORLD_API_KEY', 'Yk15dDJCNkp6dFFVbGlxbEJtNkhIZFFDY0Fic0pYbko6c2lXcHcyaXNaSmtMSUU2bGxEcWwyeWkyRDV4QXlUN3FRWW9wNGhlMFgxc2VaOFprc3ZDRHpTMWdXSmNjY0l5RA==')
 
 # ✅ IMPORTS FOR TEMPLATES + RESEARCH
 from src.ai.script_analyzer import script_analyzer
@@ -27,7 +22,7 @@ from src.ai.enhanced_script_generator import enhanced_script_generator
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
-from config.settings import KOKORO_SETTINGS, EDGE_TTS_SETTINGS
+from src.voice.inworld_tts import create_inworld_tts
 
 app = Flask(__name__)
 
@@ -43,17 +38,17 @@ CORS(app, resources={
 progress_state = {'status': 'ready', 'progress': 0, 'video_path': None, 'error': None}
 
 # ═══════════════════════════════════════════════════════════════
-# 🎤 VOICE ENGINE INITIALIZATION
+# 🎤 VOICE ENGINE INITIALIZATION - INWORLD AI
 # ═══════════════════════════════════════════════════════════════
 
-kokoro_tts = None
-if KOKORO_AVAILABLE and KOKORO_SETTINGS.get("enabled"):
-    try:
-        kokoro_tts = create_kokoro_tts(device=KOKORO_SETTINGS.get("device", "cpu"))
-        print("✅ Kokoro TTS initialized")
-    except Exception as e:
-        print(f"⚠️ Failed to initialize Kokoro TTS: {e}")
-        kokoro_tts = None
+inworld_tts = None
+try:
+    inworld_tts = create_inworld_tts(api_key=INWORLD_API_KEY)
+    print("✅ Inworld AI TTS initialized - SUPER FAST!")
+except Exception as e:
+    print(f"❌ Failed to initialize Inworld AI TTS: {e}")
+    print(f"   Set INWORLD_API_KEY environment variable")
+    inworld_tts = None
 
 # ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
@@ -116,32 +111,24 @@ def get_voice_engine_and_id(voice_engine=None, voice_id=None):
     return voice_engine, voice_id
 
 
-async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="narration.mp3", speed_boost=True):
-    """✅ Generate audio using Edge-TTS (FREE, no API key) - SUPER FAST with speed boost + parallel"""
+def generate_audio_inworld(text, voice="ashley", output_path="narration.mp3"):
+    """✅ Generate audio using Inworld AI - SUPER FAST & HIGH QUALITY"""
     try:
-        # ⚡ SPEED BOOST: Make voice speak 1.3x faster (reduces audio duration by 23%)
-        rate = "+30%" if speed_boost else "+0%"
+        if not inworld_tts:
+            raise RuntimeError("Inworld AI TTS not initialized. Set INWORLD_API_KEY environment variable")
         
-        print(f"🎤 Generating audio with Edge-TTS...")
-        print(f"   Voice: {voice}")
-        print(f"   Speech Rate: {rate} {'⚡ FAST MODE!' if speed_boost else ''}")
-        print(f"   Text: {len(text)} characters")
+        print(f"🎤 Generating audio with Inworld AI...")
         
-        # ⚡ AGGRESSIVE PARALLEL: Use parallel chunking for ANY text >800 chars (was 5000)
-        # Smaller threshold = more parallelism = MUCH FASTER!
-        if len(text) > 800:
-            print(f"   🚀 Using AGGRESSIVE parallel chunking for 5-10x speedup...")
-            return await _generate_audio_edge_parallel(text, voice, output_path, rate)
+        audio_path = inworld_tts.generate_audio(
+            text=text,
+            voice=voice,
+            output_path=str(output_path)
+        )
         
-        # For very short text (<800 chars), generate directly
-        communicate = edge_tts.Communicate(text, voice, rate=rate)
-        await communicate.save(str(output_path))
-        
-        print(f"✅ Audio generated: {output_path}")
-        return str(output_path)
+        return audio_path
         
     except Exception as e:
-        print(f"❌ Edge-TTS Error: {e}")
+        print(f"❌ Inworld AI Error: {e}")
         raise
 
 
@@ -266,12 +253,10 @@ def generate_video_background(data):
     try:
         print(f"\n🎬 Starting generation: {data.get('topic', 'Untitled')}")
         
-        # Determine voice engine
-        voice_engine = data.get('voice_engine', 'kokoro')
-        voice_id = data.get('voice_id')
-        voice_engine, voice_id = get_voice_engine_and_id(voice_engine, voice_id)
+        # Get voice ID for Inworld AI
+        voice_id = get_voice_id(data.get('voice_id'))
         
-        print(f"🎤 Voice Engine: {voice_engine.upper()}")
+        print(f"🎤 Voice Engine: INWORLD AI")
         print(f"🎤 Voice ID: {voice_id}")
         
         # Script
@@ -305,29 +290,20 @@ def generate_video_background(data):
         
         print(f"   ✅ Images: {len(image_paths)} generated")
         
-        # Voice Generation
-        progress_state['status'] = f'Generating voice with {voice_engine.upper()}...'
+        # Voice Generation - Inworld AI
+        progress_state['status'] = 'Generating voice with INWORLD AI...'
         progress_state['progress'] = 60
-        print(f"🎤 Step 3/4: Generating voice with {voice_engine.upper()}...")
+        print(f"🎤 Step 3/4: Generating voice with INWORLD AI...")
         
-        audio_path = Path("output/temp/narration.wav" if voice_engine == "kokoro" else "output/temp/narration.mp3")
+        audio_path = Path("output/temp/narration.mp3")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         
-        if voice_engine == "kokoro":
-            # ✅ KOKORO TTS
-            generate_audio_kokoro(
-                text=result['script'],
-                voice=voice_id,
-                speed=data.get('voice_speed', 1.0),
-                output_path=str(audio_path)
-            )
-        else:
-            # ✅ EDGE-TTS FALLBACK
-            asyncio.run(generate_audio_edge_tts(
-                result['script'],
-                voice=voice_id,
-                output_path=str(audio_path)
-            ))
+        # ✅ INWORLD AI TTS - SUPER FAST!
+        generate_audio_inworld(
+            text=result['script'],
+            voice=voice_id,
+            output_path=str(audio_path)
+        )
         
         audio_duration = get_audio_duration(audio_path)
         print(f"   ✅ Audio: {audio_duration:.1f} seconds")
@@ -375,7 +351,7 @@ def generate_video_background(data):
         progress_state['video_path'] = output_filename
         
         print(f"\n✅ SUCCESS! Video: {output_filename}")
-        print(f"   Voice Engine: {voice_engine.upper()}")
+        print(f"   Voice Engine: INWORLD AI")
         print(f"   Voice: {voice_id}\n")
         
     except Exception as e:
@@ -394,11 +370,11 @@ def generate_with_template_background(topic, story_type, template, research_data
         progress_state['status'] = 'generating'
         progress_state['progress'] = 10
         
-        # Determine voice engine
-        voice_engine, voice_id = get_voice_engine_and_id(voice_engine, voice_id)
+        # Get voice ID for Inworld AI
+        voice_id = get_voice_id(voice_id)
         
         print(f"📝 Generating script with template...")
-        print(f"🎤 Voice Engine: {voice_engine.upper()}")
+        print(f"🎤 Voice Engine: INWORLD AI")
         print(f"🎤 Voice: {voice_id}")
         
         # Generate script
@@ -433,29 +409,20 @@ def generate_with_template_background(topic, story_type, template, research_data
         print(f"✅ Generated {len(image_paths)} images")
         
         progress_state['progress'] = 70
-        progress_state['status'] = f'generating_voice_{voice_engine}'
+        progress_state['status'] = 'generating_voice_inworld'
         
-        print(f"🎤 Generating voice with {voice_engine.upper()}...")
+        print(f"🎤 Generating voice with INWORLD AI...")
         
-        # Generate audio based on engine
-        audio_path = Path("output/temp/narration.wav" if voice_engine == "kokoro" else "output/temp/narration.mp3")
+        # Generate audio with Inworld AI
+        audio_path = Path("output/temp/narration.mp3")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         
-        if voice_engine == "kokoro":
-            # ✅ KOKORO TTS
-            generate_audio_kokoro(
-                text=script_text,
-                voice=voice_id,
-                speed=1.0,
-                output_path=str(audio_path)
-            )
-        else:
-            # ✅ EDGE-TTS
-            asyncio.run(generate_audio_edge_tts(
-                script_text,
-                voice=voice_id,
-                output_path=str(audio_path)
-            ))
+        # ✅ INWORLD AI TTS - SUPER FAST!
+        generate_audio_inworld(
+            text=script_text,
+            voice=voice_id,
+            output_path=str(audio_path)
+        )
         
         audio_duration = get_audio_duration(audio_path)
         print(f"✅ Audio: {audio_duration:.1f} seconds")
@@ -489,7 +456,7 @@ def generate_with_template_background(topic, story_type, template, research_data
         print(f"\n✅ SUCCESS!")
         print(f"   Video: {output_filename}")
         print(f"   Script: {len(script_text)} chars")
-        print(f"   Voice Engine: {voice_engine.upper()}")
+        print(f"   Voice Engine: INWORLD AI")
         print(f"   Voice: {voice_id}")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
@@ -512,36 +479,35 @@ def health():
     return jsonify({
         'status': 'ok',
         'message': 'API Server running',
-        'kokoro_available': KOKORO_AVAILABLE and kokoro_tts is not None,
-        'edge_available': True
+        'inworld_available': inworld_tts is not None,
+        'voice_engine': 'inworld_ai'
     }), 200
 
 
 @app.route('/api/voices', methods=['GET', 'OPTIONS'])
 def list_voices():
-    """✅ List all available voices from both engines"""
+    """✅ List all available Inworld AI voices"""
     if request.method == 'OPTIONS':
         return '', 204
     
     voices = {}
     
-    # Kokoro voices
-    if kokoro_tts:
-        from src.voice.kokoro_tts import KokoroTTS
-        voices['kokoro'] = {
-            'engine': 'kokoro',
-            'voices': list(KokoroTTS.VOICES.keys()),
-            'categories': KOKORO_SETTINGS.get('voice_categories', {})
-        }
+    # Inworld AI voices
+    if inworld_tts:
+        from src.voice.inworld_tts import InworldTTS
+        for voice_id, voice_info in InworldTTS.VOICES.items():
+            voices[voice_id] = {
+                'engine': 'inworld',
+                'name': voice_info['name'],
+                'gender': voice_info['gender'],
+                'style': voice_info['style']
+            }
     
-    # Edge-TTS voices
-    voices['edge'] = {
-        'engine': 'edge',
-        'voices': ['male_narrator_deep', 'female_narrator', 'female_young'],
-        'categories': EDGE_TTS_SETTINGS.get('voice_categories', {})
-    }
-    
-    return jsonify(voices), 200
+    return jsonify({
+        'voices': voices,
+        'engine': 'inworld_ai',
+        'total': len(voices)
+    }), 200
 
 
 @app.route('/api/generate-video', methods=['POST', 'OPTIONS'])
@@ -724,17 +690,16 @@ def clear_cache_endpoint():
 
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("🚀 API SERVER READY - WITH KOKORO TTS!")
+    print("🚀 API SERVER READY - WITH INWORLD AI!")
     print("="*60)
     print("📍 URL: http://localhost:5000")
     print("✨ Features: Templates + Research + Video Generation")
     
-    if kokoro_tts:
-        print("🎤 Voice: Kokoro TTS (48 voices, FREE!)")
-        print("🎤 Backup: Edge-TTS (FREE)")
+    if inworld_tts:
+        print("🎤 Voice: INWORLD AI ⚡ (SUPER FAST, HIGH QUALITY!)")
+        print("   Available voices: 8 professional voices")
     else:
-        print("🎤 Voice: Edge-TTS (FREE)")
-        print("⚠️  Kokoro TTS not available")
+        print("⚠️  Inworld AI not initialized - set INWORLD_API_KEY")
     
     print("🎨 Images: Pollinations AI + FLUX.1 Schnell (HIGH QUALITY, FREE)")
     print("📝 Script: Gemini AI with Templates")
