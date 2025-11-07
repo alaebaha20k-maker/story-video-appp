@@ -1,0 +1,138 @@
+"""
+🎨 ULTRA IMAGE GENERATOR - Professional quality, all styles
+"""
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+import requests
+import time
+from typing import List, Dict, Optional
+
+from src.ai.ultra_image_prompts import create_prompt_builder
+from src.utils.file_handler import file_handler
+from src.utils.logger import logger
+
+
+class UltraImageGenerator:
+    """Generate professional images with multiple styles"""
+    
+    def __init__(self, image_style: str = "cinematic_film", story_type: str = "scary_horror"):
+        self.prompt_builder = create_prompt_builder(image_style, story_type)
+        self.image_style = image_style
+        self.story_type = story_type
+    
+    def register_characters(self, characters: Dict[str, str]):
+        """Register characters for consistency"""
+        for name, description in characters.items():
+            self.prompt_builder.register_character(name, description)
+    
+    def generate_scene_image(
+        self,
+        scene_description: str,
+        scene_number: int,
+        scene_type: str = "establishing",
+        characters: List[str] = None
+    ) -> Optional[Dict]:
+        """Generate single scene image"""
+        
+        # Build professional prompt
+        prompt_data = self.prompt_builder.build_scene_prompt(
+            scene_description,
+            scene_type,
+            characters
+        )
+        
+        logger.info(f"   Generating scene {scene_number} ({scene_type})...")
+        
+        # Try Pollinations (free, fast)
+        try:
+            url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt_data['prompt'])}"
+            
+            response = requests.get(url, timeout=60)
+            
+            if response.status_code == 200:
+                filename = f"scene_{scene_number:03d}.png"
+                filepath = file_handler.save_binary(
+                    response.content,
+                    filename,
+                    file_handler.temp_dir
+                )
+                
+                logger.success(f"      ✅ Generated: {filename}")
+                
+                return {
+                    "filepath": str(filepath),
+                    "scene_number": scene_number,
+                    "prompt": prompt_data['prompt'],
+                    "style": self.image_style
+                }
+        
+        except Exception as e:
+            logger.error(f"      ❌ Failed: {e}")
+        
+        return None
+    
+    def generate_batch(
+        self,
+        scenes: List[Dict],
+        characters: Dict[str, str] = None
+    ) -> List[Dict]:
+        """Generate images for all scenes"""
+        
+        logger.info(f"🎨 Generating {len(scenes)} images...")
+        logger.info(f"   Style: {self.image_style}")
+        logger.info(f"   Niche: {self.story_type}")
+        
+        # Register characters
+        if characters:
+            self.register_characters(characters)
+            logger.info(f"   Characters: {', '.join(characters.keys())}")
+        
+        images = []
+        
+        for scene in scenes:
+            # Determine scene type from description
+            desc_lower = scene.get('image_description', '').lower()
+            
+            if 'character' in desc_lower or 'face' in desc_lower:
+                scene_type = 'character_closeup'
+            elif 'location' in desc_lower or 'establishing' in desc_lower:
+                scene_type = 'establishing'
+            elif 'action' in desc_lower or 'running' in desc_lower:
+                scene_type = 'action'
+            elif 'detail' in desc_lower or 'close' in desc_lower:
+                scene_type = 'detail'
+            else:
+                scene_type = 'atmospheric'
+            
+            # Extract character names from scene
+            scene_chars = []
+            if characters:
+                for char_name in characters.keys():
+                    if char_name.lower() in scene.get('content', '').lower():
+                        scene_chars.append(char_name)
+            
+            # Generate image
+            image_data = self.generate_scene_image(
+                scene.get('image_description', scene.get('content', 'scene')),
+                scene.get('scene_number', len(images) + 1),
+                scene_type,
+                scene_chars if scene_chars else None
+            )
+            
+            if image_data:
+                images.append(image_data)
+            
+            time.sleep(1)  # Rate limiting
+        
+        logger.success(f"✅ Generated {len(images)}/{len(scenes)} images")
+        
+        return images
+
+
+# Quick function
+def create_image_generator(image_style: str, story_type: str) -> UltraImageGenerator:
+    """Create image generator with chosen styles"""
+    return UltraImageGenerator(image_style, story_type)

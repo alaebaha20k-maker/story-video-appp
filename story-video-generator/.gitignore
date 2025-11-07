@@ -1,0 +1,14 @@
+﻿__pycache__/
+*.py[cod]
+.Python
+env/
+venv/
+.env
+*.key
+output/videos/*.mp4
+output/temp/*
+cache/*
+.vscode/
+.idea/
+.DS_Store
+*.log
