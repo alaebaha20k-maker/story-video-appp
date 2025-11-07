@@ -62,54 +62,41 @@ def sanitize_filename(filename):
     return filename[:50]
 
 
-def get_voice_engine_and_id(voice_engine=None, voice_id=None):
-    """
-    Determine which voice engine to use and map voice ID
-    Returns: (engine, voice_id)
-    """
-    # Default to kokoro if available
-    if voice_engine is None:
-        voice_engine = "kokoro" if kokoro_tts else "edge"
+def get_voice_id(voice_id=None):
+    """Get Inworld AI voice ID - maps old voice names to Inworld voices"""
     
-    # If kokoro requested but not available, fallback to edge
-    if voice_engine == "kokoro" and not kokoro_tts:
-        print("⚠️ Kokoro not available, falling back to Edge-TTS")
-        voice_engine = "edge"
+    # Map common voice names to Inworld voices
+    voice_map = {
+        # Old Kokoro voices
+        'af_bella': 'ashley',
+        'af_sarah': 'sarah',
+        'af_nicole': 'emma',
+        'af_sky': 'emma',
+        'am_adam': 'brian',
+        'am_michael': 'david',
+        'bf_emma': 'rachel',
+        'bm_george': 'john',
+        # Old Edge-TTS voices
+        'en-US-AriaNeural': 'ashley',
+        'en-US-GuyNeural': 'brian',
+        'en-US-JennyNeural': 'emma',
+        'en-GB-RyanNeural': 'john',
+        # Generic names
+        'male_narrator_deep': 'john',
+        'female_narrator': 'ashley',
+        'female_young': 'emma',
+        'narrator_male_deep': 'john',
+        'narrator_female_warm': 'sarah',
+        'narrator_british_female': 'rachel',
+    }
     
-    # Map voice IDs
-    if voice_engine == "kokoro":
-        # Map common voice names to kokoro voices
-        voice_map = {
-            'male_narrator_deep': 'am_adam',
-            'female_narrator': 'af_bella',
-            'female_young': 'af_nova',
-            'narrator_male_deep': 'am_adam',
-            'narrator_female_warm': 'af_bella',
-            'narrator_british_female': 'bf_emma',
-        }
-        
-        # Use mapping or default
-        if voice_id:
-            voice_id = voice_map.get(voice_id, voice_id)
-        else:
-            voice_id = KOKORO_SETTINGS.get("default_voice", "af_bella")
+    # Use mapping or default
+    if voice_id:
+        voice_id = voice_map.get(voice_id, voice_id)
+    else:
+        voice_id = 'ashley'  # Default to Ashley
     
-    elif voice_engine == "edge":
-        # Map to Edge-TTS voices
-        voice_map = {
-            'male_narrator_deep': 'en-US-GuyNeural',
-            'female_narrator': 'en-US-AriaNeural',
-            'female_young': 'en-US-JennyNeural',
-            'narrator_male_deep': 'en-US-GuyNeural',
-            'narrator_female_warm': 'en-US-AriaNeural',
-        }
-        
-        if voice_id:
-            voice_id = voice_map.get(voice_id, voice_id)
-        else:
-            voice_id = EDGE_TTS_SETTINGS.get("default_voice", "en-US-AriaNeural")
-    
-    return voice_engine, voice_id
+    return voice_id
 
 
 def generate_audio_inworld(text, voice="ashley", output_path="narration.mp3"):
