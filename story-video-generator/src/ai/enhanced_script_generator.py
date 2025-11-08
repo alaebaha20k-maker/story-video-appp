@@ -19,7 +19,30 @@ from src.research.fact_searcher import fact_searcher
 
 
 class EnhancedScriptGenerator:
-    """Generate high-quality scripts using example templates + research"""
+    """Generate ULTIMATE quality scripts using Gemini AI with enhanced prompts!"""
+    
+    # 🏆 EXAMPLE HOOKS - Gemini will LEARN from these and create NEW ones!
+    EXAMPLE_HOOKS = [
+        # Horror/Scary
+        "I never believed my sister could come back from the dead. Until I answered her call.",
+        "The thing wearing my father's face sat down at the dinner table. Nobody else seemed to notice.",
+        "I found my daughter's diary. The last entry was dated three years after she disappeared.",
+        
+        # Romance/Emotional
+        "I fell in love with my best friend the moment she smiled at me. Three years too late.",
+        "The letter said 'I never stopped loving you.' It arrived ten years after his funeral.",
+        "She said yes. I said nothing. Because I couldn't remember proposing.",
+        
+        # Mystery/Thriller
+        "The detective asked about my alibi. I had one. For a murder that hasn't happened yet.",
+        "Every morning I wake up, it's the same day. Except one small thing is always different.",
+        "The photo showed me at a place I've never been. With people I've never met. Yesterday.",
+        
+        # Documentary/Real
+        "What they don't teach about the pyramids changes everything we thought we knew.",
+        "I discovered a secret that's been hiding in plain sight for 4,000 years.",
+        "The evidence was always there. We just weren't looking at it correctly.",
+    ]
     
     def __init__(self):
         api_key = api_manager.get_key('gemini')
@@ -30,13 +53,17 @@ class EnhancedScriptGenerator:
         self.model = genai.GenerativeModel(
             model_name=GEMINI_SETTINGS['model'],
             generation_config={
-                "temperature": 0.75,  # ✅ Reduced for more consistent quality (was 0.85)
-                "top_p": 0.92,  # ✅ Tighter control for better coherence
-                "top_k": 50,  # ✅ Increased for better vocabulary variety
-                "max_output_tokens": 16384,  # ✅ Doubled for longer, detailed scripts
+                "temperature": 0.75,  # ✅ Balanced creativity
+                "top_p": 0.92,  # ✅ Tighter control for coherence
+                "top_k": 50,  # ✅ Better vocabulary variety
+                "max_output_tokens": 16384,  # ✅ Support 60-min scripts!
             }
         )
         self.character_names = []
+        
+        print(f"🏆 Enhanced Script Generator (Gemini) initialized")
+        print(f"   Using: Gemini AI with ULTIMATE prompts!")
+        print(f"   Hook generation: INTELLIGENT (learns from examples!)")
     
     def generate_with_template(
         self,
@@ -132,26 +159,63 @@ class EnhancedScriptGenerator:
         duration_minutes: int,
         num_scenes: int
     ) -> str:
-        """Build prompt that uses template structure"""
+        """Build ULTIMATE quality prompt with intelligent hook learning!"""
         
-        target_words = duration_minutes * 200  # ~200 words per minute
+        # ✅ Perfect timing: 150 words per minute (voice narration speed!)
+        target_words = duration_minutes * 150
         
-        # Base prompt
-        prompt = f"""You are a world-class scriptwriter creating a {style['name']} story.
+        # Get example hooks for Gemini to LEARN from
+        example_hooks_text = '\n'.join([f"   • {hook}" for hook in self.EXAMPLE_HOOKS])
+        
+        # Extract style values safely
+        style_name = style.get('name', 'story')
+        style_desc = style.get('description', 'engaging narrative')
+        style_tone = style.get('tone', 'compelling')
+        style_pacing = style.get('pacing', 'medium')
+        
+        # Base prompt with ULTIMATE quality requirements!
+        prompt = f"""You are a MASTER storyteller creating a {style_name} for professional YouTube videos.
 
-🎯 MISSION: Generate a compelling {duration_minutes}-minute script about: {topic}
+🎯 CRITICAL REQUIREMENTS:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 STORY REQUIREMENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC: {topic}
+DURATION: {duration_minutes} minutes
+TARGET: EXACTLY {target_words} words (150 words per minute of narration)
+SCENES: {num_scenes} distinct visual scenes
+TYPE: {style_desc}
+TONE: {style_tone}
+PACING: {style_pacing}
 
-Target: {target_words} words EXACTLY
-Type: {style['description']}
-Tone: {style['tone']}
-Pacing: {style['pacing']}
-Scenes: {num_scenes}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔥 INTELLIGENT HOOK CREATION (First 20-30 words):
+
+STUDY these example hooks to LEARN the pattern (DON'T COPY!):
+
+{example_hooks_text}
+
+ANALYZE what makes these hooks powerful:
+✅ Create immediate intrigue (viewers MUST know more)
+✅ Use CONTRAST or TWIST ("I believed X, then Y happened")
+✅ Raise questions that NEED answers
+✅ Specific and CONCRETE (not vague)
+✅ Create emotional connection
+✅ Promise a story worth watching
+
+NOW create a COMPLETELY NEW, ORIGINAL hook for "{topic}":
+
+Your hook MUST be:
+✅ 100% UNIQUE (NOT from examples - create something NEW!)
+✅ PERFECTLY matched to topic: {topic}
+✅ {style_name} tone and style
+✅ INSTANTLY attention-grabbing
+✅ Create curiosity viewers CAN'T resist
+✅ Specific, concrete details (not generic)
+✅ Emotionally compelling
+
+CRITICAL: Learn the STYLE from examples, create ORIGINAL content!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
         
         # Add research if available
@@ -198,75 +262,115 @@ Scenes: {num_scenes}
 
 """
         
-        # Add enhanced writing rules for 10/10 quality
-        prompt += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # Add ULTIMATE writing rules for 10/10 quality
+        prompt += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✍️ PROFESSIONAL SCRIPTWRITING RULES (10/10 QUALITY!)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎬 NARRATIVE REQUIREMENTS:
-✅ PRESENT TENSE ONLY ("She runs" not "She ran")
-✅ FIRST PERSON for emotional connection (use "I", "my", "me")
+🎬 NARRATIVE EXCELLENCE:
+✅ PRESENT TENSE ONLY ("I walk" not "I walked")
+✅ FIRST PERSON for immersion ("I", "my", "me", "I'm")
 ✅ SHOW DON'T TELL ("my hands trembled" not "I was scared")
-✅ USE ALL 5 SENSES (what I see, hear, smell, taste, feel)
+✅ USE ALL 5 SENSES in EVERY paragraph!
+   - What I SEE (visual details)
+   - What I HEAR (sounds, voices)
+   - What I SMELL (scents, odors)
+   - What I TASTE (if relevant)
+   - What I FEEL/TOUCH (textures, sensations)
 ✅ SPECIFIC DETAILS > VAGUE ("my father's rusty 1987 Ford F-150" not "a truck")
-✅ ACTIVE VOICE (not passive voice)
+✅ ACTIVE VOICE (not passive)
 ✅ NO LABELS, NO HEADERS, NO METADATA
 ✅ DIALOGUE WITH CONTRACTIONS ("don't", "can't", "I'm")
 
-🎭 EMOTIONAL DEPTH (CRITICAL!):
-✅ INTERNAL THOUGHTS - Show character's mind
-✅ VISCERAL REACTIONS - Physical sensations of emotion
-✅ SUBTEXT - What's unsaid is as important as what's said
-✅ MICRO-DETAILS - Small observations that reveal character
-✅ EMOTIONAL BEATS - Vary intensity (high → low → higher)
-✅ PACING - Mix short punchy sentences with longer flowing ones
+🎭 EMOTIONAL DEPTH (CRITICAL for YouTube!):
+✅ INTERNAL THOUGHTS - Show my mind ("I think...", "I realize...")
+✅ VISCERAL REACTIONS - Physical feelings ("heart races", "stomach churns")
+✅ SUBTEXT - What's unsaid matters ("she smiles, but her eyes are cold")
+✅ MICRO-DETAILS - Small observations reveal character
+✅ EMOTIONAL WAVES - Vary intensity (calm → tense → terrified → calm)
+✅ PACING RHYTHM - Mix sentence lengths:
+   - Short. Punchy. Dramatic.
+   - Longer flowing sentences that build momentum and carry emotion forward.
+   - Then back to short. Impact.
 
-🎨 SCENE DESCRIPTIONS FOR IMAGES ({num_scenes} scenes):
-✅ After each major story beat, add: IMAGE: [detailed visual description]
-✅ Image descriptions must be:
-   - VIVID and SPECIFIC
-   - Include LIGHTING, MOOD, COMPOSITION
-   - Describe CHARACTERS, SETTING, ACTION
-   - Use CINEMATIC language
-   - 15-30 words per image description
+💬 DIALOGUE MASTERY:
+✅ Use CONTRACTIONS ("don't", "can't", "I'm", "won't")
+✅ REALISTIC speech patterns (people don't talk in perfect sentences)
+✅ SUBTEXT (dialogue says one thing, means another)
+✅ CHARACTER VOICE (each person talks differently)
 
-EXAMPLE FORMAT:
-[Story text]... She opens the door slowly, heart pounding.
+🎨 VISUAL STORYTELLING ({num_scenes} UNIQUE scenes):
+✅ EMBED {num_scenes} IMAGE: descriptions throughout story
+✅ Place IMAGE after each major story beat
+✅ Each IMAGE must be:
+   - 20-30 words
+   - UNIQUE visuals (never repeat!)
+   - SPECIFIC details (exact lighting, objects, actions)
+   - CINEMATIC language
+   - VARIED compositions (wide, close-up, dramatic, etc.)
 
-IMAGE: Woman's trembling hand on old brass doorknob, dim hallway behind, shadows stretching, eerie silence, cinematic lighting, close-up shot, suspenseful atmosphere.
+Vary shot types across {num_scenes} scenes:
+1. Wide establishing shot (set the scene)
+2. Medium close-up (introduce character)
+3. Dramatic angle (build interest)
+4. Intimate close-up (emotional moment)
+5. Environmental wide (world detail)
+6. Character focus (development)
+7. Detail shot (important object)
+8. Tension shot (increasing stakes)
+9. Climactic shot (peak moment)
+10. Resolution shot (ending)
 
-[Continue story]...
+EXAMPLE IMAGE FORMAT:
+IMAGE: Woman's trembling hand on old brass doorknob, dim hallway behind with shadows stretching, eerie silence, single flickering bulb overhead, horror atmosphere, close-up shot, cinematic lighting, suspenseful mood, high detail.
 
-🎯 QUALITY TARGETS:
-✅ Emotional impact: 10/10
-✅ Character depth: 10/10  
-✅ Visual imagery: 10/10
-✅ Pacing & rhythm: 10/10
-✅ Dialogue authenticity: 10/10
-✅ Sensory details: 10/10
-✅ Plot coherence: 10/10
-✅ Satisfying ending: 10/10
+🎯 QUALITY TARGETS (10/10!):
+✅ Emotional impact: 10/10 (MAXIMUM engagement!)
+✅ Character depth: 10/10 (Complex, relatable)
+✅ Visual imagery: 10/10 (All 5 senses constantly!)
+✅ Pacing & rhythm: 10/10 (Professional variation)
+✅ Dialogue authenticity: 10/10 (Sounds real)
+✅ Sensory immersion: 10/10 (Reader feels they're there)
+✅ Plot coherence: 10/10 (No holes, perfect flow)
+✅ Satisfying ending: 10/10 (Emotional payoff)
 
-⚡ VOICE OPTIMIZATION:
-✅ Write for spoken delivery (read-aloud test)
-✅ Use RHYTHM - vary sentence length
-✅ Add PAUSES with periods or commas
-✅ Build to CRESCENDOS for impact
-✅ Use REPETITION strategically for emphasis
-✅ Include MOMENTS OF SILENCE (short sentences)
+⚡ VOICE OPTIMIZATION (CRITICAL!):
+✅ RHYTHM - Vary sentence length for natural speech
+✅ PAUSES - Use periods and commas strategically
+✅ CRESCENDOS - Build intensity to peaks
+✅ SILENCE - Short sentences for dramatic pauses
+✅ REPETITION - Use for emphasis ("I trusted them. I trusted them completely.")
+✅ READ-ALOUD TEST - Every sentence must sound natural when spoken
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎯 YOUR MISSION: Write EXACTLY {target_words} words of EXTRAORDINARY quality!
+🎯 YOUR MISSION:
 
-REQUIREMENTS:
-- {num_scenes} IMAGE: descriptions embedded throughout
-- Present tense, first person
-- Emotional, visceral, engaging
-- Perfect for voice narration
-- Vivid visual scenes for video
+Write EXACTLY {target_words} words of EXTRAORDINARY quality!
 
-Generate the complete script NOW (no preamble, no commentary):"""
+MANDATORY REQUIREMENTS:
+✅ {num_scenes} IMAGE: descriptions embedded (one after each major beat)
+✅ Present tense, first person throughout
+✅ All 5 senses in EVERY paragraph
+✅ Emotional, visceral, deeply engaging
+✅ Perfect for voice narration (read-aloud friendly)
+✅ Vivid, unique visual scenes for each IMAGE
+✅ Hook that IMMEDIATELY grabs attention
+✅ Satisfying, memorable ending
+✅ Professional story structure (Hook → Setup → Rise → Climax → Resolution)
+
+🏆 QUALITY GOAL: Create a script so good that:
+- Viewers can't stop watching
+- They FEEL the emotions
+- They SEE the scenes in their mind
+- They remember it after watching
+- They share it with others
+- They subscribe for more
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Generate the complete {target_words}-word script NOW.
+NO preamble, NO commentary, NO explanations - JUST the story!"""
         
         return prompt
     
