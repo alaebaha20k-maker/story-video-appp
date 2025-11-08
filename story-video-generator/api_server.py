@@ -294,16 +294,27 @@ def generate_video_background(data):
         )
         
         audio_duration = get_audio_duration(audio_path)
-        print(f"   ✅ Audio: {audio_duration:.1f} seconds")
+        print(f"   ✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
         
-        # Calculate durations
+        # Calculate durations - MATCH VIDEO TO AUDIO!
         time_per_image = audio_duration / len(image_paths) if image_paths else 5
         durations = [time_per_image] * len(image_paths)
+        
+        # Debug: Show calculation
+        print(f"   🔧 Image timing:")
+        print(f"      Images: {len(image_paths)}")
+        print(f"      Duration per image: {time_per_image:.1f}s")
+        print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} minutes)")
         
         # Video
         progress_state['status'] = 'Compiling video...'
         progress_state['progress'] = 80
         print("🎬 Step 4/4: Compiling video...")
+        print(f"   📋 Effects requested:")
+        print(f"      Zoom: {zoom_effect}")
+        print(f"      Color Filter: {color_filter}")
+        print(f"      Visual Effects: {visual_effects_enabled}")
+        print(f"      Captions: {auto_captions_enabled}")
         
         compiler = FFmpegCompiler()
         safe_topic = sanitize_filename(data.get('topic', 'video'))
@@ -459,7 +470,7 @@ def generate_with_template_background(topic, story_type, template, research_data
         )
         
         audio_duration = get_audio_duration(audio_path)
-        print(f"✅ Audio: {audio_duration:.1f} seconds")
+        print(f"✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
         
         # ✅ SRT Subtitle Generation (if enabled)
         srt_path = None
@@ -500,6 +511,15 @@ def generate_with_template_background(topic, story_type, template, research_data
         
         time_per_image = audio_duration / len(image_paths) if image_paths else 5
         durations = [time_per_image] * len(image_paths)
+        
+        # Debug: Show timing calculation
+        print(f"   🔧 Video timing:")
+        print(f"      Images: {len(image_paths)}")
+        print(f"      Duration per image: {time_per_image:.1f}s")
+        print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} minutes)")
+        print(f"      Audio duration: {audio_duration:.1f}s ({audio_duration/60:.1f} minutes)")
+        if abs(sum(durations) - audio_duration) > 1:
+            print(f"   ⚠️  WARNING: Video/audio duration mismatch!")
         
         video_path = compiler.create_video(
             image_paths,

@@ -155,11 +155,34 @@ class InworldTTS:
                 future = executor.submit(self._generate_chunk, chunk, voice_name, i)
                 futures.append(future)
             
-            # Wait for all chunks to complete
-            chunk_audios = [f.result() for f in futures]
+            # Wait for all chunks to complete and verify we got them all
+            chunk_audios = []
+            failed_chunks = []
+            
+            for i, future in enumerate(futures):
+                try:
+                    chunk_data = future.result(timeout=180)  # 3-minute timeout per chunk
+                    if chunk_data and len(chunk_data) > 0:
+                        chunk_audios.append(chunk_data)
+                    else:
+                        print(f"   ❌ Chunk {i} returned empty data!")
+                        failed_chunks.append(i)
+                except Exception as e:
+                    print(f"   ❌ Chunk {i} completely failed: {e}")
+                    failed_chunks.append(i)
+            
+            # Verify we got all chunks
+            if failed_chunks:
+                print(f"   ⚠️  WARNING: {len(failed_chunks)} chunks failed: {failed_chunks}")
+                print(f"   ⚠️  Audio will be INCOMPLETE! Got {len(chunk_audios)}/{len(chunks)} chunks")
+            else:
+                print(f"   ✅ All {len(chunk_audios)} chunks generated successfully!")
         
         # Concatenate all audio chunks (raw binary concatenation for MP3)
         combined_audio = b''.join(chunk_audios)
+        
+        if len(combined_audio) == 0:
+            raise Exception("❌ No audio data generated! All chunks failed!")
         
         # Default output path
         if output_path is None:

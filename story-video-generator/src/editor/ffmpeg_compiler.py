@@ -37,8 +37,10 @@ class FFmpegCompiler:
         
         # Add zoom effect if enabled
         if zoom_effect:
-            # Simple constant zoom (Ken Burns style) - FAST
-            filters.append("zoompan=z='min(zoom+0.0015,1.05)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080")
+            # Ken Burns zoom effect - smooth zoom in on all images
+            # d=duration in frames (24fps), s=output size
+            filters.append("zoompan=z='min(zoom+0.0015,1.05)':d=25*10:s=1920x1080")
+            print(f"   ✅ Zoom effect enabled: Ken Burns style")
         
         # Add color filter if specified
         if color_filter and color_filter != 'none':
@@ -75,6 +77,10 @@ class FFmpegCompiler:
         # Join all filters
         filter_string = ','.join(filters)
         
+        # Debug: Print full filter chain
+        print(f"   🔧 Filter chain: {filter_string[:200]}...")
+        print(f"   🔧 Total filters: {len(filters)}")
+        
         # FFmpeg command - OPTIMIZED for CPU speed with filters
         cmd = [
             'ffmpeg',
@@ -89,11 +95,12 @@ class FFmpegCompiler:
             '-threads', '0',  # Use all available CPU threads
             '-c:a', 'aac',
             '-b:a', '192k',  # Good audio bitrate
-            '-shortest',
+            '-shortest',  # Match shortest stream (audio or video)
             '-y',
             str(output_path)
         ]
         
+        print(f"   🔧 Running FFmpeg with -shortest flag (matches audio duration)")
         subprocess.run(cmd, check=True)
         concat_file.unlink()
         
