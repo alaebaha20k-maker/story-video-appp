@@ -166,16 +166,28 @@ class UltraImageGenerator:
                 futures.append(future)
             
             # Collect results as they complete
+            failed_scenes = []
             for i, future in enumerate(futures):
                 try:
-                    image_data = future.result(timeout=240)  # 4-minute timeout per image (FLUX.1 Schnell can be slow!)
+                    image_data = future.result(timeout=240)  # 4-minute timeout per image
                     if image_data:
                         images.append(image_data)
+                        logger.info(f"      ✅ Image {i+1}/{len(scenes)}: {image_data['filepath']}")
+                    else:
+                        logger.error(f"      ❌ Scene {i+1} returned None!")
+                        failed_scenes.append(i)
                 except Exception as e:
                     logger.error(f"      ❌ Scene {i+1} failed: {e}")
+                    failed_scenes.append(i)
         
         duration = time.time() - start_time
         logger.success(f"✅ Generated {len(images)}/{len(scenes)} images in {duration:.1f}s ⚡")
+        
+        # 🚨 CRITICAL: If we don't have enough images, something is WRONG!
+        if len(images) < len(scenes):
+            logger.error(f"   ⚠️  WARNING: Only {len(images)}/{len(scenes)} images generated!")
+            logger.error(f"   Failed scenes: {failed_scenes}")
+            logger.error(f"   This will cause video to have repeated images!")
         
         # Only show average if we generated images
         if len(images) > 0:

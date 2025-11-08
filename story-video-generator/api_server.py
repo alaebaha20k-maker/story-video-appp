@@ -262,6 +262,10 @@ def generate_video_background(data):
         image_paths = [Path(img['filepath']) for img in images if img]
         
         print(f"   ✅ Images: {len(image_paths)} generated")
+        print(f"   🔍 DEBUG: Image paths:")
+        for i, img_path in enumerate(image_paths):
+            exists = "EXISTS" if img_path.exists() else "MISSING!"
+            print(f"      Image {i+1}: {img_path.name} - {exists}")
         
         # Voice Generation - Edge-TTS
         progress_state['status'] = 'Generating voice with Edge-TTS...'
@@ -437,6 +441,10 @@ def generate_with_template_background(topic, story_type, template, research_data
         image_paths = [Path(img['filepath']) for img in images if img]
         
         print(f"✅ Generated {len(image_paths)} images")
+        print(f"   🔍 DEBUG: Image paths:")
+        for i, img_path in enumerate(image_paths):
+            exists = "EXISTS" if img_path.exists() else "MISSING!"
+            print(f"      Image {i+1}: {img_path.name} - {exists}")
         
         progress_state['progress'] = 70
         progress_state['status'] = 'generating_voice_edge'
