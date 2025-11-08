@@ -83,7 +83,7 @@ class UltimateScriptGenerator:
         
         logger.info(f"🏆 Generating ULTIMATE script with Claude Sonnet 4")
         logger.info(f"   Topic: {topic}")
-        logger.info(f"   Type: {style['name']}")
+        logger.info(f"   Type: {style_name}")
         logger.info(f"   Duration: {duration_minutes} minutes")
         logger.info(f"   Scenes: {num_scenes}")
         logger.info(f"   Template: {template is not None}")
@@ -178,8 +178,14 @@ class UltimateScriptGenerator:
         # Get example hooks for Claude to LEARN from (not copy!)
         example_hooks_text = '\n'.join([f"   • {hook}" for hook in self.EXAMPLE_HOOKS])
         
+        # Extract style values BEFORE f-string (avoid bracket issues!)
+        style_name = style.get('name', 'story')
+        style_desc = style.get('description', 'engaging narrative')
+        style_tone = style.get('tone', 'compelling')
+        style_pacing = style.get('pacing', 'medium')
+        
         # Base prompt for Claude Sonnet 4
-        prompt = f"""You are a MASTER storyteller creating a {style['name']} for a professional YouTube video.
+        prompt = f"""You are a MASTER storyteller creating a {style_name} for a professional YouTube video.
 
 🎯 CRITICAL REQUIREMENTS:
 
@@ -187,9 +193,9 @@ TOPIC: {topic}
 DURATION: {duration_minutes} minutes
 TARGET: EXACTLY {target_words} words (150 words per minute of narration)
 SCENES: {num_scenes} distinct visual scenes
-TYPE: {style['description']}
+TYPE: {style_desc}
 TONE: {style['tone'}}
-PACING: {style['pacing']}
+PACING: {style_pacing}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -212,7 +218,7 @@ NOW create a COMPLETELY NEW, ORIGINAL hook for "{topic}":
 Your hook MUST be:
 ✅ 100% UNIQUE (NOT from examples - create something NEW!)
 ✅ PERFECTLY matched to topic: {topic}
-✅ {style['name']} tone and style
+✅ {style_name} tone and style
 ✅ INSTANTLY attention-grabbing
 ✅ Create curiosity viewers CAN'T resist
 ✅ Specific, concrete details (not generic)
@@ -487,7 +493,7 @@ NO preamble, NO commentary, NO explanations - JUST the story!"""
                 scene_text = ' '.join(paragraphs[start_idx:end_idx])[:300]
                 
                 # Create rich description
-                description = self._create_image_description(scene_text, i + 1, style['name'] if 'style' in locals() else 'story')
+                description = self._create_image_description(scene_text, i + 1, style_name if 'style' in locals() else 'story')
                 
                 scenes.append({
                     'scene_number': i + 1,
