@@ -28,6 +28,7 @@ from src.ai.enhanced_script_generator import enhanced_script_generator
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
 from src.voice.inworld_tts import create_inworld_tts
+from src.voice.elevenlabs_tts import create_elevenlabs_tts
 
 app = Flask(__name__)
 
@@ -58,6 +59,23 @@ except Exception as e:
     print(f"❌ Failed to initialize Inworld AI TTS: {e}")
     print(f"   This will cause voice generation to fail!")
     inworld_tts = None
+
+# ═══════════════════════════════════════════════════════════════
+# 🎤 ELEVENLABS TTS - HUMAN-LIKE VOICES FOR YOUTUBE!
+# ═══════════════════════════════════════════════════════════════
+
+print(f"\n🔧 Initializing ElevenLabs TTS (YouTube-Quality)...")
+
+elevenlabs_tts = None
+try:
+    elevenlabs_tts = create_elevenlabs_tts()
+    print("✅ ElevenLabs TTS initialized successfully!")
+    print("   🎬 Human-like voices ready for YouTube!")
+except Exception as e:
+    print(f"⚠️  ElevenLabs TTS not initialized: {e}")
+    print(f"   Get FREE API key: https://elevenlabs.io/")
+    print(f"   Set ELEVENLABS_API_KEY in .env file")
+    elevenlabs_tts = None
 
 # ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
@@ -147,6 +165,45 @@ def generate_audio_inworld(text, voice="Ashley", output_path="narration.mp3"):
         print(f"   3. API endpoint wrong")
         print(f"   4. Network/firewall blocking API")
         print(f"   5. API rate limiting")
+        print(f"{'='*60}\n")
+        raise
+
+
+def generate_audio_elevenlabs(text, voice="adam", output_path="narration.mp3"):
+    """✅ Generate HUMAN-LIKE audio using ElevenLabs - PERFECT FOR YOUTUBE!"""
+    try:
+        if not elevenlabs_tts:
+            raise RuntimeError("❌ ElevenLabs TTS not initialized! Set ELEVENLABS_API_KEY in .env")
+        
+        print(f"\n🎤 Generating HUMAN-LIKE audio with ElevenLabs...")
+        print(f"   Voice: {voice.title()}")
+        print(f"   Text length: {len(text)} characters")
+        print(f"   Output path: {output_path}")
+        print(f"   🎬 YouTube-quality voice generation!")
+        
+        # Generate audio
+        audio_path = elevenlabs_tts.generate_audio(
+            text=text,
+            voice=voice.lower(),  # ElevenLabs uses lowercase IDs
+            output_path=str(output_path)
+        )
+        
+        print(f"✅ ElevenLabs generation SUCCESS!")
+        print(f"   🎬 Voice sounds 99% HUMAN - perfect for YouTube!")
+        return audio_path
+        
+    except Exception as e:
+        print(f"\n{'='*60}")
+        print(f"❌ ELEVENLABS GENERATION FAILED!")
+        print(f"{'='*60}")
+        print(f"Error: {e}")
+        print(f"Voice: {voice}")
+        print(f"Text length: {len(text)}")
+        print(f"\n💡 Solutions:")
+        print(f"   1. Get FREE API key: https://elevenlabs.io/")
+        print(f"   2. Add to .env: ELEVENLABS_API_KEY=your_key_here")
+        print(f"   3. Check your quota (FREE tier = 10 min/month)")
+        print(f"   4. Try a different voice: adam, bella, josh, etc.")
         print(f"{'='*60}\n")
         raise
 
