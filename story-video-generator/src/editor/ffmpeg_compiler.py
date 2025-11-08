@@ -45,18 +45,18 @@ class FFmpegCompiler:
             total_duration = sum(durations)
             total_frames = int(total_duration * 24)  # 24fps
             
-            # FAST DRAMATIC ZOOM formula:
+            # ✅ SUPER DRAMATIC ZOOM formula:
             # - Starts at zoom=1.0 (normal)
-            # - Ends at zoom=1.15 (15% dramatic zoom!)
+            # - Ends at zoom=1.30 (30% DRAMATIC zoom!)
             # - Speed auto-adjusts: slow for long images, visible for short images
             # - Applies continuously for FULL video (all images!)
             
-            zoom_filter = f"zoompan=z='min(1+on*0.00010417,1.15)':d={total_frames}:s=1920x1080"
-            # 0.00010417 = reaches 1.15 zoom over full duration smoothly
+            zoom_filter = f"zoompan=z='min(1+on*0.000208333,1.30)':d={total_frames}:s=1920x1080"
+            # 0.000208333 = reaches 1.30 zoom (30%!) over full duration
             
             filters.append(zoom_filter)
-            print(f"   ✅ ZOOM: Fast dramatic zoom on ALL {len(image_paths)} images")
-            print(f"   🔧 Duration: {total_duration:.1f}s - zoom happens throughout FULL video!")
+            print(f"   ✅ ZOOM: SUPER DRAMATIC 30% zoom on ALL {len(image_paths)} images!")
+            print(f"   🔧 Duration: {total_duration:.1f}s - continuous zoom throughout!")
         
         # ✅ SMOOTH TRANSITIONS - Fade between images
         # Using format filter to add fade in/out on all images
