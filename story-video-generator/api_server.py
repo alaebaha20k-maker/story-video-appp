@@ -294,7 +294,14 @@ def generate_video_background(data):
         print(f"      Images: {len(image_paths)}")
         print(f"      Duration per image: {time_per_image:.1f}s")
         print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} minutes)")
-        
+
+        # Get optional filters, effects, and captions from request (BEFORE using them!)
+        color_filter = data.get('color_filter', 'none')
+        zoom_effect = data.get('zoom_effect', True)  # Enable zoom by default
+        visual_effects_enabled = data.get('visual_effects', False)  # 🔥 NEW: Fire, smoke, particles!
+        caption = data.get('caption')  # Dict with text, style, position, etc.
+        auto_captions_enabled = data.get('auto_captions', False)
+
         # Video
         progress_state['status'] = 'Compiling video...'
         progress_state['progress'] = 80
@@ -304,16 +311,10 @@ def generate_video_background(data):
         print(f"      Color Filter: {color_filter}")
         print(f"      Visual Effects: {visual_effects_enabled}")
         print(f"      Captions: {auto_captions_enabled}")
-        
+
         compiler = FFmpegCompiler()
         safe_topic = sanitize_filename(data.get('topic', 'video'))
         output_filename = f"{safe_topic}_video.mp4"
-        
-        # Get optional filters, effects, and captions from request
-        color_filter = data.get('color_filter', 'none')
-        zoom_effect = data.get('zoom_effect', False)
-        visual_effects_enabled = data.get('visual_effects', False)  # 🔥 NEW: Fire, smoke, particles!
-        caption = data.get('caption')  # Dict with text, style, position, etc.
         
         # ✅ NEW: SRT Subtitle Generation (unlimited captions for ANY video length!)
         srt_enabled = data.get('srt_subtitles', False)
