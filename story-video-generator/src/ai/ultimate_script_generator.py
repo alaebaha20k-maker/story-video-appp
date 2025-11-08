@@ -194,7 +194,7 @@ DURATION: {duration_minutes} minutes
 TARGET: EXACTLY {target_words} words (150 words per minute of narration)
 SCENES: {num_scenes} distinct visual scenes
 TYPE: {style_desc}
-TONE: {style['tone'}}
+TONE: {style_tone}
 PACING: {style_pacing}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
