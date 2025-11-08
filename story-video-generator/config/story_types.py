@@ -9,7 +9,10 @@ STORY_TYPES = {
         "description": "Stories that touch the heart and inspire",
         "tone": "warm, uplifting, inspiring, hopeful",
         "pacing": "medium, building to emotional climax",
-        "example": "A stranger's small act of kindness changes everything"
+        "example": "A stranger's small act of kindness changes everything",
+        "voice_style": "gentle, warm, sincere delivery with emotional peaks",
+        "visual_style": "soft lighting, warm colors, intimate moments, heartfelt expressions",
+        "key_elements": ["personal growth", "human connection", "hope", "redemption", "kindness"]
     },
     
     "scary_horror": {
@@ -17,7 +20,10 @@ STORY_TYPES = {
         "description": "Terrifying stories that keep you up at night",
         "tone": "dark, ominous, tense, unsettling",
         "pacing": "slow burn tension, sudden shocks",
-        "example": "They thought they were alone in the house. They were wrong."
+        "example": "They thought they were alone in the house. They were wrong.",
+        "voice_style": "suspenseful whispers, sudden intensity, building dread",
+        "visual_style": "dark shadows, eerie lighting, unsettling angles, horror atmosphere",
+        "key_elements": ["creeping dread", "jump scares", "supernatural terror", "isolation", "the unknown"]
     },
     
     "surprising_twist": {
@@ -50,7 +56,10 @@ STORY_TYPES = {
         "description": "Real criminal cases and investigations",
         "tone": "investigative, serious, factual, gripping",
         "pacing": "methodical buildup, shocking revelations",
-        "example": "The detective thought it was routine. The evidence proved otherwise."
+        "example": "The detective thought it was routine. The evidence proved otherwise.",
+        "voice_style": "investigative tone, suspenseful delivery, factual but gripping",
+        "visual_style": "crime scene aesthetic, noir lighting, investigation atmosphere, evidence close-ups",
+        "key_elements": ["investigation", "clues", "suspects", "justice", "shocking truths"]
     },
     
     "mystery_thriller": {
@@ -66,7 +75,10 @@ STORY_TYPES = {
         "description": "Real events from history told dramatically",
         "tone": "authoritative, educational, dramatic, factual",
         "pacing": "narrative documentary style",
-        "example": "What history books left out changes everything"
+        "example": "What history books left out changes everything",
+        "voice_style": "authoritative narrator, clear enunciation, dramatic pauses for impact",
+        "visual_style": "period-appropriate imagery, archival aesthetic, dramatic historical recreation",
+        "key_elements": ["historical accuracy", "compelling facts", "human drama", "context", "revelations"]
     },
     
     "supernatural_paranormal": {
@@ -114,7 +126,10 @@ STORY_TYPES = {
         "description": "Love stories that captivate",
         "tone": "passionate, tender, emotional, intimate",
         "pacing": "emotional buildup, romantic climax",
-        "example": "Two strangers. One moment. Changed everything forever."
+        "example": "Two strangers. One moment. Changed everything forever.",
+        "voice_style": "intimate, tender, heartfelt with romantic crescendos",
+        "visual_style": "soft focus, golden hour lighting, intimate close-ups, romantic atmosphere",
+        "key_elements": ["first meetings", "chemistry", "vulnerability", "passion", "connection"]
     },
     
     "war_military": {
