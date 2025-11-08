@@ -121,7 +121,7 @@ class InworldTTS:
             'modelId': self.model_id
         }
         
-        response = requests.post(self.api_url, json=payload, headers=headers, timeout=30)
+        response = requests.post(self.api_url, json=payload, headers=headers, timeout=120)  # 2-minute timeout for long texts
         
         if not response.ok:
             raise Exception(f"Inworld API error: {response.status_code} - {response.text}")
@@ -140,14 +140,16 @@ class InworldTTS:
         print(f"   🚀 Text is long, using ULTRA-FAST parallel processing...")
         
         # Split text into chunks at sentence boundaries
-        chunks = self._split_text_smart(text, max_chars=1000)
-        print(f"   Split into {len(chunks)} chunks")
+        # ⚡ SMALLER CHUNKS for Inworld API limits (500 chars max for reliability)
+        chunks = self._split_text_smart(text, max_chars=500)
+        print(f"   Split into {len(chunks)} chunks (500 chars each for API reliability)")
         print(f"   🚀 Processing {len(chunks)} chunks in PARALLEL for 10x+ speedup...")
         
         start_time = time.time()
         
         # Generate audio for each chunk in parallel (MAXIMUM SPEED!)
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        # ⚡ INCREASED WORKERS for long videos (12 workers = can process 12 chunks at once!)
+        with ThreadPoolExecutor(max_workers=12) as executor:
             futures = []
             for i, chunk in enumerate(chunks):
                 future = executor.submit(self._generate_chunk, chunk, voice_name, i)
@@ -180,15 +182,20 @@ class InworldTTS:
     
     def _generate_chunk(self, text: str, voice_name: str, chunk_id: int) -> bytes:
         """Generate audio for a single chunk (used in parallel processing)"""
-        try:
-            audio_content = self._generate_single(text, voice_name)
-            return base64.b64decode(audio_content)
-        except Exception as e:
-            print(f"⚠️  Chunk {chunk_id} failed: {e}, retrying...")
-            # Retry once
-            time.sleep(1)
-            audio_content = self._generate_single(text, voice_name)
-            return base64.b64decode(audio_content)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                audio_content = self._generate_single(text, voice_name)
+                if attempt > 0:
+                    print(f"   ✅ Chunk {chunk_id} succeeded on retry {attempt}")
+                return base64.b64decode(audio_content)
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"   ⚠️  Chunk {chunk_id} failed (attempt {attempt+1}/{max_retries}): {e}")
+                    time.sleep(2 ** attempt)  # Exponential backoff: 1s, 2s, 4s
+                else:
+                    print(f"   ❌ Chunk {chunk_id} failed after {max_retries} attempts: {e}")
+                    raise  # Re-raise on final failure
     
     def _split_text_smart(self, text: str, max_chars: int = 1000) -> list:
         """Split text at sentence boundaries"""

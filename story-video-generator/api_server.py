@@ -258,7 +258,7 @@ def generate_video_background(data):
             template=None,  # No template
             research_data=None,  # No research
             duration_minutes=int(data.get('duration', 5)),
-            num_scenes=10
+            num_scenes=int(data.get('num_scenes', 10))  # ✅ FIX: Read from request!
         )
         
         print(f"   ✅ Script: {len(result['script'])} characters")
@@ -369,8 +369,8 @@ def generate_video_background(data):
         traceback.print_exc()
 
 
-def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id):
-    """✅ Background generation with template + research + voice selection"""
+def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect, color_filter, auto_captions_enabled, srt_enabled, emotion_captions):
+    """✅ Background generation with template + research + voice selection + ALL EFFECTS"""
     global progress_state
     
     try:
@@ -458,12 +458,38 @@ def generate_with_template_background(topic, story_type, template, research_data
         audio_duration = get_audio_duration(audio_path)
         print(f"✅ Audio: {audio_duration:.1f} seconds")
         
+        # ✅ SRT Subtitle Generation (if enabled)
+        srt_path = None
+        if srt_enabled:
+            from src.editor.srt_generator import generate_srt_subtitles
+            print("📝 Generating SRT subtitles (unlimited captions!)...")
+            safe_topic_srt = re.sub(r'[^a-zA-Z0-9_\-]', '', topic)[:50]
+            srt_path = generate_srt_subtitles(
+                script_text,
+                audio_duration,
+                Path(f"output/subtitles/{safe_topic_srt}_subtitles.srt"),
+                detect_emotions=emotion_captions
+            )
+            print(f"   ✅ SRT file: {srt_path}")
+        
+        # ✅ Auto Captions (burned-in, only if NOT using SRT)
+        auto_captions = None
+        if auto_captions_enabled and not srt_enabled:
+            from src.editor.captions import generate_auto_captions
+            print("📝 Generating auto captions from script...")
+            auto_captions = generate_auto_captions(script_text, audio_duration)
+            print(f"   ✅ Auto Captions: {len(auto_captions)} sentences")
+        
         progress_state['progress'] = 80
         progress_state['status'] = 'compiling_video'
         
         print("🎬 Compiling video...")
+        print(f"   Zoom Effect: {zoom_effect}")
+        print(f"   Color Filter: {color_filter}")
+        print(f"   Auto Captions: {len(auto_captions) if auto_captions else 0}")
+        print(f"   SRT Subtitles: {srt_enabled}")
         
-        # Compile video
+        # Compile video with ALL EFFECTS
         compiler = FFmpegCompiler()
         safe_topic = re.sub(r'[^a-zA-Z0-9_\-]', '', topic)[:50]
         output_filename = f"{safe_topic}_video.mp4"
@@ -471,14 +497,20 @@ def generate_with_template_background(topic, story_type, template, research_data
         time_per_image = audio_duration / len(image_paths) if image_paths else 5
         durations = [time_per_image] * len(image_paths)
         
-        # Note: Template generation doesn't get filters/captions from request yet
-        # Can be added later if needed
         video_path = compiler.create_video(
             image_paths,
             str(audio_path),
             Path(f"output/videos/{output_filename}"),
-            durations
+            durations,
+            color_filter=color_filter,
+            zoom_effect=zoom_effect,
+            caption=None,  # Manual captions not supported in template yet
+            auto_captions=auto_captions
         )
+        
+        # Store SRT path if generated
+        if srt_path:
+            progress_state['srt_file'] = str(srt_path)
         
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'
@@ -656,14 +688,23 @@ def generate_with_template_endpoint():
         research_data = data.get('research_data')
         duration = int(data.get('duration', 10))
         num_scenes = int(data.get('num_scenes', 10))
-        voice_engine = data.get('voice_engine', 'kokoro')
+        voice_engine = data.get('voice_engine', 'inworld')
         voice_id = data.get('voice_id')
+        
+        # ✅ Get effects and captions from request
+        zoom_effect = data.get('zoom_effect', False)
+        color_filter = data.get('color_filter', 'none')
+        auto_captions_enabled = data.get('auto_captions', False)
+        srt_enabled = data.get('srt_subtitles', False)
+        emotion_captions = data.get('emotion_captions', True)
         
         print(f"\n🎬 Generating with template: {topic}")
         print(f"   Type: {story_type}")
+        print(f"   Scenes: {num_scenes}")
         print(f"   Template: {'Yes' if template else 'No'}")
         print(f"   Research: {'Yes' if research_data else 'No'}")
-        print(f"   Voice Engine: {voice_engine}")
+        print(f"   Zoom: {zoom_effect}")
+        print(f"   Filter: {color_filter}")
         
         progress_state = {
             'status': 'starting',
@@ -674,7 +715,7 @@ def generate_with_template_endpoint():
         
         thread = threading.Thread(
             target=generate_with_template_background,
-            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id)
+            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect, color_filter, auto_captions_enabled, srt_enabled, emotion_captions)
         )
         thread.start()
         
