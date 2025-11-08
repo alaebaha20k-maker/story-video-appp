@@ -37,10 +37,19 @@ class FFmpegCompiler:
         
         # Add zoom effect if enabled
         if zoom_effect:
-            # Ken Burns zoom effect - smooth zoom in on all images
-            # d=duration in frames (24fps), s=output size
-            filters.append("zoompan=z='min(zoom+0.0015,1.05)':d=25*10:s=1920x1080")
-            print(f"   ✅ Zoom effect enabled: Ken Burns style")
+            # ✅ Ken Burns zoom effect on ALL images!
+            # Calculate total frames needed for ALL images
+            total_duration = sum(durations)  # Total video duration in seconds
+            total_frames = int(total_duration * 24)  # Convert to frames (24fps)
+            
+            # Zoompan formula:
+            # z='min(zoom+0.0015,1.05)' = gradual zoom from 1.0 to 1.05 (5% zoom)
+            # d={total_frames} = apply for ENTIRE video duration
+            # s=1920x1080 = output size
+            zoom_filter = f"zoompan=z='min(zoom+0.0015,1.05)':d={total_frames}:s=1920x1080"
+            filters.append(zoom_filter)
+            print(f"   ✅ Zoom effect enabled: Ken Burns on ALL {len(image_paths)} images")
+            print(f"   🔧 Zoom duration: {total_duration:.1f}s ({total_frames} frames)")
         
         # Add color filter if specified
         if color_filter and color_filter != 'none':
