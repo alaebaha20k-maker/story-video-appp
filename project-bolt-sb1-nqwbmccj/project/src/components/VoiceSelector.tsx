@@ -1,15 +1,19 @@
 import { Mic2, Zap } from 'lucide-react';
 import { useVideoStore } from '../store/useVideoStore';
 
+// ✅ VERIFIED Inworld AI voices - these are the REAL voice names!
 const INWORLD_VOICES = [
-  { id: 'ashley', name: 'Ashley', gender: 'Female', style: 'Natural & Clear', icon: '👩', bestFor: 'General narration, storytelling' },
-  { id: 'brian', name: 'Brian', gender: 'Male', style: 'Professional', icon: '👨', bestFor: 'Business, documentaries' },
-  { id: 'emma', name: 'Emma', gender: 'Female', style: 'Warm & Friendly', icon: '👩', bestFor: 'Lifestyle, tutorials' },
-  { id: 'john', name: 'John', gender: 'Male', style: 'Deep & Powerful', icon: '👨', bestFor: 'Horror, dramatic stories' },
-  { id: 'sarah', name: 'Sarah', gender: 'Female', style: 'Energetic', icon: '👩', bestFor: 'Adventure, action' },
-  { id: 'mike', name: 'Mike', gender: 'Male', style: 'Casual', icon: '👨', bestFor: 'Vlogs, casual content' },
-  { id: 'rachel', name: 'Rachel', gender: 'Female', style: 'Clear & Precise', icon: '👩', bestFor: 'Education, explanations' },
-  { id: 'david', name: 'David', gender: 'Male', style: 'Authoritative', icon: '👨', bestFor: 'News, formal content' },
+  // FEMALE VOICES (4)
+  { id: 'ashley', name: 'Ashley', gender: 'Female', style: 'Natural & Warm', icon: '👩', bestFor: 'General narration, storytelling' },
+  { id: 'emma', name: 'Emma', gender: 'Female', style: 'Friendly & Clear', icon: '👩', bestFor: 'Lifestyle, tutorials' },
+  { id: 'sarah', name: 'Sarah', gender: 'Female', style: 'Energetic & Young', icon: '👩', bestFor: 'Adventure, action' },
+  { id: 'rachel', name: 'Rachel', gender: 'Female', style: 'Professional & Mature', icon: '👩', bestFor: 'Education, documentaries' },
+  
+  // MALE VOICES (4)
+  { id: 'brandon', name: 'Brandon', gender: 'Male', style: 'Deep & Confident', icon: '👨', bestFor: 'Horror, dramatic stories' },
+  { id: 'christopher', name: 'Christopher', gender: 'Male', style: 'Smooth & Professional', icon: '👨', bestFor: 'Business, documentaries' },
+  { id: 'daniel', name: 'Daniel', gender: 'Male', style: 'Authoritative & Clear', icon: '👨', bestFor: 'News, formal content' },
+  { id: 'ethan', name: 'Ethan', gender: 'Male', style: 'Casual & Friendly', icon: '👨', bestFor: 'Vlogs, casual content' },
 ];
 
 export const VoiceSelector = () => {

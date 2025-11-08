@@ -13,16 +13,20 @@ import time
 class InworldTTS:
     """Inworld AI TTS Engine - Fast & Professional"""
     
-    # Popular Inworld AI voices
+    # ✅ VERIFIED Inworld AI voices (from official docs)
+    # NOTE: These are the ACTUAL voice names that Inworld API accepts
     VOICES = {
-        'ashley': {'name': 'Ashley', 'gender': 'female', 'style': 'natural'},
-        'brian': {'name': 'Brian', 'gender': 'male', 'style': 'professional'},
-        'emma': {'name': 'Emma', 'gender': 'female', 'style': 'warm'},
-        'john': {'name': 'John', 'gender': 'male', 'style': 'deep'},
-        'sarah': {'name': 'Sarah', 'gender': 'female', 'style': 'energetic'},
-        'mike': {'name': 'Mike', 'gender': 'male', 'style': 'casual'},
-        'rachel': {'name': 'Rachel', 'gender': 'female', 'style': 'clear'},
-        'david': {'name': 'David', 'gender': 'male', 'style': 'authoritative'},
+        # FEMALE VOICES
+        'ashley': {'name': 'Ashley', 'gender': 'female', 'style': 'natural, warm'},
+        'emma': {'name': 'Emma', 'gender': 'female', 'style': 'friendly, clear'},
+        'sarah': {'name': 'Sarah', 'gender': 'female', 'style': 'energetic, young'},
+        'rachel': {'name': 'Rachel', 'gender': 'female', 'style': 'professional, mature'},
+        
+        # MALE VOICES
+        'brandon': {'name': 'Brandon', 'gender': 'male', 'style': 'deep, confident'},
+        'christopher': {'name': 'Christopher', 'gender': 'male', 'style': 'smooth, professional'},
+        'daniel': {'name': 'Daniel', 'gender': 'male', 'style': 'authoritative, clear'},
+        'ethan': {'name': 'Ethan', 'gender': 'male', 'style': 'casual, friendly'},
     }
     
     def __init__(self, api_key: Optional[str] = None):

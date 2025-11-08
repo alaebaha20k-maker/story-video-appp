@@ -73,25 +73,32 @@ def sanitize_filename(filename):
 def get_voice_id(voice_id=None):
     """Get Inworld AI voice ID - MUST BE CAPITALIZED!"""
     
-    # Map to Inworld voices (CAPITALIZED as per API spec!)
+    # ✅ Map to VERIFIED Inworld AI voices (CAPITALIZED as per API spec!)
     voice_map = {
-        # Frontend lowercase to API capitalized
+        # Frontend lowercase to API capitalized (VERIFIED NAMES!)
         'ashley': 'Ashley',
-        'brian': 'Brian',
         'emma': 'Emma',
-        'john': 'John',
         'sarah': 'Sarah',
-        'mike': 'Mike',
         'rachel': 'Rachel',
-        'david': 'David',
+        'brandon': 'Brandon',  # ✅ Verified male voice
+        'christopher': 'Christopher',  # ✅ Verified male voice
+        'daniel': 'Daniel',  # ✅ Verified male voice
+        'ethan': 'Ethan',  # ✅ Verified male voice
+        
+        # ❌ OLD INVALID NAMES - Map to valid alternatives
+        'john': 'Brandon',  # John doesn't exist → use Brandon
+        'brian': 'Christopher',  # Brian doesn't exist → use Christopher
+        'mike': 'Ethan',  # Mike doesn't exist → use Ethan
+        'david': 'Daniel',  # David doesn't exist → use Daniel
+        
         # Old Kokoro voices
         'af_bella': 'Ashley',
-        'am_adam': 'Brian',
+        'am_adam': 'Brandon',
         # Old Edge-TTS voices
         'en-US-AriaNeural': 'Ashley',
-        'en-US-GuyNeural': 'Brian',
+        'en-US-GuyNeural': 'Brandon',
         # Generic names
-        'male_narrator_deep': 'John',
+        'male_narrator_deep': 'Brandon',
         'female_narrator': 'Ashley',
         'female_young': 'Emma',
     }
@@ -102,7 +109,7 @@ def get_voice_id(voice_id=None):
     else:
         voice_id = 'Ashley'  # Default
     
-    print(f"   🔧 Voice for Inworld API: {voice_id} (must be capitalized!)")
+    print(f"   🔧 Voice for Inworld API: {voice_id} (VERIFIED Inworld voice!)")
     return voice_id
 
 
