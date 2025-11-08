@@ -160,22 +160,43 @@ class CaptionGenerator:
         audio_duration: float,
         style: str = 'simple',
         position: str = 'bottom',
-        max_captions: int = 10  # ⚡ REDUCED to 10 for Windows command line limit!
+        max_captions: int = None  # Auto-calculated based on video length
     ) -> List[Dict]:
         """
         Generate auto captions from script text with perfect timing
+        
+        ⚡ DYNAMIC CAPTION LIMITING based on video length:
+        - Videos < 3 min: 10 captions max (18s each)
+        - Videos 3-6 min: 6 captions max (30-60s each)  
+        - Videos 6-10 min: 5 captions max (72-120s each)
+        - Videos > 10 min: 4 captions max (150s+ each)
+        
+        This keeps FFmpeg command SHORT even for long videos!
         
         Args:
             script: Full script text
             audio_duration: Total audio duration in seconds
             style: Caption style (default: simple - medium size, readable)
             position: Caption position (default: bottom)
-            max_captions: Maximum number of captions (default: 20 to avoid FFmpeg issues)
+            max_captions: Override auto-calculation (optional)
         
         Returns:
             List of caption dictionaries with text, timing, style
         """
         import re
+        
+        # ⚡ DYNAMIC CAPTION LIMIT based on video duration
+        if max_captions is None:
+            if audio_duration < 180:  # < 3 minutes
+                max_captions = 10
+            elif audio_duration < 360:  # 3-6 minutes
+                max_captions = 6
+            elif audio_duration < 600:  # 6-10 minutes
+                max_captions = 5
+            else:  # > 10 minutes
+                max_captions = 4  # Very long videos need fewer captions!
+            
+            print(f"⚡ Auto-adjusted to {max_captions} captions for {audio_duration:.1f}s video")
         
         # Split script into sentences (handles ., !, ?)
         sentences = re.split(r'(?<=[.!?])\s+', script.strip())
