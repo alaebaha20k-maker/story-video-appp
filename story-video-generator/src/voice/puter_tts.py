@@ -5,7 +5,7 @@ Perfect for YouTube videos - No API key, No limits!
 
 import requests
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 import time
 
 class PuterTTS:
@@ -96,6 +96,11 @@ class PuterTTS:
         print(f"   Voice: {voice.title()}")
         print(f"   Text length: {len(text)} characters")
         
+        # ✅ For long texts (60-min videos!), use chunking!
+        if len(text) > 3000:  # More than ~3000 chars = use chunking
+            print(f"   🚀 Text is long, using chunking for reliability...")
+            return self._generate_long_audio_chunked(text, voice, output_path)
+        
         start_time = time.time()
         
         try:
@@ -182,6 +187,127 @@ class PuterTTS:
             print(f"   4. Check text length (try shorter text)")
             print(f"{'='*60}\n")
             raise
+    
+    def _generate_long_audio_chunked(
+        self,
+        text: str,
+        voice: str,
+        output_path: Optional[str]
+    ) -> str:
+        """Generate audio for long texts using chunking - FAST & RELIABLE!"""
+        from pydub import AudioSegment
+        
+        print(f"   📝 Splitting long text into chunks...")
+        
+        # Split into ~3000 char chunks at sentence boundaries
+        chunks = self._split_text_smart(text, max_chars=3000)
+        print(f"   Split into {len(chunks)} chunks for reliability")
+        
+        # Get voice info
+        voice_info = self.VOICES.get(voice.lower(), self.VOICES['matthew'])
+        voice_name = voice_info['name']
+        
+        # Generate each chunk
+        chunk_files = []
+        temp_dir = Path("output/temp/voice_chunks")
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        for i, chunk in enumerate(chunks):
+            print(f"   🎤 Generating chunk {i+1}/{len(chunks)} ({len(chunk)} chars)...")
+            
+            # Generate this chunk
+            chunk_file = temp_dir / f"chunk_{i:03d}.mp3"
+            
+            try:
+                # Prepare Puter API request for chunk
+                headers = {'Content-Type': 'application/json'}
+                payload = {
+                    'interface': 'puter-tts',
+                    'driver': 'aws-polly',
+                    'method': 'speak',
+                    'args': {
+                        'text': chunk,
+                        'voice': voice_name
+                    }
+                }
+                
+                response = requests.post(
+                    self.api_url,
+                    json=payload,
+                    headers=headers,
+                    timeout=120
+                )
+                
+                if response.ok and len(response.content) > 0:
+                    # Save chunk
+                    with open(chunk_file, 'wb') as f:
+                        f.write(response.content)
+                    chunk_files.append(chunk_file)
+                    print(f"      ✅ Chunk {i+1} generated ({len(response.content) / 1024:.1f} KB)")
+                else:
+                    print(f"      ⚠️  Chunk {i+1} failed, skipping...")
+                    
+            except Exception as e:
+                print(f"      ⚠️  Chunk {i+1} error: {e}")
+        
+        if len(chunk_files) == 0:
+            raise Exception("❌ No audio chunks generated! All chunks failed!")
+        
+        print(f"   🔗 Combining {len(chunk_files)} audio chunks...")
+        
+        # Combine chunks using PyDub
+        combined = AudioSegment.empty()
+        for chunk_file in chunk_files:
+            try:
+                audio_chunk = AudioSegment.from_mp3(str(chunk_file))
+                combined += audio_chunk
+            except Exception as e:
+                print(f"      ⚠️  Failed to load {chunk_file}: {e}")
+        
+        # Default output path
+        if output_path is None:
+            output_dir = Path("output/temp")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_path = output_dir / "puter_narration.mp3"
+        
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Export combined audio
+        combined.export(str(output_path), format="mp3", bitrate="192k")
+        
+        # Cleanup temp files
+        for chunk_file in chunk_files:
+            chunk_file.unlink()
+        
+        print(f"✅ Long audio generated!")
+        print(f"   File: {output_path}")
+        print(f"   Chunks: {len(chunk_files)}")
+        print(f"   💰 Cost: $0 (FREE!)")
+        
+        return str(output_path)
+    
+    def _split_text_smart(self, text: str, max_chars: int = 3000) -> List[str]:
+        """Split text at sentence boundaries"""
+        # Split by sentences
+        sentences = text.replace('!', '.').replace('?', '.').split('.')
+        sentences = [s.strip() + '.' for s in sentences if s.strip()]
+        
+        chunks = []
+        current_chunk = ""
+        
+        for sentence in sentences:
+            if len(current_chunk) + len(sentence) <= max_chars:
+                current_chunk += " " + sentence
+            else:
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                current_chunk = sentence
+        
+        if current_chunk:
+            chunks.append(current_chunk.strip())
+        
+        return chunks if chunks else [text]
     
     def get_voices(self, gender: Optional[str] = None):
         """Get available voices
