@@ -17,9 +17,11 @@ class FFmpegCompiler:
         color_filter: str = 'none',
         zoom_effect: bool = False,
         caption: Optional[Dict] = None,
-        auto_captions: Optional[List[Dict]] = None
+        auto_captions: Optional[List[Dict]] = None,
+        visual_effects: bool = False,
+        script: Optional[str] = None
     ):
-        """Create video with FFmpeg - FAST with filters and captions!"""
+        """Create video with FFmpeg - FAST with filters, captions, and VISUAL EFFECTS!"""
         
         # Create concat file
         concat_file = Path("concat.txt")
@@ -44,6 +46,12 @@ class FFmpegCompiler:
             color_filter_str = video_filters.get_filter_string(color_filter)
             if color_filter_str:
                 filters.append(color_filter_str)
+        
+        # ✅ NEW: Add VISUAL EMOTION EFFECTS (fire, smoke, particles, etc.)
+        if visual_effects and script:
+            from src.editor.visual_effects import visual_effects as vfx
+            print(f"   🎬 Adding emotion-based visual effects...")
+            filters = vfx.apply_to_video(filters, vfx.detect_dominant_emotion(script), intensity='medium')
         
         # Add auto captions (multiple timed captions) - PRIORITY
         if auto_captions:

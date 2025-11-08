@@ -309,9 +309,10 @@ def generate_video_background(data):
         safe_topic = sanitize_filename(data.get('topic', 'video'))
         output_filename = f"{safe_topic}_video.mp4"
         
-        # Get optional filters and captions from request
+        # Get optional filters, effects, and captions from request
         color_filter = data.get('color_filter', 'none')
         zoom_effect = data.get('zoom_effect', False)
+        visual_effects_enabled = data.get('visual_effects', False)  # 🔥 NEW: Fire, smoke, particles!
         caption = data.get('caption')  # Dict with text, style, position, etc.
         
         # ✅ NEW: SRT Subtitle Generation (unlimited captions for ANY video length!)
@@ -346,7 +347,9 @@ def generate_video_background(data):
             color_filter=color_filter,
             zoom_effect=zoom_effect,
             caption=caption,
-            auto_captions=auto_captions
+            auto_captions=auto_captions,
+            visual_effects=visual_effects_enabled,  # 🔥 NEW!
+            script=result['script'] if visual_effects_enabled else None  # Pass script for emotion detection
         )
         
         # If SRT enabled, also generate output info
@@ -369,8 +372,8 @@ def generate_video_background(data):
         traceback.print_exc()
 
 
-def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect, color_filter, auto_captions_enabled, srt_enabled, emotion_captions):
-    """✅ Background generation with template + research + voice selection + ALL EFFECTS"""
+def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect, color_filter, auto_captions_enabled, srt_enabled, emotion_captions, visual_effects_enabled):
+    """✅ Background generation with template + research + voice selection + ALL EFFECTS + VISUAL EMOTION EFFECTS"""
     global progress_state
     
     try:
@@ -486,6 +489,7 @@ def generate_with_template_background(topic, story_type, template, research_data
         print("🎬 Compiling video...")
         print(f"   Zoom Effect: {zoom_effect}")
         print(f"   Color Filter: {color_filter}")
+        print(f"   Visual Effects: {visual_effects_enabled}")
         print(f"   Auto Captions: {len(auto_captions) if auto_captions else 0}")
         print(f"   SRT Subtitles: {srt_enabled}")
         
@@ -505,7 +509,9 @@ def generate_with_template_background(topic, story_type, template, research_data
             color_filter=color_filter,
             zoom_effect=zoom_effect,
             caption=None,  # Manual captions not supported in template yet
-            auto_captions=auto_captions
+            auto_captions=auto_captions,
+            visual_effects=visual_effects_enabled,  # 🔥 NEW!
+            script=script_text if visual_effects_enabled else None  # For emotion detection
         )
         
         # Store SRT path if generated
@@ -694,6 +700,7 @@ def generate_with_template_endpoint():
         # ✅ Get effects and captions from request
         zoom_effect = data.get('zoom_effect', False)
         color_filter = data.get('color_filter', 'none')
+        visual_effects_enabled = data.get('visual_effects', False)  # 🔥 NEW!
         auto_captions_enabled = data.get('auto_captions', False)
         srt_enabled = data.get('srt_subtitles', False)
         emotion_captions = data.get('emotion_captions', True)
@@ -705,6 +712,7 @@ def generate_with_template_endpoint():
         print(f"   Research: {'Yes' if research_data else 'No'}")
         print(f"   Zoom: {zoom_effect}")
         print(f"   Filter: {color_filter}")
+        print(f"   Visual Effects: {visual_effects_enabled}")
         
         progress_state = {
             'status': 'starting',
@@ -715,7 +723,7 @@ def generate_with_template_endpoint():
         
         thread = threading.Thread(
             target=generate_with_template_background,
-            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect, color_filter, auto_captions_enabled, srt_enabled, emotion_captions)
+            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect, color_filter, auto_captions_enabled, srt_enabled, emotion_captions, visual_effects_enabled)
         )
         thread.start()
         
