@@ -65,7 +65,7 @@ class UltraImageGenerator:
             param_string = '&'.join([f"{k}={v}" for k, v in params.items()])
             url = f"{base_url}?{param_string}"
             
-            response = requests.get(url, timeout=90)  # Increased timeout for higher quality
+            response = requests.get(url, timeout=180)  # 3-minute timeout for FLUX.1 Schnell (high quality takes time!)
             
             if response.status_code == 200:
                 filename = f"scene_{scene_number:03d}.png"
@@ -168,7 +168,7 @@ class UltraImageGenerator:
             # Collect results as they complete
             for i, future in enumerate(futures):
                 try:
-                    image_data = future.result(timeout=120)  # 2 min timeout per image
+                    image_data = future.result(timeout=240)  # 4-minute timeout per image (FLUX.1 Schnell can be slow!)
                     if image_data:
                         images.append(image_data)
                 except Exception as e:

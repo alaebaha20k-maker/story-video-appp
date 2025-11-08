@@ -203,11 +203,13 @@ class InworldTTS:
             else:
                 print(f"   ✅ All {len(chunk_audios)} chunks generated successfully!")
         
-        # Concatenate all audio chunks (raw binary concatenation for MP3)
-        combined_audio = b''.join(chunk_audios)
+        # ✅ FIX: Use PyDub to properly concatenate MP3 chunks (not raw bytes!)
+        # Raw byte concatenation breaks MP3 headers!
         
-        if len(combined_audio) == 0:
+        if len(chunk_audios) == 0:
             raise Exception("❌ No audio data generated! All chunks failed!")
+        
+        from pydub import AudioSegment
         
         # Default output path
         if output_path is None:
@@ -218,9 +220,36 @@ class InworldTTS:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # Save combined audio
-        with open(output_path, 'wb') as f:
-            f.write(combined_audio)
+        # Save chunks as temporary files first
+        temp_dir = Path("output/temp/audio_chunks")
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        print(f"   🔧 Combining {len(chunk_audios)} audio chunks using PyDub...")
+        
+        chunk_files = []
+        for i, chunk_data in enumerate(chunk_audios):
+            chunk_file = temp_dir / f"chunk_{i:03d}.mp3"
+            with open(chunk_file, 'wb') as f:
+                f.write(chunk_data)
+            chunk_files.append(chunk_file)
+        
+        # Combine using PyDub (proper MP3 handling!)
+        combined = AudioSegment.empty()
+        for chunk_file in chunk_files:
+            try:
+                audio_chunk = AudioSegment.from_mp3(str(chunk_file))
+                combined += audio_chunk
+            except Exception as e:
+                print(f"   ⚠️  Failed to load chunk {chunk_file}: {e}")
+        
+        # Export as proper MP3
+        combined.export(str(output_path), format="mp3", bitrate="192k")
+        
+        # Clean up temp files
+        for chunk_file in chunk_files:
+            chunk_file.unlink()
+        
+        print(f"   ✅ MP3 properly combined with headers!")
         
         duration = time.time() - start_time
         print(f"✅ Audio generated: {output_path}")
