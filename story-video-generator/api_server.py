@@ -12,8 +12,12 @@ import asyncio
 import edge_tts
 from pydub import AudioSegment
 
-# ✅ VOICE ENGINE - Edge-TTS (FREE, RELIABLE, NO API KEY!)
-# Inworld AI was unreliable - switching to Edge-TTS
+# ✅ INWORLD AI TTS - Using JWT credentials
+INWORLD_JWT_KEY = os.getenv('INWORLD_JWT_KEY', 'bMyt2B6JztQUliqlBm6HHdQCcAbsJXnJ')
+INWORLD_JWT_SECRET = os.getenv('INWORLD_JWT_SECRET', 'siWpw2isZJkLIE6llDql2yi2D5xAyT7qQYop4he0X1seZ8ZksvCDzS1gWJcccIyD')
+# Base64 encode: JWT_KEY:JWT_SECRET
+import base64
+INWORLD_API_KEY = base64.b64encode(f"{INWORLD_JWT_KEY}:{INWORLD_JWT_SECRET}".encode()).decode()
 
 # ✅ IMPORTS FOR TEMPLATES + RESEARCH
 from src.ai.script_analyzer import script_analyzer
@@ -23,6 +27,7 @@ from src.ai.enhanced_script_generator import enhanced_script_generator
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
+from src.voice.inworld_tts import create_inworld_tts
 
 app = Flask(__name__)
 
@@ -38,9 +43,21 @@ CORS(app, resources={
 progress_state = {'status': 'ready', 'progress': 0, 'video_path': None, 'error': None}
 
 # ═══════════════════════════════════════════════════════════════
-# 🎤 VOICE ENGINE - EDGE-TTS (FREE, RELIABLE, ALWAYS WORKS!)
+# 🎤 VOICE ENGINE - INWORLD AI INITIALIZATION
 # ═══════════════════════════════════════════════════════════════
-# Using Edge-TTS - no API key needed, unlimited, reliable!
+
+print(f"\n🔧 Initializing Inworld AI TTS...")
+print(f"   JWT Key: {INWORLD_JWT_KEY[:10]}...")
+print(f"   Base64 API Key: {INWORLD_API_KEY[:30]}...")
+
+inworld_tts = None
+try:
+    inworld_tts = create_inworld_tts(api_key=INWORLD_API_KEY)
+    print("✅ Inworld AI TTS initialized successfully!")
+except Exception as e:
+    print(f"❌ Failed to initialize Inworld AI TTS: {e}")
+    print(f"   This will cause voice generation to fail!")
+    inworld_tts = None
 
 # ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
@@ -54,35 +71,77 @@ def sanitize_filename(filename):
 
 
 def get_voice_id(voice_id=None):
-    """Get Edge-TTS voice ID - maps to Microsoft voices"""
+    """Get Inworld AI voice ID - MUST BE CAPITALIZED!"""
     
-    # Map to Edge-TTS voices
+    # Map to Inworld voices (CAPITALIZED as per API spec!)
     voice_map = {
-        # Inworld mappings
-        'ashley': 'en-US-AriaNeural',
-        'brian': 'en-US-GuyNeural',
-        'emma': 'en-US-JennyNeural',
-        'john': 'en-GB-RyanNeural',
-        'sarah': 'en-US-SaraNeural',
-        'mike': 'en-US-ChristopherNeural',
-        'rachel': 'en-GB-SoniaNeural',
-        'david': 'en-US-EricNeural',
+        # Frontend lowercase to API capitalized
+        'ashley': 'Ashley',
+        'brian': 'Brian',
+        'emma': 'Emma',
+        'john': 'John',
+        'sarah': 'Sarah',
+        'mike': 'Mike',
+        'rachel': 'Rachel',
+        'david': 'David',
         # Old Kokoro voices
-        'af_bella': 'en-US-AriaNeural',
-        'am_adam': 'en-US-GuyNeural',
+        'af_bella': 'Ashley',
+        'am_adam': 'Brian',
+        # Old Edge-TTS voices
+        'en-US-AriaNeural': 'Ashley',
+        'en-US-GuyNeural': 'Brian',
         # Generic names
-        'male_narrator_deep': 'en-US-GuyNeural',
-        'female_narrator': 'en-US-AriaNeural',
-        'female_young': 'en-US-JennyNeural',
+        'male_narrator_deep': 'John',
+        'female_narrator': 'Ashley',
+        'female_young': 'Emma',
     }
     
     # Use mapping or default
     if voice_id:
-        voice_id = voice_map.get(voice_id, voice_id)
+        voice_id = voice_map.get(voice_id, voice_id.capitalize() if isinstance(voice_id, str) else 'Ashley')
     else:
-        voice_id = 'en-US-AriaNeural'  # Default
+        voice_id = 'Ashley'  # Default
     
+    print(f"   🔧 Voice for Inworld API: {voice_id} (must be capitalized!)")
     return voice_id
+
+
+def generate_audio_inworld(text, voice="Ashley", output_path="narration.mp3"):
+    """✅ Generate audio using Inworld AI with DETAILED ERROR LOGGING"""
+    try:
+        if not inworld_tts:
+            raise RuntimeError("❌ Inworld TTS not initialized! Check initialization logs above!")
+        
+        print(f"\n🎤 Generating audio with Inworld AI...")
+        print(f"   Voice: {voice}")
+        print(f"   Text length: {len(text)} characters")
+        print(f"   Output path: {output_path}")
+        
+        # Generate audio
+        audio_path = inworld_tts.generate_audio(
+            text=text,
+            voice=voice,  # Must be capitalized!
+            output_path=str(output_path)
+        )
+        
+        print(f"✅ Inworld AI generation SUCCESS!")
+        return audio_path
+        
+    except Exception as e:
+        print(f"\n{'='*60}")
+        print(f"❌ INWORLD AI GENERATION FAILED!")
+        print(f"{'='*60}")
+        print(f"Error: {e}")
+        print(f"Voice: {voice}")
+        print(f"Text length: {len(text)}")
+        print(f"\n💡 Possible causes:")
+        print(f"   1. Invalid JWT credentials")
+        print(f"   2. Voice name must be capitalized (Ashley, not ashley)")
+        print(f"   3. API endpoint wrong")
+        print(f"   4. Network/firewall blocking API")
+        print(f"   5. API rate limiting")
+        print(f"{'='*60}\n")
+        raise
 
 
 async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="narration.mp3"):

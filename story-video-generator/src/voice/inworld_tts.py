@@ -121,13 +121,34 @@ class InworldTTS:
             'modelId': self.model_id
         }
         
-        response = requests.post(self.api_url, json=payload, headers=headers, timeout=120)  # 2-minute timeout for long texts
-        
-        if not response.ok:
-            raise Exception(f"Inworld API error: {response.status_code} - {response.text}")
-        
-        result = response.json()
-        return result['audioContent']
+        try:
+            print(f"   🔧 API Request: URL={self.api_url}, Voice={voice_name}, TextLen={len(text)}")
+            
+            response = requests.post(self.api_url, json=payload, headers=headers, timeout=120)
+            
+            print(f"   🔧 API Response: Status={response.status_code}")
+            
+            if not response.ok:
+                error_detail = f"Status {response.status_code}: {response.text[:500]}"
+                print(f"   ❌ API Error Details: {error_detail}")
+                raise Exception(f"Inworld API error: {error_detail}")
+            
+            result = response.json()
+            
+            if 'audioContent' not in result:
+                print(f"   ❌ Response missing 'audioContent': {list(result.keys())}")
+                raise Exception(f"API response missing audioContent. Got keys: {list(result.keys())}")
+            
+            print(f"   ✅ Audio content received: {len(result['audioContent'])} bytes (base64)")
+            return result['audioContent']
+            
+        except requests.exceptions.Timeout:
+            raise Exception(f"Inworld API timeout after 120s for text length {len(text)}")
+        except requests.exceptions.ConnectionError as e:
+            raise Exception(f"Inworld API connection error: {e}")
+        except Exception as e:
+            print(f"   ❌ Unexpected error: {type(e).__name__}: {e}")
+            raise
     
     def _generate_long_audio_parallel(
         self,
