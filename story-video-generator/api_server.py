@@ -8,16 +8,7 @@ from pathlib import Path
 import os
 import threading
 import re
-import asyncio
-import edge_tts
 from pydub import AudioSegment
-
-# ✅ INWORLD AI TTS - Using JWT credentials
-INWORLD_JWT_KEY = os.getenv('INWORLD_JWT_KEY', 'bMyt2B6JztQUliqlBm6HHdQCcAbsJXnJ')
-INWORLD_JWT_SECRET = os.getenv('INWORLD_JWT_SECRET', 'siWpw2isZJkLIE6llDql2yi2D5xAyT7qQYop4he0X1seZ8ZksvCDzS1gWJcccIyD')
-# Base64 encode: JWT_KEY:JWT_SECRET
-import base64
-INWORLD_API_KEY = base64.b64encode(f"{INWORLD_JWT_KEY}:{INWORLD_JWT_SECRET}".encode()).decode()
 
 # ✅ IMPORTS FOR TEMPLATES + RESEARCH
 from src.ai.script_analyzer import script_analyzer
@@ -27,8 +18,7 @@ from src.ai.enhanced_script_generator import enhanced_script_generator
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
-from src.voice.inworld_tts import create_inworld_tts
-from src.voice.elevenlabs_tts import create_elevenlabs_tts
+from src.voice.puter_tts import create_puter_tts
 
 app = Flask(__name__)
 
@@ -44,38 +34,21 @@ CORS(app, resources={
 progress_state = {'status': 'ready', 'progress': 0, 'video_path': None, 'error': None}
 
 # ═══════════════════════════════════════════════════════════════
-# 🎤 VOICE ENGINE - INWORLD AI INITIALIZATION
+# 🎤 PUTER TTS - FREE & UNLIMITED VOICES!
 # ═══════════════════════════════════════════════════════════════
 
-print(f"\n🔧 Initializing Inworld AI TTS...")
-print(f"   JWT Key: {INWORLD_JWT_KEY[:10]}...")
-print(f"   Base64 API Key: {INWORLD_API_KEY[:30]}...")
+print(f"\n🔧 Initializing Puter TTS (FREE & UNLIMITED!)...")
 
-inworld_tts = None
+puter_tts = None
 try:
-    inworld_tts = create_inworld_tts(api_key=INWORLD_API_KEY)
-    print("✅ Inworld AI TTS initialized successfully!")
+    puter_tts = create_puter_tts()
+    print("✅ Puter TTS initialized successfully!")
+    print("   💰 FREE & UNLIMITED - No API key needed!")
+    print("   🎬 Good quality voices for YouTube!")
 except Exception as e:
-    print(f"❌ Failed to initialize Inworld AI TTS: {e}")
-    print(f"   This will cause voice generation to fail!")
-    inworld_tts = None
-
-# ═══════════════════════════════════════════════════════════════
-# 🎤 ELEVENLABS TTS - HUMAN-LIKE VOICES FOR YOUTUBE!
-# ═══════════════════════════════════════════════════════════════
-
-print(f"\n🔧 Initializing ElevenLabs TTS (YouTube-Quality)...")
-
-elevenlabs_tts = None
-try:
-    elevenlabs_tts = create_elevenlabs_tts()
-    print("✅ ElevenLabs TTS initialized successfully!")
-    print("   🎬 Human-like voices ready for YouTube!")
-except Exception as e:
-    print(f"⚠️  ElevenLabs TTS not initialized: {e}")
-    print(f"   Get FREE API key: https://elevenlabs.io/")
-    print(f"   Set ELEVENLABS_API_KEY in .env file")
-    elevenlabs_tts = None
+    print(f"❌ Failed to initialize Puter TTS: {e}")
+    print(f"   Check internet connection!")
+    puter_tts = None
 
 # ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
@@ -89,45 +62,47 @@ def sanitize_filename(filename):
 
 
 def get_voice_id(voice_id=None):
-    """Get Inworld AI voice ID - MUST BE CAPITALIZED!"""
+    """Get Puter TTS voice ID"""
     
-    # ✅ Map to VERIFIED Inworld AI voices (CAPITALIZED as per API spec!)
+    # ✅ Map to Puter TTS voices
     voice_map = {
-        # Frontend lowercase to API capitalized (VERIFIED NAMES!)
-        'ashley': 'Ashley',
-        'emma': 'Emma',
-        'sarah': 'Sarah',
-        'rachel': 'Rachel',
-        'brandon': 'Brandon',  # ✅ Verified male voice
-        'christopher': 'Christopher',  # ✅ Verified male voice
-        'daniel': 'Daniel',  # ✅ Verified male voice
-        'ethan': 'Ethan',  # ✅ Verified male voice
+        # Puter voices (lowercase)
+        'matthew': 'matthew',
+        'joey': 'joey',
+        'brian': 'brian',
+        'justin': 'justin',
+        'joanna': 'joanna',
+        'salli': 'salli',
+        'kimberly': 'kimberly',
+        'ivy': 'ivy',
         
-        # ❌ OLD INVALID NAMES - Map to valid alternatives
-        'john': 'Brandon',  # John doesn't exist → use Brandon
-        'brian': 'Christopher',  # Brian doesn't exist → use Christopher
-        'mike': 'Ethan',  # Mike doesn't exist → use Ethan
-        'david': 'Daniel',  # David doesn't exist → use Daniel
+        # Old voice mappings → Puter equivalents
+        'ashley': 'joanna',  # Female natural
+        'emma': 'ivy',  # Female friendly
+        'sarah': 'kimberly',  # Female energetic
+        'rachel': 'salli',  # Female professional
+        'brandon': 'matthew',  # Male deep
+        'christopher': 'brian',  # Male professional
+        'daniel': 'matthew',  # Male authoritative
+        'ethan': 'justin',  # Male casual
+        'john': 'matthew',  # Male deep
+        'mike': 'joey',  # Male casual
+        'david': 'brian',  # Male professional
         
-        # Old Kokoro voices
-        'af_bella': 'Ashley',
-        'am_adam': 'Brandon',
-        # Old Edge-TTS voices
-        'en-US-AriaNeural': 'Ashley',
-        'en-US-GuyNeural': 'Brandon',
-        # Generic names
-        'male_narrator_deep': 'Brandon',
-        'female_narrator': 'Ashley',
-        'female_young': 'Emma',
+        # Old engine voices
+        'af_bella': 'joanna',
+        'am_adam': 'matthew',
+        'en-US-AriaNeural': 'joanna',
+        'en-US-GuyNeural': 'matthew',
     }
     
     # Use mapping or default
     if voice_id:
-        voice_id = voice_map.get(voice_id, voice_id.capitalize() if isinstance(voice_id, str) else 'Ashley')
+        voice_id = voice_map.get(voice_id.lower() if isinstance(voice_id, str) else 'matthew', 'matthew')
     else:
-        voice_id = 'Ashley'  # Default
+        voice_id = 'matthew'  # Default
     
-    print(f"   🔧 Voice for Inworld API: {voice_id} (VERIFIED Inworld voice!)")
+    print(f"   🔧 Voice for Puter TTS: {voice_id.title()}")
     return voice_id
 
 
