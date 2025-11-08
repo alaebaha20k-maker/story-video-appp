@@ -90,8 +90,19 @@ class UltraImageGenerator:
         
         return None
     
-    def _generate_single_scene(self, scene: Dict, scene_index: int, characters: Dict[str, str] = None) -> Optional[Dict]:
+    def _generate_single_scene(self, scene, scene_index: int, characters: Dict[str, str] = None) -> Optional[Dict]:
         """Helper method to generate a single scene (used for parallel processing)"""
+        
+        # Handle both dict and string inputs (for backward compatibility)
+        if isinstance(scene, str):
+            scene = {
+                'image_description': scene,
+                'content': scene,
+                'scene_number': scene_index + 1
+            }
+        elif not isinstance(scene, dict):
+            logger.error(f"      ❌ Invalid scene type: {type(scene)}")
+            return None
         
         # Determine scene type from description
         desc_lower = scene.get('image_description', '').lower()
@@ -165,7 +176,12 @@ class UltraImageGenerator:
         
         duration = time.time() - start_time
         logger.success(f"✅ Generated {len(images)}/{len(scenes)} images in {duration:.1f}s ⚡")
-        logger.info(f"   Average: {duration/len(images):.1f}s per image (parallel!)")
+        
+        # Only show average if we generated images
+        if len(images) > 0:
+            logger.info(f"   Average: {duration/len(images):.1f}s per image (parallel!)")
+        else:
+            logger.error(f"   ⚠️  No images generated - check prompts and API connection")
         
         return images
 

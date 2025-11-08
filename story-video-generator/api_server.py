@@ -388,10 +388,19 @@ def generate_with_template_background(topic, story_type, template, research_data
         if not image_prompts:
             image_prompts = [f"{topic} scene {i+1}" for i in range(num_scenes)]
         
+        # Convert string prompts to scene dictionaries for image generator
+        scenes = []
+        for i, prompt in enumerate(image_prompts[:num_scenes]):
+            scenes.append({
+                'image_description': prompt,
+                'content': prompt,
+                'scene_number': i + 1
+            })
+        
         # Generate images
         image_gen = create_image_generator('cinematic_film', story_type)
         characters = {char: f"{char}, character" for char in result.get('characters', [])[:3]}
-        images = image_gen.generate_batch(image_prompts[:num_scenes], characters)
+        images = image_gen.generate_batch(scenes, characters)
         image_paths = [Path(img['filepath']) for img in images if img]
         
         print(f"✅ Generated {len(image_paths)} images")
