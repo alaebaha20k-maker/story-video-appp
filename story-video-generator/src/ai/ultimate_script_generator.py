@@ -306,6 +306,11 @@ IMAGE: Woman's trembling hand reaching for old brass doorknob, dim hallway stret
 
         # Add template structure if available
         if template:
+            # Extract tone safely (avoid f-string bracket issues)
+            default_tone = [style.get('tone', 'engaging')]
+            template_tone = template.get('tone', default_tone)
+            tone_str = ', '.join(template_tone) if isinstance(template_tone, list) else str(template_tone)
+            
             prompt += f"""
 📋 TEMPLATE STRUCTURE (Learn from this example):
 
@@ -313,7 +318,7 @@ This template is from a HIGH-QUALITY example script.
 MATCH this structure but create COMPLETELY NEW content for: {topic}
 
 Hook Style: {template.get('hook_style', 'compelling')}
-Tone: {', '.join(template.get('tone', [style['tone']]))}
+Tone: {tone_str}
 Pacing: {template.get('sentence_variation', 'varied')}
 
 ✅ Use SAME structural approach
