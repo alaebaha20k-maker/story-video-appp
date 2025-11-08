@@ -147,9 +147,13 @@ class InworldTTS:
         
         start_time = time.time()
         
-        # Generate audio for each chunk in parallel (MAXIMUM SPEED!)
-        # ⚡ INCREASED WORKERS for long videos (12 workers = can process 12 chunks at once!)
-        with ThreadPoolExecutor(max_workers=12) as executor:
+        # Generate audio for each chunk in parallel
+        # ⚡ ADAPTIVE WORKERS: Fewer workers for reliability, more for speed
+        # For Inworld API: 4-6 workers prevents rate limiting while staying fast
+        num_workers = min(6, len(chunks))  # Max 6 workers to avoid API rate limits
+        print(f"   ⚡ Using {num_workers} parallel workers (prevents API rate limiting)")
+        
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
             futures = []
             for i, chunk in enumerate(chunks):
                 future = executor.submit(self._generate_chunk, chunk, voice_name, i)
