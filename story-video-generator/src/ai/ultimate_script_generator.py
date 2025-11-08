@@ -83,7 +83,7 @@ class UltimateScriptGenerator:
         
         logger.info(f"🏆 Generating ULTIMATE script with Claude Sonnet 4")
         logger.info(f"   Topic: {topic}")
-        logger.info(f"   Type: {style_name}")
+        logger.info(f"   Type: {style.get('name', story_type)}")
         logger.info(f"   Duration: {duration_minutes} minutes")
         logger.info(f"   Scenes: {num_scenes}")
         logger.info(f"   Template: {template is not None}")
@@ -493,7 +493,7 @@ NO preamble, NO commentary, NO explanations - JUST the story!"""
                 scene_text = ' '.join(paragraphs[start_idx:end_idx])[:300]
                 
                 # Create rich description
-                description = self._create_image_description(scene_text, i + 1, style_name if 'style' in locals() else 'story')
+                description = self._create_image_description(scene_text, i + 1, 'story')
                 
                 scenes.append({
                     'scene_number': i + 1,
