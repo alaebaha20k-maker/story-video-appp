@@ -382,20 +382,35 @@ def generate_with_template_background(topic, story_type, template, research_data
         
         print("🎨 Generating images...")
         
-        # Extract image prompts from script
-        image_prompts = re.findall(r'IMAGE:\s*(.+?)(?:\n|$)', script_text, re.IGNORECASE)
-        
-        if not image_prompts:
-            image_prompts = [f"{topic} scene {i+1}" for i in range(num_scenes)]
-        
-        # Convert string prompts to scene dictionaries for image generator
-        scenes = []
-        for i, prompt in enumerate(image_prompts[:num_scenes]):
-            scenes.append({
-                'image_description': prompt,
-                'content': prompt,
-                'scene_number': i + 1
-            })
+        # ✅ FIX: Use scenes from result if available (MUCH BETTER VARIETY!)
+        if 'scenes' in result and result['scenes']:
+            # Use the structured scenes from script generator - BEST QUALITY!
+            scenes = result['scenes'][:num_scenes]
+            print(f"   Using {len(scenes)} varied scenes from script generator")
+        else:
+            # Fallback: Extract image prompts from script
+            image_prompts = re.findall(r'IMAGE:\s*(.+?)(?:\n|$)', script_text, re.IGNORECASE)
+            
+            if not image_prompts or len(image_prompts) < num_scenes:
+                # Create VARIED prompts based on story progression
+                print(f"   ⚠️  Creating varied prompts (no scenes in result)")
+                story_parts = script_text.split('.')[:num_scenes]
+                image_prompts = []
+                for i, part in enumerate(story_parts):
+                    if part.strip():
+                        # Use actual story content for variety!
+                        image_prompts.append(f"{part.strip()[:100]}")
+                    else:
+                        image_prompts.append(f"{topic}, scene {i+1}, {story_type} atmosphere")
+            
+            # Convert string prompts to scene dictionaries
+            scenes = []
+            for i, prompt in enumerate(image_prompts[:num_scenes]):
+                scenes.append({
+                    'image_description': prompt,
+                    'content': prompt,
+                    'scene_number': i + 1
+                })
         
         # Generate images
         image_gen = create_image_generator('cinematic_film', story_type)
