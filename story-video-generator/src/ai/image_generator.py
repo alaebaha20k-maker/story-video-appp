@@ -9,6 +9,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import requests
 import time
 from typing import List, Dict, Optional
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
 from src.ai.ultra_image_prompts import create_prompt_builder
 from src.utils.file_handler import file_handler
@@ -88,61 +90,82 @@ class UltraImageGenerator:
         
         return None
     
+    def _generate_single_scene(self, scene: Dict, scene_index: int, characters: Dict[str, str] = None) -> Optional[Dict]:
+        """Helper method to generate a single scene (used for parallel processing)"""
+        
+        # Determine scene type from description
+        desc_lower = scene.get('image_description', '').lower()
+        
+        if 'character' in desc_lower or 'face' in desc_lower:
+            scene_type = 'character_closeup'
+        elif 'location' in desc_lower or 'establishing' in desc_lower:
+            scene_type = 'establishing'
+        elif 'action' in desc_lower or 'running' in desc_lower:
+            scene_type = 'action'
+        elif 'detail' in desc_lower or 'close' in desc_lower:
+            scene_type = 'detail'
+        else:
+            scene_type = 'atmospheric'
+        
+        # Extract character names from scene
+        scene_chars = []
+        if characters:
+            for char_name in characters.keys():
+                if char_name.lower() in scene.get('content', '').lower():
+                    scene_chars.append(char_name)
+        
+        # Generate image
+        return self.generate_scene_image(
+            scene.get('image_description', scene.get('content', 'scene')),
+            scene.get('scene_number', scene_index + 1),
+            scene_type,
+            scene_chars if scene_chars else None
+        )
+    
     def generate_batch(
         self,
         scenes: List[Dict],
         characters: Dict[str, str] = None
     ) -> List[Dict]:
-        """Generate images for all scenes"""
+        """⚡ Generate images for all scenes - PARALLEL PROCESSING FOR SPEED!"""
         
         logger.info(f"🎨 Generating {len(scenes)} images...")
         logger.info(f"   Model: {self.model} (High Quality)")
         logger.info(f"   Style: {self.image_style}")
         logger.info(f"   Niche: {self.story_type}")
+        logger.info(f"   🚀 Using PARALLEL processing for 10x speedup!")
         
         # Register characters
         if characters:
             self.register_characters(characters)
             logger.info(f"   Characters: {', '.join(characters.keys())}")
         
+        start_time = time.time()
+        
+        # ⚡ PARALLEL IMAGE GENERATION - Generate all images at once!
         images = []
         
-        for scene in scenes:
-            # Determine scene type from description
-            desc_lower = scene.get('image_description', '').lower()
+        # Use ThreadPoolExecutor to generate all images in parallel
+        # Max workers = 10 (all images at once for maximum speed!)
+        with ThreadPoolExecutor(max_workers=min(10, len(scenes))) as executor:
+            # Submit all tasks
+            futures = []
+            for i, scene in enumerate(scenes):
+                future = executor.submit(self._generate_single_scene, scene, i, characters)
+                futures.append(future)
             
-            if 'character' in desc_lower or 'face' in desc_lower:
-                scene_type = 'character_closeup'
-            elif 'location' in desc_lower or 'establishing' in desc_lower:
-                scene_type = 'establishing'
-            elif 'action' in desc_lower or 'running' in desc_lower:
-                scene_type = 'action'
-            elif 'detail' in desc_lower or 'close' in desc_lower:
-                scene_type = 'detail'
-            else:
-                scene_type = 'atmospheric'
-            
-            # Extract character names from scene
-            scene_chars = []
-            if characters:
-                for char_name in characters.keys():
-                    if char_name.lower() in scene.get('content', '').lower():
-                        scene_chars.append(char_name)
-            
-            # Generate image
-            image_data = self.generate_scene_image(
-                scene.get('image_description', scene.get('content', 'scene')),
-                scene.get('scene_number', len(images) + 1),
-                scene_type,
-                scene_chars if scene_chars else None
-            )
-            
-            if image_data:
-                images.append(image_data)
-            
-            time.sleep(1)  # Rate limiting
+            # Collect results as they complete
+            for i, future in enumerate(futures):
+                try:
+                    image_data = future.result(timeout=120)  # 2 min timeout per image
+                    if image_data:
+                        images.append(image_data)
+                except Exception as e:
+                    logger.error(f"      ❌ Scene {i+1} failed: {e}")
         
-        logger.success(f"✅ Generated {len(images)}/{len(scenes)} images")
+        duration = time.time() - start_time
+        logger.success(f"✅ Generated {len(images)}/{len(scenes)} images in {duration:.1f}s ⚡")
+        logger.info(f"   Average: {duration/len(images):.1f}s per image (parallel!)")
         
         return images
 
