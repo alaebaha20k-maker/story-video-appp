@@ -394,7 +394,7 @@ MANDATORY REQUIREMENTS:
 NOW Generate the complete {target_words}-word script with {num_scenes} IMAGE: descriptions.
 NO preamble, NO commentary, NO explanations - JUST the story with IMAGES!
 
-REMEMBER: {num_scenes} IMAGES REQUIRED - COUNT THEM!
+REMEMBER: {num_scenes} IMAGES REQUIRED - COUNT THEM!"""
         
         return prompt
     
