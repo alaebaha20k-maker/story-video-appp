@@ -20,23 +20,28 @@ from src.research.fact_searcher import fact_searcher
 class UltimateScriptGenerator:
     """Generate ULTIMATE quality scripts using Claude Sonnet 4!"""
     
-    # 🔥 SUPER HOOK TEMPLATES (Vary every time!)
-    HOOK_TEMPLATES = [
-        "I never believed in {concept} until {dramatic_moment}.",
-        "They told me {warning}. I should have listened.",
-        "The moment I {action}, everything changed forever.",
-        "{time_reference}, I discovered {shocking_truth}.",
-        "My {relationship} always said {quote}. Now I know why.",
-        "I thought {belief}. I was so wrong.",
-        "The {object} in my hand held a secret that would destroy everything.",
-        "Three words changed my life: {three_words}.",
-        "I should have known something was wrong when {red_flag}.",
-        "The last thing I expected to find was {discovery}.",
-        "Everyone has secrets. Mine cost me {price}.",
-        "{number} {time_units} ago, {event}. Today, {consequence}.",
-        "If I could go back to {moment}, I'd {action}. But it's too late now.",
-        "The {person} at my door wasn't supposed to exist.",
-        "I'm about to tell you something {adjective}. {promise}.",
+    # 🏆 EXAMPLE HOOKS - Claude will LEARN from these and create NEW ones!
+    # These are just examples to show Claude what GREAT hooks look like
+    EXAMPLE_HOOKS = [
+        # Horror/Scary
+        "I never believed my sister could come back from the dead. Until I answered her call.",
+        "The thing wearing my father's face sat down at the dinner table. Nobody else seemed to notice.",
+        "I found my daughter's diary. The last entry was dated three years after she disappeared.",
+        
+        # Romance/Emotional
+        "I fell in love with my best friend the moment she smiled at me. Three years too late.",
+        "The letter said 'I never stopped loving you.' It arrived ten years after his funeral.",
+        "She said yes. I said nothing. Because I couldn't remember proposing.",
+        
+        # Mystery/Thriller
+        "The detective asked about my alibi. I had one. For a murder that hasn't happened yet.",
+        "Every morning I wake up, it's the same day. Except one small thing is always different.",
+        "The photo showed me at a place I've never been. With people I've never met. Yesterday.",
+        
+        # Documentary/Real
+        "What they don't teach about the pyramids changes everything we thought we knew.",
+        "I discovered a secret that's been hiding in plain sight for 4,000 years.",
+        "The evidence was always there. We just weren't looking at it correctly.",
     ]
     
     def __init__(self):
@@ -45,7 +50,7 @@ class UltimateScriptGenerator:
         
         print(f"🏆 ULTIMATE Script Generator initialized")
         print(f"   Using: Claude Sonnet 4 (BEST for storytelling!)")
-        print(f"   Hook variations: {len(self.HOOK_TEMPLATES)} templates")
+        print(f"   Hook generation: INTELLIGENT (learns from examples!)")
     
     def generate_ultimate_script(
         self,
@@ -170,8 +175,8 @@ class UltimateScriptGenerator:
         # Voice reads ~150 words per minute
         target_words = duration_minutes * 150
         
-        # Select random hook template for variety!
-        hook_template = random.choice(self.HOOK_TEMPLATES)
+        # Get example hooks for Claude to LEARN from (not copy!)
+        example_hooks_text = '\n'.join([f"   • {hook}" for hook in self.EXAMPLE_HOOKS])
         
         # Base prompt for Claude Sonnet 4
         prompt = f"""You are a MASTER storyteller creating a {style['name']} for a professional YouTube video.
@@ -188,17 +193,34 @@ PACING: {style['pacing']}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔥 SUPER HOOK (First 20-30 words) - MUST grab attention INSTANTLY!
+🔥 INTELLIGENT HOOK CREATION (First 20-30 words):
 
-Create a hook inspired by this template (but make it UNIQUE):
-"{hook_template}"
+STUDY these example hooks to LEARN the pattern (DON'T COPY!):
 
-Make it:
-✅ SHOCKING or COMPELLING (viewers MUST keep watching!)
-✅ RELEVANT to: {topic}
-✅ EMOTIONAL (create immediate connection)
-✅ MYSTERIOUS (raise questions that need answers)
-✅ UNIQUE every time (don't copy templates, use as inspiration!)
+{example_hooks_text}
+
+ANALYZE what makes these hooks powerful:
+✅ Create immediate intrigue (viewers MUST know more)
+✅ Use CONTRAST or TWIST ("I believed X, then Y happened")
+✅ Raise questions that NEED answers
+✅ Specific and CONCRETE (not vague)
+✅ Create emotional connection
+✅ Promise a story worth watching
+
+NOW create a COMPLETELY NEW, ORIGINAL hook for "{topic}":
+
+Your hook MUST be:
+✅ 100% UNIQUE (NOT from examples - create something NEW!)
+✅ PERFECTLY matched to topic: {topic}
+✅ {style['name']} tone and style
+✅ INSTANTLY attention-grabbing
+✅ Create curiosity viewers CAN'T resist
+✅ Specific, concrete details (not generic)
+✅ Emotionally compelling
+✅ Make viewers NEED to keep watching
+
+CRITICAL: Learn the STYLE from examples, create ORIGINAL content!
+Never repeat patterns - each hook must be COMPLETELY UNIQUE!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
