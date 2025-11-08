@@ -12,8 +12,8 @@ import asyncio
 import edge_tts
 from pydub import AudioSegment
 
-# ✅ INWORLD AI TTS - SUPER FAST & HIGH QUALITY
-INWORLD_API_KEY = os.getenv('INWORLD_API_KEY', 'Yk15dDJCNkp6dFFVbGlxbEJtNkhIZFFDY0Fic0pYbko6c2lXcHcyaXNaSmtMSUU2bGxEcWwyeWkyRDV4QXlUN3FRWW9wNGhlMFgxc2VaOFprc3ZDRHpTMWdXSmNjY0l5RA==')
+# ✅ VOICE ENGINE - Edge-TTS (FREE, RELIABLE, NO API KEY!)
+# Inworld AI was unreliable - switching to Edge-TTS
 
 # ✅ IMPORTS FOR TEMPLATES + RESEARCH
 from src.ai.script_analyzer import script_analyzer
@@ -23,7 +23,6 @@ from src.ai.enhanced_script_generator import enhanced_script_generator
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
-from src.voice.inworld_tts import create_inworld_tts
 
 app = Flask(__name__)
 
@@ -39,17 +38,9 @@ CORS(app, resources={
 progress_state = {'status': 'ready', 'progress': 0, 'video_path': None, 'error': None}
 
 # ═══════════════════════════════════════════════════════════════
-# 🎤 VOICE ENGINE INITIALIZATION - INWORLD AI
+# 🎤 VOICE ENGINE - EDGE-TTS (FREE, RELIABLE, ALWAYS WORKS!)
 # ═══════════════════════════════════════════════════════════════
-
-inworld_tts = None
-try:
-    inworld_tts = create_inworld_tts(api_key=INWORLD_API_KEY)
-    print("✅ Inworld AI TTS initialized - SUPER FAST!")
-except Exception as e:
-    print(f"❌ Failed to initialize Inworld AI TTS: {e}")
-    print(f"   Set INWORLD_API_KEY environment variable")
-    inworld_tts = None
+# Using Edge-TTS - no API key needed, unlimited, reliable!
 
 # ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
@@ -63,61 +54,129 @@ def sanitize_filename(filename):
 
 
 def get_voice_id(voice_id=None):
-    """Get Inworld AI voice ID - maps old voice names to Inworld voices"""
+    """Get Edge-TTS voice ID - maps to Microsoft voices"""
     
-    # Map common voice names to Inworld voices
+    # Map to Edge-TTS voices
     voice_map = {
+        # Inworld mappings
+        'ashley': 'en-US-AriaNeural',
+        'brian': 'en-US-GuyNeural',
+        'emma': 'en-US-JennyNeural',
+        'john': 'en-GB-RyanNeural',
+        'sarah': 'en-US-SaraNeural',
+        'mike': 'en-US-ChristopherNeural',
+        'rachel': 'en-GB-SoniaNeural',
+        'david': 'en-US-EricNeural',
         # Old Kokoro voices
-        'af_bella': 'ashley',
-        'af_sarah': 'sarah',
-        'af_nicole': 'emma',
-        'af_sky': 'emma',
-        'am_adam': 'brian',
-        'am_michael': 'david',
-        'bf_emma': 'rachel',
-        'bm_george': 'john',
-        # Old Edge-TTS voices
-        'en-US-AriaNeural': 'ashley',
-        'en-US-GuyNeural': 'brian',
-        'en-US-JennyNeural': 'emma',
-        'en-GB-RyanNeural': 'john',
+        'af_bella': 'en-US-AriaNeural',
+        'am_adam': 'en-US-GuyNeural',
         # Generic names
-        'male_narrator_deep': 'john',
-        'female_narrator': 'ashley',
-        'female_young': 'emma',
-        'narrator_male_deep': 'john',
-        'narrator_female_warm': 'sarah',
-        'narrator_british_female': 'rachel',
+        'male_narrator_deep': 'en-US-GuyNeural',
+        'female_narrator': 'en-US-AriaNeural',
+        'female_young': 'en-US-JennyNeural',
     }
     
     # Use mapping or default
     if voice_id:
         voice_id = voice_map.get(voice_id, voice_id)
     else:
-        voice_id = 'ashley'  # Default to Ashley
+        voice_id = 'en-US-AriaNeural'  # Default
     
     return voice_id
 
 
-def generate_audio_inworld(text, voice="ashley", output_path="narration.mp3"):
-    """✅ Generate audio using Inworld AI - SUPER FAST & HIGH QUALITY"""
+async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="narration.mp3"):
+    """✅ Generate audio using Edge-TTS - FREE, RELIABLE, UNLIMITED!"""
     try:
-        if not inworld_tts:
-            raise RuntimeError("Inworld AI TTS not initialized. Set INWORLD_API_KEY environment variable")
+        print(f"🎤 Generating audio with Edge-TTS (Microsoft)...")
+        print(f"   Voice: {voice}")
+        print(f"   Text: {len(text)} characters")
         
-        print(f"🎤 Generating audio with Inworld AI...")
+        # For long text, use parallel chunking (FAST!)
+        if len(text) > 800:
+            print(f"   🚀 Using parallel chunking for long text...")
+            return await _generate_audio_edge_parallel(text, voice, output_path)
         
-        audio_path = inworld_tts.generate_audio(
-            text=text,
-            voice=voice,
-            output_path=str(output_path)
-        )
+        # For short text, generate directly
+        communicate = edge_tts.Communicate(text, voice)
+        await communicate.save(str(output_path))
         
-        return audio_path
+        print(f"✅ Audio generated: {output_path}")
+        return str(output_path)
         
     except Exception as e:
-        print(f"❌ Inworld AI Error: {e}")
+        print(f"❌ Edge-TTS Error: {e}")
         raise
+
+
+async def _generate_audio_edge_parallel(text, voice, output_path):
+    """Generate audio in parallel chunks using asyncio.gather - SUPER FAST!"""
+    from pydub import AudioSegment
+    
+    # Split text into chunks
+    chunks = _split_text_smart(text, max_chars=1000)
+    print(f"   Split into {len(chunks)} chunks")
+    print(f"   🚀 Generating {len(chunks)} chunks in PARALLEL...")
+    
+    # Create temp directory
+    temp_dir = Path("output/temp/chunks")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate all chunks in parallel using asyncio.gather
+    tasks = []
+    chunk_files = []
+    
+    for i, chunk in enumerate(chunks):
+        chunk_file = temp_dir / f"chunk_{i:03d}.mp3"
+        chunk_files.append(chunk_file)
+        communicate = edge_tts.Communicate(chunk, voice)
+        tasks.append(communicate.save(str(chunk_file)))
+    
+    # Wait for all chunks to complete
+    await asyncio.gather(*tasks)
+    
+    print(f"   ✅ All {len(chunks)} chunks generated!")
+    
+    # Combine all chunks
+    print(f"   🔗 Combining audio chunks...")
+    combined = AudioSegment.empty()
+    
+    for chunk_file in chunk_files:
+        if chunk_file.exists():
+            chunk_audio = AudioSegment.from_mp3(str(chunk_file))
+            combined += chunk_audio
+            chunk_file.unlink()  # Delete chunk
+    
+    # Export combined audio
+    combined.export(str(output_path), format="mp3")
+    
+    # Cleanup
+    temp_dir.rmdir() if not list(temp_dir.iterdir()) else None
+    
+    print(f"✅ Audio generated: {output_path}")
+    return str(output_path)
+
+
+def _split_text_smart(text, max_chars=1000):
+    """Split text at sentence boundaries"""
+    sentences = text.replace('!', '.').replace('?', '.').split('.')
+    sentences = [s.strip() + '.' for s in sentences if s.strip()]
+    
+    chunks = []
+    current_chunk = ""
+    
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) <= max_chars:
+            current_chunk += " " + sentence
+        else:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            current_chunk = sentence
+    
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    
+    return chunks if chunks else [text]
 
 
 async def _generate_audio_edge_parallel(text, voice, output_path, rate="+0%"):
