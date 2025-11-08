@@ -106,264 +106,42 @@ def get_voice_id(voice_id=None):
     return voice_id
 
 
-def generate_audio_inworld(text, voice="Ashley", output_path="narration.mp3"):
-    """✅ Generate audio using Inworld AI with DETAILED ERROR LOGGING"""
+def generate_audio_puter(text, voice="matthew", output_path="narration.mp3"):
+    """✅ Generate audio using Puter TTS - FREE & UNLIMITED!"""
     try:
-        if not inworld_tts:
-            raise RuntimeError("❌ Inworld TTS not initialized! Check initialization logs above!")
+        if not puter_tts:
+            raise RuntimeError("❌ Puter TTS not initialized! Check initialization logs above!")
         
-        print(f"\n🎤 Generating audio with Inworld AI...")
-        print(f"   Voice: {voice}")
-        print(f"   Text length: {len(text)} characters")
-        print(f"   Output path: {output_path}")
-        
-        # Generate audio
-        audio_path = inworld_tts.generate_audio(
-            text=text,
-            voice=voice,  # Must be capitalized!
-            output_path=str(output_path)
-        )
-        
-        print(f"✅ Inworld AI generation SUCCESS!")
-        return audio_path
-        
-    except Exception as e:
-        print(f"\n{'='*60}")
-        print(f"❌ INWORLD AI GENERATION FAILED!")
-        print(f"{'='*60}")
-        print(f"Error: {e}")
-        print(f"Voice: {voice}")
-        print(f"Text length: {len(text)}")
-        print(f"\n💡 Possible causes:")
-        print(f"   1. Invalid JWT credentials")
-        print(f"   2. Voice name must be capitalized (Ashley, not ashley)")
-        print(f"   3. API endpoint wrong")
-        print(f"   4. Network/firewall blocking API")
-        print(f"   5. API rate limiting")
-        print(f"{'='*60}\n")
-        raise
-
-
-def generate_audio_elevenlabs(text, voice="adam", output_path="narration.mp3"):
-    """✅ Generate HUMAN-LIKE audio using ElevenLabs - PERFECT FOR YOUTUBE!"""
-    try:
-        if not elevenlabs_tts:
-            raise RuntimeError("❌ ElevenLabs TTS not initialized! Set ELEVENLABS_API_KEY in .env")
-        
-        print(f"\n🎤 Generating HUMAN-LIKE audio with ElevenLabs...")
+        print(f"\n🎤 Generating audio with Puter TTS (FREE & UNLIMITED)...")
         print(f"   Voice: {voice.title()}")
         print(f"   Text length: {len(text)} characters")
         print(f"   Output path: {output_path}")
-        print(f"   🎬 YouTube-quality voice generation!")
+        print(f"   💰 Cost: $0 (FREE!)")
         
         # Generate audio
-        audio_path = elevenlabs_tts.generate_audio(
+        audio_path = puter_tts.generate_audio(
             text=text,
-            voice=voice.lower(),  # ElevenLabs uses lowercase IDs
+            voice=voice.lower(),  # Puter uses lowercase IDs
             output_path=str(output_path)
         )
         
-        print(f"✅ ElevenLabs generation SUCCESS!")
-        print(f"   🎬 Voice sounds 99% HUMAN - perfect for YouTube!")
+        print(f"✅ Puter TTS generation SUCCESS!")
+        print(f"   🎬 Good quality for YouTube - FREE forever!")
         return audio_path
         
     except Exception as e:
         print(f"\n{'='*60}")
-        print(f"❌ ELEVENLABS GENERATION FAILED!")
+        print(f"❌ PUTER TTS GENERATION FAILED!")
         print(f"{'='*60}")
         print(f"Error: {e}")
         print(f"Voice: {voice}")
         print(f"Text length: {len(text)}")
-        print(f"\n💡 Solutions:")
-        print(f"   1. Get FREE API key: https://elevenlabs.io/")
-        print(f"   2. Add to .env: ELEVENLABS_API_KEY=your_key_here")
-        print(f"   3. Check your quota (FREE tier = 10 min/month)")
-        print(f"   4. Try a different voice: adam, bella, josh, etc.")
+        print(f"\n💡 Troubleshooting:")
+        print(f"   1. Check internet connection")
+        print(f"   2. Verify api.puter.com is accessible")
+        print(f"   3. Try a different voice (matthew, joanna, etc.)")
+        print(f"   4. Check text length (try shorter text)")
         print(f"{'='*60}\n")
-        raise
-
-
-async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="narration.mp3"):
-    """✅ Generate audio using Edge-TTS - FREE, RELIABLE, UNLIMITED!"""
-    try:
-        print(f"🎤 Generating audio with Edge-TTS (Microsoft)...")
-        print(f"   Voice: {voice}")
-        print(f"   Text: {len(text)} characters")
-        
-        # For long text, use parallel chunking (FAST!)
-        if len(text) > 800:
-            print(f"   🚀 Using parallel chunking for long text...")
-            return await _generate_audio_edge_parallel(text, voice, output_path)
-        
-        # For short text, generate directly
-        communicate = edge_tts.Communicate(text, voice)
-        await communicate.save(str(output_path))
-        
-        print(f"✅ Audio generated: {output_path}")
-        return str(output_path)
-        
-    except Exception as e:
-        print(f"❌ Edge-TTS Error: {e}")
-        raise
-
-
-async def _generate_audio_edge_parallel(text, voice, output_path):
-    """Generate audio in parallel chunks using asyncio.gather - SUPER FAST!"""
-    from pydub import AudioSegment
-    
-    # Split text into chunks
-    chunks = _split_text_smart(text, max_chars=1000)
-    print(f"   Split into {len(chunks)} chunks")
-    print(f"   🚀 Generating {len(chunks)} chunks in PARALLEL...")
-    
-    # Create temp directory
-    temp_dir = Path("output/temp/chunks")
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Generate all chunks in parallel using asyncio.gather
-    tasks = []
-    chunk_files = []
-    
-    for i, chunk in enumerate(chunks):
-        chunk_file = temp_dir / f"chunk_{i:03d}.mp3"
-        chunk_files.append(chunk_file)
-        communicate = edge_tts.Communicate(chunk, voice)
-        tasks.append(communicate.save(str(chunk_file)))
-    
-    # Wait for all chunks to complete
-    await asyncio.gather(*tasks)
-    
-    print(f"   ✅ All {len(chunks)} chunks generated!")
-    
-    # Combine all chunks
-    print(f"   🔗 Combining audio chunks...")
-    combined = AudioSegment.empty()
-    
-    for chunk_file in chunk_files:
-        if chunk_file.exists():
-            chunk_audio = AudioSegment.from_mp3(str(chunk_file))
-            combined += chunk_audio
-            chunk_file.unlink()  # Delete chunk
-    
-    # Export combined audio
-    combined.export(str(output_path), format="mp3")
-    
-    # Cleanup
-    temp_dir.rmdir() if not list(temp_dir.iterdir()) else None
-    
-    print(f"✅ Audio generated: {output_path}")
-    return str(output_path)
-
-
-def _split_text_smart(text, max_chars=1000):
-    """Split text at sentence boundaries"""
-    sentences = text.replace('!', '.').replace('?', '.').split('.')
-    sentences = [s.strip() + '.' for s in sentences if s.strip()]
-    
-    chunks = []
-    current_chunk = ""
-    
-    for sentence in sentences:
-        if len(current_chunk) + len(sentence) <= max_chars:
-            current_chunk += " " + sentence
-        else:
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-            current_chunk = sentence
-    
-    if current_chunk:
-        chunks.append(current_chunk.strip())
-    
-    return chunks if chunks else [text]
-
-
-async def _generate_audio_edge_parallel(text, voice, output_path, rate="+0%"):
-    """Generate audio in parallel chunks using asyncio.gather - SUPER FAST!"""
-    from pydub import AudioSegment
-    
-    # ⚡ EVEN SMALLER CHUNKS = MORE PARALLEL TASKS = FASTER!
-    # Changed from 2000 to 1000 chars per chunk for MAXIMUM parallelism
-    chunks = _split_text_smart(text, max_chars=1000)
-    print(f"   Split into {len(chunks)} chunks")
-    print(f"   🚀 Processing {len(chunks)} chunks in AGGRESSIVE PARALLEL for 10x+ speedup...")
-    
-    # Create temporary directory
-    temp_dir = Path("output/temp")
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Generate all chunks in parallel
-    chunk_files = []
-    tasks = []
-    
-    for i, chunk in enumerate(chunks):
-        chunk_file = temp_dir / f"chunk_{i:03d}.mp3"
-        chunk_files.append(chunk_file)
-        
-        # Create async task for each chunk with speed boost
-        communicate = edge_tts.Communicate(chunk, voice, rate=rate)
-        tasks.append(communicate.save(str(chunk_file)))
-    
-    # Execute all tasks in parallel
-    await asyncio.gather(*tasks)
-    
-    # Merge all chunks
-    print(f"   Merging {len(chunk_files)} audio chunks...")
-    combined = AudioSegment.empty()
-    
-    for chunk_file in chunk_files:
-        audio = AudioSegment.from_mp3(str(chunk_file))
-        combined += audio
-        chunk_file.unlink()  # Clean up
-    
-    # Save final audio
-    combined.export(str(output_path), format="mp3")
-    
-    print(f"✅ Audio generated: {output_path}")
-    return str(output_path)
-
-
-def _split_text_smart(text, max_chars=1000):
-    """Split text at sentence boundaries"""
-    # Split by sentences
-    sentences = text.replace('!', '.').replace('?', '.').split('.')
-    sentences = [s.strip() + '.' for s in sentences if s.strip()]
-    
-    chunks = []
-    current_chunk = ""
-    
-    for sentence in sentences:
-        if len(current_chunk) + len(sentence) <= max_chars:
-            current_chunk += " " + sentence
-        else:
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-            current_chunk = sentence
-    
-    if current_chunk:
-        chunks.append(current_chunk.strip())
-    
-    return chunks
-
-
-def generate_audio_kokoro(text, voice="af_bella", speed=1.0, output_path="narration.wav"):
-    """✅ Generate audio using Kokoro TTS"""
-    try:
-        if not kokoro_tts:
-            raise RuntimeError("Kokoro TTS not initialized")
-        
-        print(f"🎤 Generating audio with Kokoro TTS...")
-        
-        audio_path = kokoro_tts.generate_audio(
-            text=text,
-            voice=voice,
-            speed=speed,
-            output_path=str(output_path)
-        )
-        
-        return audio_path
-        
-    except Exception as e:
-        print(f"❌ Kokoro TTS Error: {e}")
         raise
 
 
@@ -444,7 +222,7 @@ def generate_video_background(data):
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         
         # ✅ INWORLD AI TTS - SUPER FAST!
-        generate_audio_inworld(
+        generate_audio_puter(
             text=result['script'],
             voice=voice_id,
             output_path=str(audio_path)
@@ -620,7 +398,7 @@ def generate_with_template_background(topic, story_type, template, research_data
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         
         # ✅ INWORLD AI TTS - SUPER FAST!
-        generate_audio_inworld(
+        generate_audio_puter(
             text=script_text,
             voice=voice_id,
             output_path=str(audio_path)
@@ -732,27 +510,30 @@ def health():
 
 @app.route('/api/voices', methods=['GET', 'OPTIONS'])
 def list_voices():
-    """✅ List all available Inworld AI voices"""
+    """✅ List all available Puter TTS voices"""
     if request.method == 'OPTIONS':
         return '', 204
     
     voices = {}
     
-    # Inworld AI voices
-    if inworld_tts:
-        from src.voice.inworld_tts import InworldTTS
-        for voice_id, voice_info in InworldTTS.VOICES.items():
+    # Puter TTS voices
+    if puter_tts:
+        from src.voice.puter_tts import PuterTTS
+        for voice_id, voice_info in PuterTTS.VOICES.items():
             voices[voice_id] = {
-                'engine': 'inworld',
+                'engine': 'puter',
                 'name': voice_info['name'],
                 'gender': voice_info['gender'],
-                'style': voice_info['style']
+                'style': voice_info['style'],
+                'best_for': voice_info['best_for']
             }
     
     return jsonify({
         'voices': voices,
-        'engine': 'inworld_ai',
-        'total': len(voices)
+        'engine': 'puter_tts',
+        'total': len(voices),
+        'cost': 'FREE',
+        'unlimited': True
     }), 200
 
 
@@ -947,19 +728,20 @@ def clear_cache_endpoint():
 
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("🚀 API SERVER READY - WITH INWORLD AI!")
+    print("🚀 API SERVER READY - WITH PUTER TTS!")
     print("="*60)
     print("📍 URL: http://localhost:5000")
     print("✨ Features: Templates + Research + Video Generation")
     
-    if inworld_tts:
-        print("🎤 Voice: INWORLD AI ⚡ (SUPER FAST, HIGH QUALITY!)")
+    if puter_tts:
+        print("🎤 Voice: PUTER TTS 💰 (FREE & UNLIMITED!)")
         print("   Available voices: 8 professional voices")
+        print("   💸 Cost: $0 Forever - No API key needed!")
     else:
-        print("⚠️  Inworld AI not initialized - set INWORLD_API_KEY")
+        print("⚠️  Puter TTS not initialized - check internet connection")
     
     print("🎨 Images: Pollinations AI + FLUX.1 Schnell (HIGH QUALITY, FREE)")
-    print("📝 Script: Gemini AI with Templates")
+    print("📝 Script: Gemini AI with Templates (10/10 Quality!)")
     print("="*60)
     print("\n✅ ENDPOINTS:")
     print("   GET  /api/voices - List all voices")

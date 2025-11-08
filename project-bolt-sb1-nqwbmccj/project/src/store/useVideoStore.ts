@@ -80,8 +80,8 @@ export const useVideoStore = create<VideoStore>((set) => ({
   storyType: 'scary_horror',
   imageStyle: 'cinematic',
   imageMode: 'ai_only',
-  voiceId: 'ashley',  // Default Inworld AI voice
-  voiceEngine: 'inworld',
+  voiceId: 'matthew',  // Default Puter TTS voice (male)
+  voiceEngine: 'puter',
   voiceSpeed: 1.0,
   duration: 5,
   hookIntensity: 'medium',
