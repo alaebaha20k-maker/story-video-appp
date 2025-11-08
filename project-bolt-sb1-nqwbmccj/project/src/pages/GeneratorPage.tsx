@@ -135,6 +135,15 @@ export const GeneratorPage = () => {
           research_data: null,
           duration: store.duration,
           num_scenes: store.numScenes,
+          // ✅ ADD ALL SETTINGS (voice, zoom, filters, effects!)
+          voice_id: store.voiceId,
+          voice_engine: store.voiceEngine,
+          zoom_effect: store.zoomEffect,
+          color_filter: store.colorFilter,
+          visual_effects: false,  // Will add toggle later
+          auto_captions: store.autoCaptions,
+          srt_subtitles: false,  // Can enable later if needed
+          emotion_captions: true,
         }),
       });
 
