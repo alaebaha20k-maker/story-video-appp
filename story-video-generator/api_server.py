@@ -313,9 +313,24 @@ def generate_video_background(data):
         color_filter = data.get('color_filter', 'none')
         zoom_effect = data.get('zoom_effect', False)
         caption = data.get('caption')  # Dict with text, style, position, etc.
-        auto_captions_enabled = data.get('auto_captions', False)
         
-        # Generate auto captions from script if enabled
+        # ✅ NEW: SRT Subtitle Generation (unlimited captions for ANY video length!)
+        srt_enabled = data.get('srt_subtitles', False)
+        srt_path = None
+        if srt_enabled:
+            from src.editor.srt_generator import generate_srt_subtitles
+            print("📝 Generating SRT subtitles (unlimited captions!)...")
+            safe_topic = re.sub(r'[^a-zA-Z0-9_\-]', '', data.get('topic', 'video'))[:50]
+            srt_path = generate_srt_subtitles(
+                result['script'],
+                audio_duration,
+                Path(f"output/subtitles/{safe_topic}_subtitles.srt"),
+                detect_emotions=data.get('emotion_captions', True)
+            )
+            print(f"   ✅ SRT file: {srt_path}")
+        
+        # Auto Captions (burned-in, only if NOT using SRT)
+        auto_captions_enabled = data.get('auto_captions', False) and not srt_enabled
         auto_captions = None
         if auto_captions_enabled:
             from src.editor.captions import generate_auto_captions
@@ -333,6 +348,10 @@ def generate_video_background(data):
             caption=caption,
             auto_captions=auto_captions
         )
+        
+        # If SRT enabled, also generate output info
+        if srt_path:
+            progress_state['srt_file'] = str(srt_path)
         
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'
