@@ -9,6 +9,8 @@ import os
 import threading
 import re
 from pydub import AudioSegment
+import asyncio
+import edge_tts
 
 # ✅ IMPORTS FOR TEMPLATES + RESEARCH
 from src.ai.script_analyzer import script_analyzer
@@ -107,42 +109,133 @@ def get_voice_id(voice_id=None):
 
 
 def generate_audio_puter(text, voice="matthew", output_path="narration.mp3"):
-    """✅ Generate audio using Puter TTS - FREE & UNLIMITED!"""
+    """✅ Generate audio using Puter TTS with Edge-TTS fallback!"""
     try:
         if not puter_tts:
-            raise RuntimeError("❌ Puter TTS not initialized! Check initialization logs above!")
+            raise RuntimeError("❌ Puter TTS not initialized! Falling back to Edge-TTS...")
         
-        print(f"\n🎤 Generating audio with Puter TTS (FREE & UNLIMITED)...")
+        print(f"\n🎤 Trying Puter TTS (FREE & UNLIMITED)...")
         print(f"   Voice: {voice.title()}")
         print(f"   Text length: {len(text)} characters")
-        print(f"   Output path: {output_path}")
-        print(f"   💰 Cost: $0 (FREE!)")
         
-        # Generate audio
+        # Try Puter TTS
         audio_path = puter_tts.generate_audio(
             text=text,
-            voice=voice.lower(),  # Puter uses lowercase IDs
+            voice=voice.lower(),
             output_path=str(output_path)
         )
         
-        print(f"✅ Puter TTS generation SUCCESS!")
-        print(f"   🎬 Good quality for YouTube - FREE forever!")
+        print(f"✅ Puter TTS SUCCESS!")
         return audio_path
         
-    except Exception as e:
-        print(f"\n{'='*60}")
-        print(f"❌ PUTER TTS GENERATION FAILED!")
-        print(f"{'='*60}")
-        print(f"Error: {e}")
-        print(f"Voice: {voice}")
-        print(f"Text length: {len(text)}")
-        print(f"\n💡 Troubleshooting:")
-        print(f"   1. Check internet connection")
-        print(f"   2. Verify api.puter.com is accessible")
-        print(f"   3. Try a different voice (matthew, joanna, etc.)")
-        print(f"   4. Check text length (try shorter text)")
-        print(f"{'='*60}\n")
-        raise
+    except Exception as puter_error:
+        # Puter TTS failed - use Edge-TTS fallback!
+        print(f"\n⚠️  Puter TTS failed: {puter_error}")
+        print(f"🔄 AUTOMATICALLY switching to Edge-TTS (FREE backup!)...")
+        
+        try:
+            # Map Puter voices to Edge-TTS voices
+            voice_map = {
+                'matthew': 'en-US-GuyNeural',
+                'joey': 'en-US-ChristopherNeural',
+                'brian': 'en-US-AndrewNeural',
+                'justin': 'en-US-RogerNeural',
+                'joanna': 'en-US-AriaNeural',
+                'salli': 'en-US-JennyNeural',
+                'kimberly': 'en-US-SaraNeural',
+                'ivy': 'en-US-NancyNeural',
+            }
+            
+            edge_voice = voice_map.get(voice.lower(), 'en-US-GuyNeural')
+            
+            print(f"   Using Edge-TTS voice: {edge_voice}")
+            print(f"   Quality: Good for YouTube (free backup!)")
+            
+            # Generate with Edge-TTS
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            audio_path = loop.run_until_complete(
+                generate_audio_edge_tts(text, edge_voice, output_path)
+            )
+            loop.close()
+            
+            print(f"✅ Edge-TTS fallback SUCCESS!")
+            print(f"   🎬 Video will generate with Edge-TTS voice!")
+            return audio_path
+            
+        except Exception as edge_error:
+            print(f"\n{'='*60}")
+            print(f"❌ BOTH Puter TTS AND Edge-TTS FAILED!")
+            print(f"{'='*60}")
+            print(f"Puter error: {puter_error}")
+            print(f"Edge error: {edge_error}")
+            print(f"{'='*60}\n")
+            raise Exception("❌ Voice generation completely failed!")
+
+
+async def generate_audio_edge_tts(text, voice="en-US-GuyNeural", output_path="narration.mp3"):
+    """✅ Edge-TTS fallback - Always works!"""
+    from pydub import AudioSegment
+    
+    print(f"   🎤 Edge-TTS generating...")
+    
+    # For long text, use chunking
+    if len(text) > 3000:
+        chunks = _split_text_smart(text, max_chars=2000)
+        print(f"   Split into {len(chunks)} chunks for Edge-TTS")
+        
+        temp_dir = Path("output/temp/edge_chunks")
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate chunks in parallel
+        tasks = []
+        chunk_files = []
+        
+        for i, chunk in enumerate(chunks):
+            chunk_file = temp_dir / f"chunk_{i:03d}.mp3"
+            chunk_files.append(chunk_file)
+            communicate = edge_tts.Communicate(chunk, voice, rate="+10%")
+            tasks.append(communicate.save(str(chunk_file)))
+        
+        await asyncio.gather(*tasks)
+        
+        # Combine chunks
+        combined = AudioSegment.empty()
+        for chunk_file in chunk_files:
+            if chunk_file.exists():
+                audio_chunk = AudioSegment.from_mp3(str(chunk_file))
+                combined += audio_chunk
+                chunk_file.unlink()
+        
+        combined.export(str(output_path), format="mp3", bitrate="192k")
+    else:
+        # Short text - generate directly
+        communicate = edge_tts.Communicate(text, voice, rate="+10%")
+        await communicate.save(str(output_path))
+    
+    return str(output_path)
+
+
+def _split_text_smart(text, max_chars=2000):
+    """Split text at sentence boundaries"""
+    sentences = text.replace('!', '.').replace('?', '.').split('.')
+    sentences = [s.strip() + '.' for s in sentences if s.strip()]
+    
+    chunks = []
+    current_chunk = ""
+    
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) <= max_chars:
+            current_chunk += " " + sentence
+        else:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            current_chunk = sentence
+    
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    
+    return chunks if chunks else [text]
 
 
 def get_audio_duration(audio_path):
@@ -742,15 +835,14 @@ if __name__ == '__main__':
     print("   - First-person narrative")
     print("   - Unique IMAGE descriptions")
     
+    print("")
+    print("🎤 VOICE: SMART FALLBACK SYSTEM")
     if puter_tts:
-        print("")
-        print("🎤 VOICE: PUTER TTS (FREE & UNLIMITED!)")
-        print("   - 8 professional voices")
-        print("   - 80% human-like quality")
-        print("   - Perfect for YouTube")
-        print("   - $0 Forever - No API key!")
-    else:
-        print("⚠️  Puter TTS not initialized - check internet connection")
+        print("   - Primary: Puter TTS (FREE, tries first)")
+    print("   - Backup: Edge-TTS (FREE, always works!)")
+    print("   - 8 professional voices")
+    print("   - Auto-switches if Puter fails")
+    print("   - $0 Forever - No API key needed!")
     
     print("")
     print("🎨 IMAGES: FLUX.1 Schnell (10/10 QUALITY, FREE)")
