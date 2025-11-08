@@ -30,10 +30,10 @@ class EnhancedScriptGenerator:
         self.model = genai.GenerativeModel(
             model_name=GEMINI_SETTINGS['model'],
             generation_config={
-                "temperature": 0.85,  # Creative but controlled
-                "top_p": 0.95,
-                "top_k": 40,
-                "max_output_tokens": 8192,
+                "temperature": 0.75,  # ✅ Reduced for more consistent quality (was 0.85)
+                "top_p": 0.92,  # ✅ Tighter control for better coherence
+                "top_k": 50,  # ✅ Increased for better vocabulary variety
+                "max_output_tokens": 16384,  # ✅ Doubled for longer, detailed scripts
             }
         )
         self.character_names = []
@@ -198,26 +198,75 @@ Scenes: {num_scenes}
 
 """
         
-        # Add writing rules
-        prompt += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✍️ WRITING RULES (MUST FOLLOW)
+        # Add enhanced writing rules for 10/10 quality
+        prompt += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✍️ PROFESSIONAL SCRIPTWRITING RULES (10/10 QUALITY!)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+🎬 NARRATIVE REQUIREMENTS:
 ✅ PRESENT TENSE ONLY ("She runs" not "She ran")
-✅ SHOW DON'T TELL ("hands trembled" not "was scared")
-✅ USE ALL 5 SENSES (sight, sound, smell, taste, touch)
-✅ CHARACTER NAMES STAY CONSISTENT
-✅ SPECIFIC > VAGUE ("rusty Ford truck" not "a car")
-✅ ACTIVE VOICE (not passive)
-✅ NO LABELS or headers
-✅ DIALOGUE WITH CONTRACTIONS
-✅ VARIED SENTENCE LENGTH for rhythm
-✅ STRONG VOCABULARY without repetition
+✅ FIRST PERSON for emotional connection (use "I", "my", "me")
+✅ SHOW DON'T TELL ("my hands trembled" not "I was scared")
+✅ USE ALL 5 SENSES (what I see, hear, smell, taste, feel)
+✅ SPECIFIC DETAILS > VAGUE ("my father's rusty 1987 Ford F-150" not "a truck")
+✅ ACTIVE VOICE (not passive voice)
+✅ NO LABELS, NO HEADERS, NO METADATA
+✅ DIALOGUE WITH CONTRACTIONS ("don't", "can't", "I'm")
+
+🎭 EMOTIONAL DEPTH (CRITICAL!):
+✅ INTERNAL THOUGHTS - Show character's mind
+✅ VISCERAL REACTIONS - Physical sensations of emotion
+✅ SUBTEXT - What's unsaid is as important as what's said
+✅ MICRO-DETAILS - Small observations that reveal character
+✅ EMOTIONAL BEATS - Vary intensity (high → low → higher)
+✅ PACING - Mix short punchy sentences with longer flowing ones
+
+🎨 SCENE DESCRIPTIONS FOR IMAGES ({num_scenes} scenes):
+✅ After each major story beat, add: IMAGE: [detailed visual description]
+✅ Image descriptions must be:
+   - VIVID and SPECIFIC
+   - Include LIGHTING, MOOD, COMPOSITION
+   - Describe CHARACTERS, SETTING, ACTION
+   - Use CINEMATIC language
+   - 15-30 words per image description
+
+EXAMPLE FORMAT:
+[Story text]... She opens the door slowly, heart pounding.
+
+IMAGE: Woman's trembling hand on old brass doorknob, dim hallway behind, shadows stretching, eerie silence, cinematic lighting, close-up shot, suspenseful atmosphere.
+
+[Continue story]...
+
+🎯 QUALITY TARGETS:
+✅ Emotional impact: 10/10
+✅ Character depth: 10/10  
+✅ Visual imagery: 10/10
+✅ Pacing & rhythm: 10/10
+✅ Dialogue authenticity: 10/10
+✅ Sensory details: 10/10
+✅ Plot coherence: 10/10
+✅ Satisfying ending: 10/10
+
+⚡ VOICE OPTIMIZATION:
+✅ Write for spoken delivery (read-aloud test)
+✅ Use RHYTHM - vary sentence length
+✅ Add PAUSES with periods or commas
+✅ Build to CRESCENDOS for impact
+✅ Use REPETITION strategically for emphasis
+✅ Include MOMENTS OF SILENCE (short sentences)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-WRITE EXACTLY {target_words} WORDS with MAXIMUM quality!
-Generate NOW (no preamble):"""
+🎯 YOUR MISSION: Write EXACTLY {target_words} words of EXTRAORDINARY quality!
+
+REQUIREMENTS:
+- {num_scenes} IMAGE: descriptions embedded throughout
+- Present tense, first person
+- Emotional, visceral, engaging
+- Perfect for voice narration
+- Vivid visual scenes for video
+
+Generate the complete script NOW (no preamble, no commentary):"""
         
         return prompt
     
@@ -295,23 +344,112 @@ Sentence Variation: {template.get('sentence_variation', 'medium')}
         return sorted(list(names))[:10]
     
     def _parse_scenes(self, text: str, num_scenes: int) -> List[Dict]:
-        """Parse text into scenes"""
-        paragraphs = text.split('\n\n')
-        scene_length = len(paragraphs) // max(num_scenes, 1)
+        """Parse text into scenes with proper IMAGE descriptions"""
+        
+        # First, try to extract IMAGE: descriptions from script
+        image_descriptions = re.findall(r'IMAGE:\s*(.+?)(?:\n|$)', text, re.IGNORECASE)
+        
+        if image_descriptions and len(image_descriptions) >= num_scenes:
+            # Use explicit IMAGE: descriptions from script
+            logger.info(f"   ✅ Found {len(image_descriptions)} IMAGE descriptions in script")
+            
+            scenes = []
+            for i in range(min(num_scenes, len(image_descriptions))):
+                # Find the text around this image description
+                img_desc = image_descriptions[i]
+                
+                scenes.append({
+                    'scene_number': i + 1,
+                    'image_description': img_desc.strip(),
+                    'content': img_desc.strip(),  # For character detection
+                    'has_explicit_image': True
+                })
+            
+            return scenes
+        
+        # Fallback: Create scenes from text chunks with generated descriptions
+        logger.info(f"   ⚠️  No IMAGE descriptions found, creating from story content")
+        
+        # Split into paragraphs
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        
+        if not paragraphs:
+            paragraphs = [text]
+        
+        scene_length = max(1, len(paragraphs) // num_scenes)
         
         scenes = []
         for i in range(num_scenes):
-            start = i * scene_length
-            end = start + scene_length
-            scene_text = '\n\n'.join(paragraphs[start:end])
+            start_idx = i * scene_length
+            end_idx = min(start_idx + scene_length, len(paragraphs))
+            
+            scene_paragraphs = paragraphs[start_idx:end_idx]
+            scene_text = ' '.join(scene_paragraphs)[:300]  # First 300 chars of scene
+            
+            # Create rich image description from scene content
+            # Extract key visual elements
+            description = self._create_image_description_from_text(
+                scene_text,
+                scene_num=i + 1,
+                story_type=style.get('name', 'story') if 'style' in locals() else 'story'
+            )
             
             scenes.append({
-                'scene_num': i + 1,
-                'content': scene_text[:200],
-                'char_count': len(scene_text)
+                'scene_number': i + 1,
+                'image_description': description,
+                'content': scene_text,
+                'has_explicit_image': False
             })
         
         return scenes
+    
+    def _create_image_description_from_text(self, text: str, scene_num: int, story_type: str) -> str:
+        """Create detailed image description from story text"""
+        
+        # Extract key elements (characters, objects, actions, emotions)
+        words = text.lower().split()[:50]  # First 50 words of scene
+        
+        # Detect scene elements
+        has_character = any(name.lower() in ' '.join(words) for name in self.character_names[:3])
+        has_action = any(word in ' '.join(words) for word in ['run', 'walk', 'look', 'turn', 'move', 'open', 'close'])
+        has_emotion = any(word in ' '.join(words) for word in ['fear', 'joy', 'sad', 'angry', 'love', 'terror', 'happy'])
+        
+        # Build rich description
+        description_parts = []
+        
+        # Add main subject
+        if has_character and self.character_names:
+            description_parts.append(f"{self.character_names[0]}")
+        else:
+            description_parts.append("Main character")
+        
+        # Add key text snippet (cleaned)
+        clean_snippet = text[:80].replace('\n', ' ').strip()
+        if clean_snippet:
+            description_parts.append(clean_snippet)
+        
+        # Add cinematic elements
+        description_parts.append(f"{story_type} atmosphere")
+        description_parts.append("cinematic lighting")
+        description_parts.append("high detail")
+        
+        # Add composition based on scene number
+        compositions = [
+            "establishing wide shot",
+            "medium close-up",
+            "dramatic angle",
+            "intimate close-up",
+            "atmospheric wide",
+            "character focus",
+            "environmental detail",
+            "tension building shot",
+            "climactic moment",
+            "emotional resolution"
+        ]
+        if scene_num <= len(compositions):
+            description_parts.append(compositions[scene_num - 1])
+        
+        return ', '.join(description_parts)
 
 
 # Create singleton instance
