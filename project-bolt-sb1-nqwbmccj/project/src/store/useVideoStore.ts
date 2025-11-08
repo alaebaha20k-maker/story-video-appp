@@ -94,7 +94,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   
   // Filters and Effects
   colorFilter: 'none',
-  zoomEffect: false,
+  zoomEffect: true,  // ✅ Enabled by default for better videos!
   
   // Captions
   autoCaptions: false,  // NEW: Auto captions from script

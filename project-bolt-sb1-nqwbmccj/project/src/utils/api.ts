@@ -17,7 +17,7 @@ export const checkHealth = async (): Promise<boolean> => {
 
 interface GenerateVideoRequest {
   topic: string;
-  storytype: string;
+  story_type: string;
   duration: number;
   image_style: string;
   image_mode: string;
@@ -29,6 +29,16 @@ interface GenerateVideoRequest {
   pacing: string;
   characters?: any[];
   stock_keywords?: string[];
+  // Filters and Effects
+  color_filter?: string;
+  zoom_effect?: boolean;
+  auto_captions?: boolean;
+  caption?: {
+    text: string;
+    style: string;
+    position: string;
+    animation: string;
+  };
 }
 
 // ✅ GENERATE VIDEO

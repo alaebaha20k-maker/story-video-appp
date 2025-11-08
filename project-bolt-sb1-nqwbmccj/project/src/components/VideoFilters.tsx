@@ -40,9 +40,12 @@ export const VideoFilters = () => {
             <div className="flex items-center space-x-2">
               <Zap className="w-5 h-5 text-indigo-600" />
               <span className="font-semibold text-gray-900">Ken Burns Zoom Effect</span>
+              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
+                Recommended
+              </span>
             </div>
             <p className="text-sm text-gray-600 mt-1">
-              Smooth zoom on all images/videos (5% zoom in) - Creates dynamic motion
+              Smooth zoom on all images (30% dramatic zoom) - Creates professional motion and engagement
             </p>
           </div>
         </label>
