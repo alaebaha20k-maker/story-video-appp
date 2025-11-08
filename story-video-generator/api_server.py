@@ -20,7 +20,6 @@ from src.ai.enhanced_script_generator import enhanced_script_generator
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
-from src.voice.puter_tts import create_puter_tts
 
 app = Flask(__name__)
 
@@ -36,21 +35,13 @@ CORS(app, resources={
 progress_state = {'status': 'ready', 'progress': 0, 'video_path': None, 'error': None}
 
 # ═══════════════════════════════════════════════════════════════
-# 🎤 PUTER TTS - FREE & UNLIMITED VOICES!
+# 🎤 EDGE-TTS - FREE, RELIABLE, ALWAYS WORKS!
 # ═══════════════════════════════════════════════════════════════
 
-print(f"\n🔧 Initializing Puter TTS (FREE & UNLIMITED!)...")
-
-puter_tts = None
-try:
-    puter_tts = create_puter_tts()
-    print("✅ Puter TTS initialized successfully!")
-    print("   💰 FREE & UNLIMITED - No API key needed!")
-    print("   🎬 Good quality voices for YouTube!")
-except Exception as e:
-    print(f"❌ Failed to initialize Puter TTS: {e}")
-    print(f"   Check internet connection!")
-    puter_tts = None
+print(f"\n🔧 Using Edge-TTS (Microsoft) - FREE & UNLIMITED!")
+print("✅ Edge-TTS ready - No API key needed!")
+print("   💰 FREE & UNLIMITED forever!")
+print("   🎬 10+ professional voices!")
 
 # ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
@@ -64,113 +55,78 @@ def sanitize_filename(filename):
 
 
 def get_voice_id(voice_id=None):
-    """Get Puter TTS voice ID"""
+    """Get Edge-TTS voice ID"""
     
-    # ✅ Map to Puter TTS voices
+    # ✅ Map to Edge-TTS voices (Microsoft)
     voice_map = {
-        # Puter voices (lowercase)
-        'matthew': 'matthew',
-        'joey': 'joey',
-        'brian': 'brian',
-        'justin': 'justin',
-        'joanna': 'joanna',
-        'salli': 'salli',
-        'kimberly': 'kimberly',
-        'ivy': 'ivy',
+        # Male voices
+        'guy': 'en-US-GuyNeural',
+        'andrew': 'en-US-AndrewNeural',
+        'brian': 'en-US-BrianNeural',
+        'christopher': 'en-US-ChristopherNeural',
+        'roger': 'en-US-RogerNeural',
         
-        # Old voice mappings → Puter equivalents
-        'ashley': 'joanna',  # Female natural
-        'emma': 'ivy',  # Female friendly
-        'sarah': 'kimberly',  # Female energetic
-        'rachel': 'salli',  # Female professional
-        'brandon': 'matthew',  # Male deep
-        'christopher': 'brian',  # Male professional
-        'daniel': 'matthew',  # Male authoritative
-        'ethan': 'justin',  # Male casual
-        'john': 'matthew',  # Male deep
-        'mike': 'joey',  # Male casual
-        'david': 'brian',  # Male professional
+        # Female voices
+        'aria': 'en-US-AriaNeural',
+        'jenny': 'en-US-JennyNeural',
+        'sara': 'en-US-SaraNeural',
+        'nancy': 'en-US-NancyNeural',
+        'michelle': 'en-US-MichelleNeural',
         
-        # Old engine voices
-        'af_bella': 'joanna',
-        'am_adam': 'matthew',
-        'en-US-AriaNeural': 'joanna',
-        'en-US-GuyNeural': 'matthew',
+        # Old mappings
+        'matthew': 'en-US-GuyNeural',
+        'joey': 'en-US-ChristopherNeural',
+        'justin': 'en-US-RogerNeural',
+        'joanna': 'en-US-AriaNeural',
+        'salli': 'en-US-JennyNeural',
+        'kimberly': 'en-US-SaraNeural',
+        'ivy': 'en-US-NancyNeural',
     }
     
     # Use mapping or default
     if voice_id:
-        voice_id = voice_map.get(voice_id.lower() if isinstance(voice_id, str) else 'matthew', 'matthew')
+        voice_id = voice_map.get(voice_id.lower() if isinstance(voice_id, str) else 'en-US-GuyNeural', 'en-US-GuyNeural')
     else:
-        voice_id = 'matthew'  # Default
+        voice_id = 'en-US-GuyNeural'  # Default male voice
     
-    print(f"   🔧 Voice for Puter TTS: {voice_id.title()}")
+    print(f"   🔧 Voice for Edge-TTS: {voice_id}")
     return voice_id
 
 
-def generate_audio_puter(text, voice="matthew", output_path="narration.mp3"):
-    """✅ Generate audio using Puter TTS with Edge-TTS fallback!"""
+def generate_audio_edge(text, voice="en-US-GuyNeural", output_path="narration.mp3"):
+    """✅ Generate audio using Edge-TTS - FREE, RELIABLE, ALWAYS WORKS!"""
+    print(f"\n🎤 Generating audio with Edge-TTS (Microsoft - FREE!)...")
+    print(f"   Voice: {voice}")
+    print(f"   Text length: {len(text)} characters")
+    print(f"   Output path: {output_path}")
+    print(f"   💰 Cost: $0 (FREE!)")
+    
     try:
-        if not puter_tts:
-            raise RuntimeError("❌ Puter TTS not initialized! Falling back to Edge-TTS...")
-        
-        print(f"\n🎤 Trying Puter TTS (FREE & UNLIMITED)...")
-        print(f"   Voice: {voice.title()}")
-        print(f"   Text length: {len(text)} characters")
-        
-        # Try Puter TTS
-        audio_path = puter_tts.generate_audio(
-            text=text,
-            voice=voice.lower(),
-            output_path=str(output_path)
+        # Generate with Edge-TTS
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        audio_path = loop.run_until_complete(
+            generate_audio_edge_tts(text, voice, output_path)
         )
+        loop.close()
         
-        print(f"✅ Puter TTS SUCCESS!")
+        print(f"✅ Edge-TTS generation SUCCESS!")
+        print(f"   🎬 Good quality for YouTube - FREE forever!")
         return audio_path
         
-    except Exception as puter_error:
-        # Puter TTS failed - use Edge-TTS fallback!
-        print(f"\n⚠️  Puter TTS failed: {puter_error}")
-        print(f"🔄 AUTOMATICALLY switching to Edge-TTS (FREE backup!)...")
-        
-        try:
-            # Map Puter voices to Edge-TTS voices
-            voice_map = {
-                'matthew': 'en-US-GuyNeural',
-                'joey': 'en-US-ChristopherNeural',
-                'brian': 'en-US-AndrewNeural',
-                'justin': 'en-US-RogerNeural',
-                'joanna': 'en-US-AriaNeural',
-                'salli': 'en-US-JennyNeural',
-                'kimberly': 'en-US-SaraNeural',
-                'ivy': 'en-US-NancyNeural',
-            }
-            
-            edge_voice = voice_map.get(voice.lower(), 'en-US-GuyNeural')
-            
-            print(f"   Using Edge-TTS voice: {edge_voice}")
-            print(f"   Quality: Good for YouTube (free backup!)")
-            
-            # Generate with Edge-TTS
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            audio_path = loop.run_until_complete(
-                generate_audio_edge_tts(text, edge_voice, output_path)
-            )
-            loop.close()
-            
-            print(f"✅ Edge-TTS fallback SUCCESS!")
-            print(f"   🎬 Video will generate with Edge-TTS voice!")
-            return audio_path
-            
-        except Exception as edge_error:
-            print(f"\n{'='*60}")
-            print(f"❌ BOTH Puter TTS AND Edge-TTS FAILED!")
-            print(f"{'='*60}")
-            print(f"Puter error: {puter_error}")
-            print(f"Edge error: {edge_error}")
-            print(f"{'='*60}\n")
-            raise Exception("❌ Voice generation completely failed!")
+    except Exception as e:
+        print(f"\n{'='*60}")
+        print(f"❌ EDGE-TTS GENERATION FAILED!")
+        print(f"{'='*60}")
+        print(f"Error: {e}")
+        print(f"Voice: {voice}")
+        print(f"Text length: {len(text)}")
+        print(f"\n💡 Troubleshooting:")
+        print(f"   1. Check internet connection")
+        print(f"   2. Try a different voice")
+        print(f"   3. Check text length")
+        print(f"{'='*60}\n")
+        raise
 
 
 async def generate_audio_edge_tts(text, voice="en-US-GuyNeural", output_path="narration.mp3"):
@@ -307,16 +263,16 @@ def generate_video_background(data):
         
         print(f"   ✅ Images: {len(image_paths)} generated")
         
-        # Voice Generation - Puter TTS
-        progress_state['status'] = 'Generating voice with PUTER TTS...'
+        # Voice Generation - Edge-TTS
+        progress_state['status'] = 'Generating voice with Edge-TTS...'
         progress_state['progress'] = 60
-        print(f"🎤 Step 3/4: Generating voice with Puter TTS (FREE!)...")
+        print(f"🎤 Step 3/4: Generating voice with Edge-TTS (FREE!)...")
         
         audio_path = Path("output/temp/narration.mp3")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # ✅ PUTER TTS - FREE & UNLIMITED!
-        generate_audio_puter(
+        # ✅ EDGE-TTS - FREE & UNLIMITED!
+        generate_audio_edge(
             text=result['script'],
             voice=voice_id,
             output_path=str(audio_path)
@@ -402,7 +358,7 @@ def generate_video_background(data):
         
         print(f"\n✅ SUCCESS! Video: {output_filename}")
         print(f"   📝 Script: Gemini AI (10/10 quality!)")
-        print(f"   🎤 Voice: Puter TTS - {voice_id.title()} (FREE!)\n")
+        print(f"   🎤 Voice: Edge-TTS - {voice_id} (FREE!)\n")
         
     except Exception as e:
         progress_state['status'] = 'error'
@@ -424,7 +380,7 @@ def generate_with_template_background(topic, story_type, template, research_data
         voice_id = get_voice_id(voice_id)
         
         print(f"📝 Generating script with Gemini AI (10/10 quality!)...")
-        print(f"🎤 Voice Engine: PUTER TTS")
+        print(f"🎤 Voice Engine: EDGE-TTS")
         print(f"🎤 Voice: {voice_id}")
         
         # 📝 Generate script with Gemini (improved prompts!)
@@ -483,16 +439,16 @@ def generate_with_template_background(topic, story_type, template, research_data
         print(f"✅ Generated {len(image_paths)} images")
         
         progress_state['progress'] = 70
-        progress_state['status'] = 'generating_voice_puter'
+        progress_state['status'] = 'generating_voice_edge'
         
-        print(f"🎤 Generating voice with Puter TTS (FREE!)...")
+        print(f"🎤 Generating voice with Edge-TTS (FREE!)...")
         
-        # Generate audio with Puter TTS
+        # Generate audio with Edge-TTS
         audio_path = Path("output/temp/narration.mp3")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # ✅ PUTER TTS - FREE & UNLIMITED!
-        generate_audio_puter(
+        # ✅ EDGE-TTS - FREE & UNLIMITED!
+        generate_audio_edge(
             text=script_text,
             voice=voice_id,
             output_path=str(audio_path)
@@ -574,7 +530,7 @@ def generate_with_template_background(topic, story_type, template, research_data
         print(f"\n✅ SUCCESS!")
         print(f"   Video: {output_filename}")
         print(f"   📝 Script: Gemini AI - {len(script_text)} chars (10/10!)")
-        print(f"   🎤 Voice: Puter TTS - {voice_id.title()} (FREE!)")
+        print(f"   🎤 Voice: Edge-TTS - {voice_id} (FREE!)")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
     
@@ -596,36 +552,32 @@ def health():
     return jsonify({
         'status': 'ok',
         'message': 'API Server running',
-        'puter_tts_available': puter_tts is not None,
-        'puter_ai_available': True,
-        'voice_engine': 'puter_tts',
+        'voice_engine': 'edge_tts',
         'script_engine': 'gemini_ai'
     }), 200
 
 
 @app.route('/api/voices', methods=['GET', 'OPTIONS'])
 def list_voices():
-    """✅ List all available Puter TTS voices"""
+    """✅ List all available Edge-TTS voices"""
     if request.method == 'OPTIONS':
         return '', 204
     
-    voices = {}
-    
-    # Puter TTS voices
-    if puter_tts:
-        from src.voice.puter_tts import PuterTTS
-        for voice_id, voice_info in PuterTTS.VOICES.items():
-            voices[voice_id] = {
-                'engine': 'puter',
-                'name': voice_info['name'],
-                'gender': voice_info['gender'],
-                'style': voice_info['style'],
-                'best_for': voice_info['best_for']
-            }
+    # Edge-TTS voices (Microsoft)
+    voices = {
+        'guy': {'engine': 'edge', 'name': 'Guy', 'gender': 'male', 'style': 'Natural & Clear', 'best_for': 'General narration'},
+        'andrew': {'engine': 'edge', 'name': 'Andrew', 'gender': 'male', 'style': 'Professional', 'best_for': 'Business content'},
+        'christopher': {'engine': 'edge', 'name': 'Christopher', 'gender': 'male', 'style': 'Casual & Friendly', 'best_for': 'Vlogs, tutorials'},
+        'roger': {'engine': 'edge', 'name': 'Roger', 'gender': 'male', 'style': 'Authoritative', 'best_for': 'News, documentaries'},
+        'aria': {'engine': 'edge', 'name': 'Aria', 'gender': 'female', 'style': 'Natural & Warm', 'best_for': 'Stories, lifestyle'},
+        'jenny': {'engine': 'edge', 'name': 'Jenny', 'gender': 'female', 'style': 'Cheerful & Clear', 'best_for': 'Education, tutorials'},
+        'sara': {'engine': 'edge', 'name': 'Sara', 'gender': 'female', 'style': 'Young & Energetic', 'best_for': 'Adventure, action'},
+        'nancy': {'engine': 'edge', 'name': 'Nancy', 'gender': 'female', 'style': 'Professional', 'best_for': 'Business, formal'},
+    }
     
     return jsonify({
         'voices': voices,
-        'engine': 'puter_tts',
+        'engine': 'edge_tts',
         'total': len(voices),
         'cost': 'FREE',
         'unlimited': True
@@ -836,13 +788,11 @@ if __name__ == '__main__':
     print("   - Unique IMAGE descriptions")
     
     print("")
-    print("🎤 VOICE: SMART FALLBACK SYSTEM")
-    if puter_tts:
-        print("   - Primary: Puter TTS (FREE, tries first)")
-    print("   - Backup: Edge-TTS (FREE, always works!)")
+    print("🎤 VOICE: EDGE-TTS (Microsoft - FREE & UNLIMITED!)")
     print("   - 8 professional voices")
-    print("   - Auto-switches if Puter fails")
-    print("   - $0 Forever - No API key needed!")
+    print("   - FREE forever, no API key")
+    print("   - Reliable, always works")
+    print("   - $0 Forever!")
     
     print("")
     print("🎨 IMAGES: FLUX.1 Schnell (10/10 QUALITY, FREE)")

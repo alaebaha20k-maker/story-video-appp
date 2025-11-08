@@ -1,27 +1,27 @@
 import { Mic2, Zap } from 'lucide-react';
 import { useVideoStore } from '../store/useVideoStore';
 
-// ✅ PUTER TTS VOICES - FREE & UNLIMITED!
-const PUTER_VOICES = [
+// ✅ EDGE-TTS VOICES - FREE & UNLIMITED!
+const EDGE_VOICES = [
   // FEMALE VOICES (4)
-  { id: 'joanna', name: 'Joanna', gender: 'Female', style: 'Natural & Warm', icon: '👩', bestFor: 'General narration, storytelling' },
-  { id: 'ivy', name: 'Ivy', gender: 'Female', style: 'Soft & Friendly', icon: '👩', bestFor: 'Lifestyle, general content' },
-  { id: 'kimberly', name: 'Kimberly', gender: 'Female', style: 'Young & Energetic', icon: '👩', bestFor: 'Adventure, action' },
-  { id: 'salli', name: 'Salli', gender: 'Female', style: 'Professional & Clear', icon: '👩', bestFor: 'Education, tutorials' },
+  { id: 'aria', name: 'Aria', gender: 'Female', style: 'Natural & Warm', icon: '👩', bestFor: 'General narration, storytelling' },
+  { id: 'jenny', name: 'Jenny', gender: 'Female', style: 'Cheerful & Clear', icon: '👩', bestFor: 'Education, tutorials' },
+  { id: 'sara', name: 'Sara', gender: 'Female', style: 'Young & Energetic', icon: '👩', bestFor: 'Adventure, action' },
+  { id: 'nancy', name: 'Nancy', gender: 'Female', style: 'Professional', icon: '👩', bestFor: 'Business, formal content' },
   
   // MALE VOICES (4)
-  { id: 'matthew', name: 'Matthew', gender: 'Male', style: 'Natural & Clear', icon: '👨', bestFor: 'Documentaries, narration' },
-  { id: 'joey', name: 'Joey', gender: 'Male', style: 'Young & Energetic', icon: '👨', bestFor: 'Gaming, entertainment' },
-  { id: 'brian', name: 'Brian', gender: 'Male', style: 'Professional', icon: '👨', bestFor: 'Business, formal content' },
-  { id: 'justin', name: 'Justin', gender: 'Male', style: 'Casual & Friendly', icon: '👨', bestFor: 'Vlogs, tutorials' },
+  { id: 'guy', name: 'Guy', gender: 'Male', style: 'Natural & Clear', icon: '👨', bestFor: 'Documentaries, narration' },
+  { id: 'andrew', name: 'Andrew', gender: 'Male', style: 'Professional', icon: '👨', bestFor: 'Business, formal content' },
+  { id: 'christopher', name: 'Christopher', gender: 'Male', style: 'Casual & Friendly', icon: '👨', bestFor: 'Vlogs, tutorials' },
+  { id: 'roger', name: 'Roger', gender: 'Male', style: 'Authoritative', icon: '👨', bestFor: 'News, documentaries' },
 ];
 
 export const VoiceSelector = () => {
   const { voiceId, setVoiceId } = useVideoStore();
 
   // Group by gender
-  const femaleVoices = PUTER_VOICES.filter(v => v.gender === 'Female');
-  const maleVoices = PUTER_VOICES.filter(v => v.gender === 'Male');
+  const femaleVoices = EDGE_VOICES.filter(v => v.gender === 'Female');
+  const maleVoices = EDGE_VOICES.filter(v => v.gender === 'Male');
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
@@ -30,18 +30,18 @@ export const VoiceSelector = () => {
           <Mic2 className="w-6 h-6 text-purple-600" />
           <span>Voice Selection</span>
         </h2>
-        <p className="text-gray-600">Choose your narrator's voice (Puter TTS - FREE & Unlimited!)</p>
+        <p className="text-gray-600">Choose your narrator's voice (Edge-TTS - FREE & Unlimited!)</p>
       </div>
 
-      {/* Puter TTS Info */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border-2 border-green-200">
+      {/* Edge-TTS Info */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border-2 border-blue-200">
         <div className="flex items-center space-x-2 mb-2">
-          <Zap className="w-5 h-5 text-green-600" />
-          <span className="font-bold text-gray-900">PUTER TTS - FREE & UNLIMITED!</span>
-          <span className="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded">$0 FOREVER</span>
+          <Zap className="w-5 h-5 text-blue-600" />
+          <span className="font-bold text-gray-900">EDGE-TTS (Microsoft) - FREE & UNLIMITED!</span>
+          <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded">$0 FOREVER</span>
         </div>
         <p className="text-sm text-gray-600">
-          Professional voices with NO API key - Unlimited usage - Perfect for YouTube!
+          Professional Microsoft voices - NO API key - Unlimited usage - Reliable & Fast!
         </p>
       </div>
 
@@ -69,7 +69,7 @@ export const VoiceSelector = () => {
               <div className="text-xs text-gray-600 mt-2">
                 <strong>Best for:</strong> {voice.bestFor}
               </div>
-              <div className="text-xs text-green-600 font-semibold mt-1">
+              <div className="text-xs text-blue-600 font-semibold mt-1">
                 💰 FREE Forever
               </div>
             </button>
@@ -101,7 +101,7 @@ export const VoiceSelector = () => {
               <div className="text-xs text-gray-600 mt-2">
                 <strong>Best for:</strong> {voice.bestFor}
               </div>
-              <div className="text-xs text-green-600 font-semibold mt-1">
+              <div className="text-xs text-blue-600 font-semibold mt-1">
                 💰 FREE Forever
               </div>
             </button>
@@ -110,16 +110,16 @@ export const VoiceSelector = () => {
       </div>
 
       {/* Current Selection */}
-      <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-lg p-4 text-white">
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-4 text-white">
         <p className="text-sm font-medium mb-1">Currently Selected:</p>
         <p className="text-lg font-bold">
-          {PUTER_VOICES.find((v) => v.id === voiceId)?.name || 'Matthew'}
+          {EDGE_VOICES.find((v) => v.id === voiceId)?.name || 'Guy'}
         </p>
         <p className="text-sm opacity-90">
-          {PUTER_VOICES.find((v) => v.id === voiceId)?.style || 'Natural & Clear'}
+          {EDGE_VOICES.find((v) => v.id === voiceId)?.style || 'Natural & Clear'}
         </p>
         <p className="text-xs mt-2 opacity-80">
-          💰 FREE & Unlimited - No costs ever!
+          💰 FREE & Unlimited - Microsoft Edge-TTS!
         </p>
       </div>
     </div>
