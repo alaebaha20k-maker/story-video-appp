@@ -295,23 +295,39 @@ Sentence Variation: {template.get('sentence_variation', 'medium')}
         return sorted(list(names))[:10]
     
     def _parse_scenes(self, text: str, num_scenes: int) -> List[Dict]:
-        """Parse text into scenes"""
+        """Parse text into scenes with separate narration and image descriptions"""
         paragraphs = text.split('\n\n')
         scene_length = len(paragraphs) // max(num_scenes, 1)
-        
+
         scenes = []
         for i in range(num_scenes):
             start = i * scene_length
             end = start + scene_length
             scene_text = '\n\n'.join(paragraphs[start:end])
-            
+
             scenes.append({
                 'scene_num': i + 1,
-                'content': scene_text[:200],
+                'content': scene_text[:200],  # Narration text (for voice)
+                'image_description': self._create_image_prompt(scene_text[:200]),  # Visual description (for images only)
                 'char_count': len(scene_text)
             })
-        
+
         return scenes
+
+    def _create_image_prompt(self, sentence: str) -> str:
+        """Create visual prompt from sentence - NOT included in voice narration"""
+        sentence_lower = sentence.lower()
+
+        if any(word in sentence_lower for word in ['she', 'he', 'they', 'person', 'man', 'woman']):
+            return f"character: {sentence[:150]}"
+
+        if any(word in sentence_lower for word in ['room', 'house', 'street', 'forest', 'building']):
+            return f"location: {sentence[:150]}"
+
+        if any(word in sentence_lower for word in ['door', 'window', 'phone', 'car', 'weapon']):
+            return f"detail: {sentence[:150]}"
+
+        return f"atmospheric: {sentence[:150]}"
 
 
 # Create singleton instance
