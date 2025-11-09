@@ -38,7 +38,13 @@ class FFmpegCompiler:
         # Build video filter based on zoom_effect setting
         if zoom_effect:
             # Zoom effect: gentle zoom in for cinematic feel
-            video_filter = 'scale=1920:1080,zoompan=z=\'min(zoom+0.0015,1.1)\':d=1:x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1920x1080,fps=24'
+            video_filter_parts = (
+                "scale=1920:1080,"
+                "zoompan=z='min(zoom+0.0015,1.1)':d=1:"
+                "x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1920x1080,"
+                "fps=24"
+            )
+            video_filter = ''.join(video_filter_parts)
         else:
             # No zoom: simple scale
             video_filter = 'scale=1920:1080,fps=24'
