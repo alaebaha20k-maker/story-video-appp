@@ -5,6 +5,7 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from pathlib import Path
+import os
 import threading
 import re
 import asyncio
@@ -53,7 +54,14 @@ CORS(app, resources={
     }
 })
 
-progress_state = {'status': 'ready', 'progress': 0, 'video_path': None, 'error': None}
+progress_state = {
+    'status': 'ready',
+    'progress': 0,
+    'video_path': None,
+    'error': None,
+    'voice_engine': None,
+    'voice_id': None,
+}
 
 # ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
@@ -94,11 +102,142 @@ async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="n
         raise
 
 
+def generate_audio_playht(text, voice="James", output_path="narration.mp3"):
+    """✅ Generate audio using PlayHT (premium)"""
+    if not PLAYHT_READY:
+        raise RuntimeError("PlayHT not configured")
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        print("🎤 Generating audio with PlayHT...")
+        print(f"   Voice: {voice}")
+        print(f"   Text: {len(text)} characters")
+
+        stream = playht.generate(
+            text=text,
+            voice=voice,
+            output_format="mp3",
+        )
+
+        with open(str(output_path), 'wb') as handle:
+            for chunk in stream:
+                handle.write(chunk)
+
+        print(f"✅ Audio generated: {output_path}")
+        return output_path
+
+    except Exception as e:
+        print(f"❌ PlayHT Error: {e}")
+        raise
+
+
+def generate_audio_gtts(text, language="en", output_path="narration.mp3"):
+    """✅ Generate audio using gTTS (free)"""
+    if not GTTS_AVAILABLE:
+        raise RuntimeError("gTTS not installed")
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        print("🎤 Generating audio with gTTS...")
+        print(f"   Language: {language}")
+        print(f"   Text: {len(text)} characters")
+
+        from gtts import gTTS  # Local import to avoid module requirement when unavailable
+
+        tts = gTTS(text=text, lang=language, slow=False)
+        tts.save(str(output_path))
+
+        print(f"✅ Audio generated: {output_path}")
+        return output_path
+
+    except Exception as e:
+        print(f"❌ gTTS Error: {e}")
+        raise
+
+
+def generate_audio_for_engine(engine, text, voice_id, speed, output_path):
+    """Generate audio for the specified engine"""
+    engine = engine.lower()
+
+    if engine == 'kokoro':
+        return Path(
+            generate_audio_kokoro(
+                text=text,
+                voice=voice_id,
+                speed=speed,
+                output_path=str(output_path),
+            )
+        )
+
+    if engine == 'edge':
+        return Path(
+            asyncio.run(
+                generate_audio_edge_tts(
+                    text,
+                    voice=voice_id,
+                    output_path=str(output_path),
+                )
+            )
+        )
+
+    if engine == 'playht':
+        return generate_audio_playht(text, voice=voice_id, output_path=str(output_path))
+
+    if engine == 'gtts':
+        return generate_audio_gtts(text, language=voice_id, output_path=str(output_path))
+
+    raise ValueError(f"Unknown voice engine: {engine}")
+
+
+def generate_voice_with_fallback(text, preferred_engine=None, voice_id=None, speed=1.0, status_callback=None):
+    """Generate narration using available engines with graceful fallback"""
+    engine_order = get_engine_order(preferred_engine)
+    last_error = None
+
+    for engine in engine_order:
+        resolved_voice = map_voice_id(engine, voice_id)
+        output_path = get_audio_output_path(engine)
+
+        if status_callback:
+            status_callback(engine, 'start')
+
+        print(f"🎤 Trying {ENGINE_LABELS[engine]} (voice: {resolved_voice})")
+
+        try:
+            audio_path = generate_audio_for_engine(
+                engine,
+                text,
+                resolved_voice,
+                speed,
+                output_path,
+            )
+
+            print(f"✅ Voice ready using {ENGINE_LABELS[engine]}")
+
+            if status_callback:
+                status_callback(engine, 'success')
+
+            return engine, audio_path, resolved_voice
+
+        except Exception as e:
+            last_error = e
+            print(f"⚠️ {ENGINE_LABELS[engine]} failed: {e}")
+
+            if status_callback:
+                status_callback(engine, 'error', e)
+
+    raise last_error or RuntimeError("All voice engines failed")
+
+
 def get_audio_duration(audio_path):
     """Get duration of audio file (MP3 or WAV)"""
     try:
         audio_path = str(audio_path)
-        
+
         if audio_path.endswith('.mp3'):
             audio = AudioSegment.from_mp3(audio_path)
         elif audio_path.endswith('.wav'):
@@ -133,8 +272,11 @@ def generate_video_background(data):
         # Get zoom effect setting (default: True for better UX)
         zoom_effect = data.get('zoom_effect', True)
 
-        print(f"🎤 Voice Engine: {voice_engine.upper()}")
-        print(f"🎤 Voice ID: {voice_id}")
+        progress_state['voice_engine'] = None
+        progress_state['voice_id'] = None
+
+        print(f"🎤 Requested Engine: {preferred_engine or 'auto'}")
+        print(f"🎤 Requested Voice ID: {requested_voice_id or 'auto'}")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
         # Script
@@ -169,7 +311,6 @@ def generate_video_background(data):
         print(f"   ✅ Images: {len(image_paths)} generated")
         
         # Voice Generation
-        progress_state['status'] = f'Generating voice with {voice_engine.upper()}...'
         progress_state['progress'] = 60
         print(f"🎤 Step 3/4: Generating voice with {voice_engine.upper()}...")
 
@@ -186,6 +327,8 @@ def generate_video_background(data):
         
         audio_duration = get_audio_duration(audio_path)
         print(f"   ✅ Audio: {audio_duration:.1f} seconds")
+        print(f"   Engine Used: {ENGINE_LABELS[voice_engine]}")
+        print(f"   Voice Used: {resolved_voice}")
         
         # Calculate durations
         time_per_image = audio_duration / len(image_paths) if image_paths else 5
@@ -213,8 +356,8 @@ def generate_video_background(data):
         progress_state['video_path'] = output_filename
 
         print(f"\n✅ SUCCESS! Video: {output_filename}")
-        print(f"   Voice Engine: {voice_engine.upper()}")
-        print(f"   Voice: {voice_id}")
+        print(f"   Voice Engine: {ENGINE_LABELS[voice_engine]}")
+        print(f"   Voice: {resolved_voice}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}\n")
         
     except Exception as e:
@@ -225,17 +368,20 @@ def generate_video_background(data):
         traceback.print_exc()
 
 
-def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect=True):
+def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id,
+zoom_effect=True):
     """✅ Background generation with template + research + voice selection + zoom effect"""
     global progress_state
 
     try:
         progress_state['status'] = 'generating'
         progress_state['progress'] = 10
+        progress_state['voice_engine'] = None
+        progress_state['voice_id'] = None
 
         print(f"📝 Generating script with template...")
-        print(f"🎤 Voice Engine: {voice_engine.upper()}")
-        print(f"🎤 Voice: {voice_id}")
+        print(f"🎤 Requested Engine: {preferred_engine or 'auto'}")
+        print(f"🎤 Requested Voice: {requested_voice_id or 'auto'}")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
 
         # Generate script
@@ -247,12 +393,12 @@ def generate_with_template_background(topic, story_type, template, research_data
             duration_minutes=duration,
             num_scenes=num_scenes
         )
-        
+
         script_text = result['script']
-        
+
         progress_state['progress'] = 50
         progress_state['status'] = 'generating_images'
-        
+
         print("🎨 Generating images...")
         
         # Prepare scene data for image generation
@@ -295,7 +441,9 @@ def generate_with_template_background(topic, story_type, template, research_data
         
         audio_duration = get_audio_duration(audio_path)
         print(f"✅ Audio: {audio_duration:.1f} seconds")
-        
+        print(f"   Engine Used: {ENGINE_LABELS[voice_engine]}")
+        print(f"   Voice Used: {resolved_voice}")
+
         progress_state['progress'] = 80
         progress_state['status'] = 'compiling_video'
 
@@ -316,7 +464,7 @@ def generate_with_template_background(topic, story_type, template, research_data
             durations,
             zoom_effect=zoom_effect
         )
-        
+
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'
         progress_state['video_path'] = output_filename
@@ -324,12 +472,12 @@ def generate_with_template_background(topic, story_type, template, research_data
         print(f"\n✅ SUCCESS!")
         print(f"   Video: {output_filename}")
         print(f"   Script: {len(script_text)} chars")
-        print(f"   Voice Engine: {voice_engine.upper()}")
-        print(f"   Voice: {voice_id}")
+        print(f"   Voice Engine: {ENGINE_LABELS[voice_engine]}")
+        print(f"   Voice: {resolved_voice}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
-    
+
     except Exception as e:
         progress_state['status'] = 'error'
         progress_state['error'] = str(e)
@@ -381,7 +529,14 @@ def generate_video():
         return jsonify({'error': 'Topic is required'}), 400
     
     global progress_state
-    progress_state = {'status': 'starting', 'progress': 0, 'video_path': None, 'error': None}
+    progress_state = {
+        'status': 'starting',
+        'progress': 0,
+        'video_path': None,
+        'error': None,
+        'voice_engine': None,
+        'voice_id': None,
+    }
     
     threading.Thread(target=generate_video_background, args=(data,)).start()
     return jsonify({'success': True, 'message': 'Generation started'}), 200
@@ -498,12 +653,14 @@ def generate_with_template_endpoint():
         else:
             print(f"   Voice Engine: {voice_engine}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
-        
+
         progress_state = {
             'status': 'starting',
             'progress': 0,
             'video_path': None,
-            'error': None
+            'error': None,
+            'voice_engine': None,
+            'voice_id': None,
         }
 
         thread = threading.Thread(
