@@ -80,12 +80,12 @@ IMAGE_SETTINGS = {
 # ═══════════════════════════════════════════════════════════════
 
 # Voice engine priority (will try in this order)
-VOICE_ENGINE = "kokoro"  # Options: "kokoro", "edge"
-VOICE_PRIORITY = ["kokoro", "edge"]  # Fallback order
+VOICE_ENGINE = "edge"  # Options: "kokoro", "edge"
+VOICE_PRIORITY = ["edge"]  # Fallback order
 
-# 🎤 KOKORO TTS SETTINGS (48 professional voices, FREE, high quality)
+# 🎤 KOKORO TTS SETTINGS (disabled)
 KOKORO_SETTINGS = {
-    "enabled": True,
+    "enabled": False,
     "device": "cpu",  # Change to "cuda" for GPU acceleration (210× faster!)
     "sample_rate": 24000,
     "default_voice": "af_bella",  # Warm female voice
@@ -119,7 +119,7 @@ EDGE_TTS_SETTINGS = {
     "rate": "+0%",
     "volume": "+0%",
     "output_format": "mp3",
-    
+
     # Voice mapping
     "voice_categories": {
         "male_narrator_deep": "en-US-GuyNeural",
@@ -129,6 +129,33 @@ EDGE_TTS_SETTINGS = {
         "female_narrator_warm": "en-US-SaraNeural"
     }
 }
+
+
+# Human-friendly aliases for Edge voices used by API routes.
+EDGE_VOICE_MAP = {
+    "male_narrator_deep": "en-US-GuyNeural",
+    "female_narrator": "en-US-AriaNeural",
+    "female_young": "en-US-JennyNeural",
+    "narrator_male_deep": "en-US-GuyNeural",
+    "narrator_female_warm": "en-US-AriaNeural",
+}
+
+
+def resolve_edge_voice(voice_id=None):
+    """Return the configured Edge voice identifier."""
+    if voice_id:
+        return EDGE_VOICE_MAP.get(voice_id, voice_id)
+    return EDGE_TTS_SETTINGS.get("default_voice", "en-US-AriaNeural")
+
+
+def get_voice_engine_and_id(requested_engine=None, requested_voice=None):
+    """Resolve the voice engine and identifier expected by downstream code."""
+    engine = "edge"
+    if requested_engine and requested_engine.lower() != "edge":
+        print(f"⚠️ Voice engine '{requested_engine}' requested but Edge-TTS is enforced.")
+
+    voice_id = resolve_edge_voice(requested_voice)
+    return engine, voice_id
 
 # Voice settings (legacy support - maps to Kokoro)
 VOICE_SETTINGS = KOKORO_SETTINGS.copy()
