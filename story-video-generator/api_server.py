@@ -176,28 +176,7 @@ def is_engine_available(engine):
 
 def get_engine_order(preferred_engine=None):
     """Return a prioritized list of voice engines to try"""
-    candidates = []
-    if preferred_engine:
-        candidates.append(preferred_engine.lower())
-
-    candidates.extend([engine.lower() for engine in VOICE_PRIORITY])
-
-    # Ensure Edge and gTTS are present as safety nets
-    candidates.extend(['edge', 'gtts'])
-
-    order = []
-    for engine in candidates:
-        if engine not in ENGINE_LABELS:
-            continue
-        if engine in order:
-            continue
-        if is_engine_available(engine):
-            order.append(engine)
-
-    if not order:
-        raise RuntimeError("No voice engines available")
-
-    return order
+    return ['edge']
 
 
 def map_voice_id(engine, voice_id=None):
@@ -699,24 +678,6 @@ def list_voices():
 
     voices = {}
 
-    # Kokoro voices (list even if engine unavailable for UI purposes)
-    kokoro_available = kokoro_tts is not None
-    kokoro_voice_list = []
-    try:
-        from src.voice.kokoro_tts import KokoroTTS
-        kokoro_voice_list = list(KokoroTTS.VOICES.keys())
-    except Exception:
-        kokoro_voice_list = sorted(set(KOKORO_VOICE_MAP.values()))
-
-    voices['kokoro'] = {
-        'engine': 'kokoro',
-        'available': kokoro_available,
-        'voices': kokoro_voice_list,
-        'aliases': KOKORO_VOICE_MAP,
-        'default': DEFAULT_VOICES['kokoro'],
-        'categories': KOKORO_SETTINGS.get('voice_categories', {})
-    }
-
     # Edge-TTS voices
     voices['edge'] = {
         'engine': 'edge',
@@ -725,25 +686,6 @@ def list_voices():
         'aliases': EDGE_VOICE_MAP,
         'default': DEFAULT_VOICES['edge'],
         'categories': EDGE_TTS_SETTINGS.get('voice_categories', {})
-    }
-
-    # PlayHT voices (premium)
-    voices['playht'] = {
-        'engine': 'playht',
-        'available': PLAYHT_READY,
-        'voices': sorted(set(PLAYHT_VOICE_MAP.values())),
-        'aliases': PLAYHT_VOICE_MAP,
-        'default': DEFAULT_VOICES['playht'],
-        'requires_credentials': True
-    }
-
-    # gTTS voices (free)
-    voices['gtts'] = {
-        'engine': 'gtts',
-        'available': GTTS_AVAILABLE,
-        'voices': sorted(set(GTTS_VOICE_MAP.values())),
-        'aliases': GTTS_VOICE_MAP,
-        'default': DEFAULT_VOICES['gtts']
     }
 
     return jsonify(voices), 200

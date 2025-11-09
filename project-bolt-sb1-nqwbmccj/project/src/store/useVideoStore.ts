@@ -7,7 +7,6 @@ interface VideoStore {
   imageStyle: string;
   imageMode: string;
   voiceId: string;
-  voiceEngine: 'kokoro' | 'edge';  // ✅ NEW: Voice engine selector
   voiceSpeed: number;              // ✅ NEW: Voice speed control (0.5-2.0)
   duration: number;
   hookIntensity: string;
@@ -27,7 +26,6 @@ interface VideoStore {
   setImageStyle: (style: string) => void;
   setImageMode: (mode: string) => void;
   setVoiceId: (id: string) => void;
-  setVoiceEngine: (engine: 'kokoro' | 'edge') => void;  // ✅ NEW
   setVoiceSpeed: (speed: number) => void;               // ✅ NEW
   setDuration: (duration: number) => void;
   setHookIntensity: (intensity: string) => void;
@@ -49,8 +47,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   storyType: 'scary_horror',
   imageStyle: 'cinematic',
   imageMode: 'ai_only',
-  voiceId: 'af_bella',  // ✅ Default to Kokoro voice
-  voiceEngine: 'kokoro',  // ✅ NEW: Default to Kokoro
+  voiceId: 'en-US-GuyNeural',
   voiceSpeed: 1.0,        // ✅ NEW: Normal speed
   duration: 5,
   hookIntensity: 'medium',
@@ -70,7 +67,6 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setImageStyle: (imageStyle) => set({ imageStyle }),
   setImageMode: (imageMode) => set({ imageMode }),
   setVoiceId: (voiceId) => set({ voiceId }),
-  setVoiceEngine: (voiceEngine) => set({ voiceEngine }),  // ✅ NEW
   setVoiceSpeed: (voiceSpeed) => set({ voiceSpeed: Math.max(0.5, Math.min(2.0, voiceSpeed)) }),  // ✅ NEW: Clamp 0.5-2.0
   setDuration: (duration) => set({ duration }),
   setHookIntensity: (hookIntensity) => set({ hookIntensity }),
