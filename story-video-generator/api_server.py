@@ -61,6 +61,16 @@ def resolve_edge_voice(voice_id=None):
     return EDGE_TTS_SETTINGS.get("default_voice", "en-US-AriaNeural")
 
 
+def get_voice_engine_and_id(requested_engine=None, requested_voice=None):
+    """Resolve the voice engine and identifier expected by downstream code."""
+    engine = 'edge'
+    if requested_engine and requested_engine.lower() != 'edge':
+        print(f"⚠️ Voice engine '{requested_engine}' requested but Edge-TTS is enforced.")
+
+    voice_id = resolve_edge_voice(requested_voice)
+    return engine, voice_id
+
+
 def clean_script_for_voice(script_text):
     """Remove image prompt annotations before feeding text to TTS."""
     cleaned_lines = []
@@ -120,16 +130,15 @@ def generate_video_background(data):
     try:
         print(f"\n🎬 Starting generation: {data.get('topic', 'Untitled')}")
 
-        requested_engine = data.get('voice_engine')
-        if requested_engine and requested_engine.lower() != 'edge':
-            print(f"⚠️ Voice engine '{requested_engine}' requested but Edge-TTS is enforced.")
-
-        voice_id = resolve_edge_voice(data.get('voice_id'))
+        voice_engine, voice_id = get_voice_engine_and_id(
+            data.get('voice_engine'),
+            data.get('voice_id')
+        )
 
         # Get zoom effect setting (default: True for better UX)
         zoom_effect = data.get('zoom_effect', True)
 
-        print("🎤 Voice Engine: EDGE")
+        print(f"🎤 Voice Engine: {voice_engine.upper()}")
         print(f"🎤 Voice ID: {voice_id}")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
@@ -165,9 +174,9 @@ def generate_video_background(data):
         print(f"   ✅ Images: {len(image_paths)} generated")
         
         # Voice Generation
-        progress_state['status'] = 'Generating voice with EDGE...'
+        progress_state['status'] = f'Generating voice with {voice_engine.upper()}...'
         progress_state['progress'] = 60
-        print("🎤 Step 3/4: Generating voice with EDGE...")
+        print(f"🎤 Step 3/4: Generating voice with {voice_engine.upper()}...")
 
         audio_path = Path("output/temp/narration.mp3")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
@@ -209,7 +218,7 @@ def generate_video_background(data):
         progress_state['video_path'] = output_filename
 
         print(f"\n✅ SUCCESS! Video: {output_filename}")
-        print("   Voice Engine: EDGE")
+        print(f"   Voice Engine: {voice_engine.upper()}")
         print(f"   Voice: {voice_id}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}\n")
         
@@ -221,7 +230,7 @@ def generate_video_background(data):
         traceback.print_exc()
 
 
-def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_id, zoom_effect=True):
+def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect=True):
     """✅ Background generation with template + research + voice selection + zoom effect"""
     global progress_state
 
@@ -230,7 +239,7 @@ def generate_with_template_background(topic, story_type, template, research_data
         progress_state['progress'] = 10
 
         print(f"📝 Generating script with template...")
-        print("🎤 Voice Engine: EDGE")
+        print(f"🎤 Voice Engine: {voice_engine.upper()}")
         print(f"🎤 Voice: {voice_id}")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
 
@@ -273,9 +282,9 @@ def generate_with_template_background(topic, story_type, template, research_data
         print(f"✅ Generated {len(image_paths)} images")
 
         progress_state['progress'] = 70
-        progress_state['status'] = 'generating_voice_edge'
+        progress_state['status'] = f'generating_voice_{voice_engine.lower()}'
 
-        print("🎤 Generating voice with EDGE...")
+        print(f"🎤 Generating voice with {voice_engine.upper()}...")
 
         # Generate audio with Edge-TTS
         audio_path = Path("output/temp/narration.mp3")
@@ -320,7 +329,7 @@ def generate_with_template_background(topic, story_type, template, research_data
         print(f"\n✅ SUCCESS!")
         print(f"   Video: {output_filename}")
         print(f"   Script: {len(script_text)} chars")
-        print("   Voice Engine: EDGE")
+        print(f"   Voice Engine: {voice_engine.upper()}")
         print(f"   Voice: {voice_id}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         print(f"   Template: {'Used' if template else 'Not used'}")
@@ -481,17 +490,18 @@ def generate_with_template_endpoint():
         duration = int(data.get('duration', 10))
         num_scenes = int(data.get('num_scenes', 10))
         requested_engine = data.get('voice_engine')
-        voice_id = data.get('voice_id')
+        requested_voice = data.get('voice_id')
+        voice_engine, voice_id = get_voice_engine_and_id(requested_engine, requested_voice)
         zoom_effect = data.get('zoom_effect', True)  # Default: True for better UX
 
         print(f"\n🎬 Generating with template: {topic}")
         print(f"   Type: {story_type}")
         print(f"   Template: {'Yes' if template else 'No'}")
         print(f"   Research: {'Yes' if research_data else 'No'}")
-        if requested_engine and requested_engine.lower() != 'edge':
-            print(f"   Voice Engine request: {requested_engine} (overridden to EDGE)")
+        if requested_engine and requested_engine.lower() != voice_engine:
+            print(f"   Voice Engine request: {requested_engine} (overridden to {voice_engine.upper()})")
         else:
-            print("   Voice Engine: edge")
+            print(f"   Voice Engine: {voice_engine}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
         progress_state = {
@@ -503,7 +513,7 @@ def generate_with_template_endpoint():
 
         thread = threading.Thread(
             target=generate_with_template_background,
-            args=(topic, story_type, template, research_data, duration, num_scenes, voice_id, zoom_effect)
+            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect)
         )
         thread.start()
 
@@ -512,7 +522,7 @@ def generate_with_template_endpoint():
             'message': 'Generation started',
             'used_template': template is not None,
             'used_research': research_data is not None,
-            'voice_engine': 'edge',
+            'voice_engine': voice_engine,
             'zoom_effect': zoom_effect
         }), 200
     
