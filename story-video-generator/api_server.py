@@ -183,17 +183,21 @@ def get_audio_duration(audio_path):
 def generate_video_background(data):
     """Original video generation (without template)"""
     global progress_state
-    
+
     try:
         print(f"\n🎬 Starting generation: {data.get('topic', 'Untitled')}")
-        
+
         # Determine voice engine
         voice_engine = data.get('voice_engine', 'kokoro')
         voice_id = data.get('voice_id')
         voice_engine, voice_id = get_voice_engine_and_id(voice_engine, voice_id)
-        
+
+        # Get zoom effect setting (default: True for better UX)
+        zoom_effect = data.get('zoom_effect', True)
+
         print(f"🎤 Voice Engine: {voice_engine.upper()}")
         print(f"🎤 Voice ID: {voice_id}")
+        print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
         # Script
         progress_state['status'] = 'Generating script...'
@@ -261,25 +265,27 @@ def generate_video_background(data):
         progress_state['status'] = 'Compiling video...'
         progress_state['progress'] = 80
         print("🎬 Step 4/4: Compiling video...")
-        
+
         compiler = FFmpegCompiler()
         safe_topic = sanitize_filename(data.get('topic', 'video'))
         output_filename = f"{safe_topic}_video.mp4"
-        
+
         video_path = compiler.create_video(
             image_paths,
             str(audio_path),
             Path(f"output/videos/{output_filename}"),
-            durations
+            durations,
+            zoom_effect=zoom_effect
         )
         
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'
         progress_state['video_path'] = output_filename
-        
+
         print(f"\n✅ SUCCESS! Video: {output_filename}")
         print(f"   Voice Engine: {voice_engine.upper()}")
-        print(f"   Voice: {voice_id}\n")
+        print(f"   Voice: {voice_id}")
+        print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}\n")
         
     except Exception as e:
         progress_state['status'] = 'error'
@@ -289,20 +295,21 @@ def generate_video_background(data):
         traceback.print_exc()
 
 
-def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id):
-    """✅ Background generation with template + research + voice selection"""
+def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect=True):
+    """✅ Background generation with template + research + voice selection + zoom effect"""
     global progress_state
-    
+
     try:
         progress_state['status'] = 'generating'
         progress_state['progress'] = 10
-        
+
         # Determine voice engine
         voice_engine, voice_id = get_voice_engine_and_id(voice_engine, voice_id)
-        
+
         print(f"📝 Generating script with template...")
         print(f"🎤 Voice Engine: {voice_engine.upper()}")
         print(f"🎤 Voice: {voice_id}")
+        print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
         # Generate script
         result = enhanced_script_generator.generate_with_template(
@@ -365,33 +372,35 @@ def generate_with_template_background(topic, story_type, template, research_data
         
         progress_state['progress'] = 80
         progress_state['status'] = 'compiling_video'
-        
+
         print("🎬 Compiling video...")
-        
+
         # Compile video
         compiler = FFmpegCompiler()
         safe_topic = re.sub(r'[^a-zA-Z0-9_\-]', '', topic)[:50]
         output_filename = f"{safe_topic}_video.mp4"
-        
+
         time_per_image = audio_duration / len(image_paths) if image_paths else 5
         durations = [time_per_image] * len(image_paths)
-        
+
         video_path = compiler.create_video(
             image_paths,
             str(audio_path),
             Path(f"output/videos/{output_filename}"),
-            durations
+            durations,
+            zoom_effect=zoom_effect
         )
         
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'
         progress_state['video_path'] = output_filename
-        
+
         print(f"\n✅ SUCCESS!")
         print(f"   Video: {output_filename}")
         print(f"   Script: {len(script_text)} chars")
         print(f"   Voice Engine: {voice_engine.upper()}")
         print(f"   Voice: {voice_id}")
+        print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
     
@@ -562,12 +571,14 @@ def generate_with_template_endpoint():
         num_scenes = int(data.get('num_scenes', 10))
         voice_engine = data.get('voice_engine', 'kokoro')
         voice_id = data.get('voice_id')
-        
+        zoom_effect = data.get('zoom_effect', True)  # Default: True for better UX
+
         print(f"\n🎬 Generating with template: {topic}")
         print(f"   Type: {story_type}")
         print(f"   Template: {'Yes' if template else 'No'}")
         print(f"   Research: {'Yes' if research_data else 'No'}")
         print(f"   Voice Engine: {voice_engine}")
+        print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
         progress_state = {
             'status': 'starting',
@@ -578,16 +589,17 @@ def generate_with_template_endpoint():
         
         thread = threading.Thread(
             target=generate_with_template_background,
-            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id)
+            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect)
         )
         thread.start()
-        
+
         return jsonify({
             'success': True,
             'message': 'Generation started',
             'used_template': template is not None,
             'used_research': research_data is not None,
-            'voice_engine': voice_engine
+            'voice_engine': voice_engine,
+            'zoom_effect': zoom_effect
         }), 200
     
     except Exception as e:
