@@ -1,5 +1,5 @@
 """
-🔌 API SERVER - Edge-TTS narration + Flux image prompts
+🔌 API SERVER - With Kokoro TTS (PRIMARY) + Edge-TTS (BACKUP)
 """
 
 from flask import Flask, request, jsonify, send_file
@@ -12,6 +12,14 @@ import asyncio
 import edge_tts
 from pydub import AudioSegment
 
+# ✅ KOKORO TTS IMPORT
+try:
+    from src.voice.kokoro_tts import create_kokoro_tts
+    KOKORO_AVAILABLE = True
+except ImportError:
+    KOKORO_AVAILABLE = False
+    print("⚠️ Kokoro TTS not available - using Edge-TTS only")
+
 # ✅ IMPORTS FOR TEMPLATES + RESEARCH
 from src.ai.script_analyzer import script_analyzer
 from src.research.fact_searcher import fact_searcher
@@ -20,12 +28,6 @@ from src.ai.enhanced_script_generator import enhanced_script_generator
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
-from config.settings import (
-    EDGE_TTS_SETTINGS,
-    EDGE_VOICE_MAP,
-    resolve_edge_voice,
-    get_voice_engine_and_id,
-)
 from config.settings import KOKORO_SETTINGS, EDGE_TTS_SETTINGS, VOICE_PRIORITY
 
 # ✅ OPTIONAL TTS ENGINES
@@ -136,6 +138,19 @@ progress_state = {
 }
 
 # ═══════════════════════════════════════════════════════════════
+# 🎤 VOICE ENGINE INITIALIZATION
+# ═══════════════════════════════════════════════════════════════
+
+kokoro_tts = None
+if KOKORO_AVAILABLE and KOKORO_SETTINGS.get("enabled"):
+    try:
+        kokoro_tts = create_kokoro_tts(device=KOKORO_SETTINGS.get("device", "cpu"))
+        print("✅ Kokoro TTS initialized")
+    except Exception as e:
+        print(f"⚠️ Failed to initialize Kokoro TTS: {e}")
+        kokoro_tts = None
+
+# ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
 # ═══════════════════════════════════════════════════════════════
 
@@ -146,14 +161,6 @@ def sanitize_filename(filename):
     return filename[:50]
 
 
-def clean_script_for_voice(script_text):
-    """Remove image prompt annotations before feeding text to TTS."""
-    cleaned_lines = []
-    for line in script_text.splitlines():
-        if re.match(r"^\s*(IMAGE(?: PROMPT)?|PROMPT|SCENE IMAGE)\b", line, re.IGNORECASE):
-            continue
-        cleaned_lines.append(line)
-    return "\n".join(cleaned_lines).strip()
 def is_engine_available(engine):
     engine = (engine or '').lower()
     if engine == 'kokoro':
@@ -235,15 +242,37 @@ async def generate_audio_edge_tts(text, voice="en-US-AriaNeural", output_path="n
         print(f"🎤 Generating audio with Edge-TTS...")
         print(f"   Voice: {voice}")
         print(f"   Text: {len(text)} characters")
-
+        
         communicate = edge_tts.Communicate(text, voice)
         await communicate.save(str(output_path))
-
+        
         print(f"✅ Audio generated: {output_path}")
         return str(output_path)
-
+        
     except Exception as e:
         print(f"❌ Edge-TTS Error: {e}")
+        raise
+
+
+def generate_audio_kokoro(text, voice="af_bella", speed=1.0, output_path="narration.wav"):
+    """✅ Generate audio using Kokoro TTS"""
+    try:
+        if not kokoro_tts:
+            raise RuntimeError("Kokoro TTS not initialized")
+        
+        print(f"🎤 Generating audio with Kokoro TTS...")
+        
+        audio_path = kokoro_tts.generate_audio(
+            text=text,
+            voice=voice,
+            speed=speed,
+            output_path=str(output_path)
+        )
+        
+        return audio_path
+        
+    except Exception as e:
+        print(f"❌ Kokoro TTS Error: {e}")
         raise
 
 
@@ -409,10 +438,6 @@ def generate_video_background(data):
     try:
         print(f"\n🎬 Starting generation: {data.get('topic', 'Untitled')}")
 
-        voice_engine, voice_id = get_voice_engine_and_id(
-            data.get('voice_engine'),
-            data.get('voice_id')
-        )
         # Determine voice preferences
         preferred_engine = data.get('voice_engine')
         requested_voice_id = data.get('voice_id')
@@ -460,19 +485,6 @@ def generate_video_background(data):
         
         # Voice Generation
         progress_state['progress'] = 60
-        print(f"🎤 Step 3/4: Generating voice with {voice_engine.upper()}...")
-
-        audio_path = Path("output/temp/narration.mp3")
-        audio_path.parent.mkdir(parents=True, exist_ok=True)
-
-        narration_text = clean_script_for_voice(result['script'])
-
-        asyncio.run(generate_audio_edge_tts(
-            narration_text,
-            voice=voice_id,
-            output_path=str(audio_path)
-        ))
-        
 
         def _voice_status(engine, stage, error=None):
             label = ENGINE_LABELS[engine]
@@ -575,19 +587,6 @@ zoom_effect=True):
         progress_state['status'] = 'generating_images'
 
         print("🎨 Generating images...")
-        
-        # Prepare scene data for image generation
-        scenes = result.get('scenes', [])
-        if not scenes:
-            scenes = [{'scene_num': i + 1, 'content': f"{topic} scene {i + 1}"} for i in range(num_scenes)]
-
-        scene_inputs = []
-        for idx, scene in enumerate(scenes[:num_scenes]):
-            scene_inputs.append({
-                'scene_number': scene.get('scene_num', idx + 1),
-                'content': scene.get('content', ''),
-                'image_description': scene.get('image_description', scene.get('content', ''))
-            })
 
         # Extract image prompts from script
         image_prompts = re.findall(r'IMAGE:\s*(.+?)(?:\n|$)', script_text, re.IGNORECASE)
@@ -598,28 +597,12 @@ zoom_effect=True):
         # Generate images
         image_gen = create_image_generator('cinematic_film', story_type)
         characters = {char: f"{char}, character" for char in result.get('characters', [])[:3]}
-        images = image_gen.generate_batch(scene_inputs, characters)
+        images = image_gen.generate_batch(image_prompts[:num_scenes], characters)
         image_paths = [Path(img['filepath']) for img in images if img]
 
         print(f"✅ Generated {len(image_paths)} images")
 
         progress_state['progress'] = 70
-        progress_state['status'] = f'generating_voice_{voice_engine.lower()}'
-
-        print(f"🎤 Generating voice with {voice_engine.upper()}...")
-
-        # Generate audio with Edge-TTS
-        audio_path = Path("output/temp/narration.mp3")
-        audio_path.parent.mkdir(parents=True, exist_ok=True)
-
-        narration_text = clean_script_for_voice(script_text)
-
-        asyncio.run(generate_audio_edge_tts(
-            narration_text,
-            voice=voice_id,
-            output_path=str(audio_path)
-        ))
-        
 
         def _voice_status(engine, stage, error=None):
             label = ENGINE_LABELS[engine]
@@ -701,7 +684,6 @@ def health():
     return jsonify({
         'status': 'ok',
         'message': 'API Server running',
-        'edge_available': True
         'kokoro_available': KOKORO_AVAILABLE and kokoro_tts is not None,
         'edge_available': True,
         'playht_available': PLAYHT_READY,
@@ -711,18 +693,9 @@ def health():
 
 @app.route('/api/voices', methods=['GET', 'OPTIONS'])
 def list_voices():
-    """✅ List all available Edge-TTS voices"""
+    """✅ List all available voices from both engines"""
     if request.method == 'OPTIONS':
         return '', 204
-    
-    voices = {
-        'edge': {
-            'engine': 'edge',
-            'voices': sorted(set(list(EDGE_VOICE_MAP.keys()) + list(EDGE_TTS_SETTINGS.get('voice_categories', {}).keys()))),
-            'categories': EDGE_TTS_SETTINGS.get('voice_categories', {})
-        }
-    }
-
 
     voices = {}
 
@@ -898,19 +871,15 @@ def generate_with_template_endpoint():
         research_data = data.get('research_data')
         duration = int(data.get('duration', 10))
         num_scenes = int(data.get('num_scenes', 10))
-        requested_engine = data.get('voice_engine')
-        requested_voice = data.get('voice_id')
-        voice_engine, voice_id = get_voice_engine_and_id(requested_engine, requested_voice)
+        voice_engine = data.get('voice_engine', 'kokoro')
+        voice_id = data.get('voice_id')
         zoom_effect = data.get('zoom_effect', True)  # Default: True for better UX
 
         print(f"\n🎬 Generating with template: {topic}")
         print(f"   Type: {story_type}")
         print(f"   Template: {'Yes' if template else 'No'}")
         print(f"   Research: {'Yes' if research_data else 'No'}")
-        if requested_engine and requested_engine.lower() != voice_engine:
-            print(f"   Voice Engine request: {requested_engine} (overridden to {voice_engine.upper()})")
-        else:
-            print(f"   Voice Engine: {voice_engine}")
+        print(f"   Voice Engine: {voice_engine}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
 
         progress_state = {
@@ -921,7 +890,7 @@ def generate_with_template_endpoint():
             'voice_engine': None,
             'voice_id': None,
         }
-
+        
         thread = threading.Thread(
             target=generate_with_template_background,
             args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect)
@@ -972,13 +941,19 @@ def clear_cache_endpoint():
 
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("🚀 API SERVER READY - EDGE TTS ONLY!")
+    print("🚀 API SERVER READY - WITH KOKORO TTS!")
     print("="*60)
     print("📍 URL: http://localhost:5000")
     print("✨ Features: Templates + Research + Video Generation")
-
-    print("🎤 Voice: Edge-TTS (FREE)")
-    print("🎨 Images: Pollinations AI (Flux model)")
+    
+    if kokoro_tts:
+        print("🎤 Voice: Kokoro TTS (48 voices, FREE!)")
+        print("🎤 Backup: Edge-TTS (FREE)")
+    else:
+        print("🎤 Voice: Edge-TTS (FREE)")
+        print("⚠️  Kokoro TTS not available")
+    
+    print("🎨 Images: Pollinations AI (FREE)")
     print("📝 Script: Gemini AI with Templates")
     print("="*60)
     print("\n✅ ENDPOINTS:")
@@ -990,6 +965,5 @@ if __name__ == '__main__':
     print("   GET  /api/cache-stats - Cache statistics")
     print("   POST /api/clear-cache - Clear cache")
     print("="*60 + "\n")
-
+    
     app.run(host='0.0.0.0', port=5000, debug=True)
-
