@@ -221,15 +221,18 @@ def get_audio_duration(audio_path):
 def generate_video_background(data):
     """Original video generation (without template)"""
     global progress_state
-    
+
     try:
         print(f"\n🎬 Starting generation: {data.get('topic', 'Untitled')}")
         
-        # Get voice ID for Inworld AI
-        voice_id = get_voice_id(data.get('voice_id'))
+        # Determine voice engine
+        voice_engine = data.get('voice_engine', 'kokoro')
+        voice_id = data.get('voice_id')
+        voice_engine, voice_id = get_voice_engine_and_id(voice_engine, voice_id)
         
-        print(f"🎤 Voice Engine: INWORLD AI")
+        print(f"🎤 Voice Engine: {voice_engine.upper()}")
         print(f"🎤 Voice ID: {voice_id}")
+        print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
         # Script
         progress_state['status'] = 'Generating script...'
@@ -299,70 +302,25 @@ def generate_video_background(data):
         progress_state['status'] = 'Compiling video...'
         progress_state['progress'] = 80
         print("🎬 Step 4/4: Compiling video...")
-        print(f"   📋 Effects requested:")
-        print(f"      Zoom: {zoom_effect}")
-        print(f"      Color Filter: {color_filter}")
-        print(f"      Visual Effects: {visual_effects_enabled}")
-        print(f"      Captions: {auto_captions_enabled}")
         
         compiler = FFmpegCompiler()
         safe_topic = sanitize_filename(data.get('topic', 'video'))
         output_filename = f"{safe_topic}_video.mp4"
         
-        # Get optional filters, effects, and captions from request
-        color_filter = data.get('color_filter', 'none')
-        zoom_effect = data.get('zoom_effect', False)
-        visual_effects_enabled = data.get('visual_effects', False)  # 🔥 NEW: Fire, smoke, particles!
-        caption = data.get('caption')  # Dict with text, style, position, etc.
-        
-        # ✅ NEW: SRT Subtitle Generation (unlimited captions for ANY video length!)
-        srt_enabled = data.get('srt_subtitles', False)
-        srt_path = None
-        if srt_enabled:
-            from src.editor.srt_generator import generate_srt_subtitles
-            print("📝 Generating SRT subtitles (unlimited captions!)...")
-            safe_topic = re.sub(r'[^a-zA-Z0-9_\-]', '', data.get('topic', 'video'))[:50]
-            srt_path = generate_srt_subtitles(
-                result['script'],
-                audio_duration,
-                Path(f"output/subtitles/{safe_topic}_subtitles.srt"),
-                detect_emotions=data.get('emotion_captions', True)
-            )
-            print(f"   ✅ SRT file: {srt_path}")
-        
-        # Auto Captions (burned-in, only if NOT using SRT)
-        auto_captions_enabled = data.get('auto_captions', False) and not srt_enabled
-        auto_captions = None
-        if auto_captions_enabled:
-            from src.editor.captions import generate_auto_captions
-            print("📝 Generating auto captions from script...")
-            auto_captions = generate_auto_captions(result['script'], audio_duration)
-            print(f"   ✅ Auto Captions: {len(auto_captions)} sentences")
-        
         video_path = compiler.create_video(
             image_paths,
             str(audio_path),
             Path(f"output/videos/{output_filename}"),
-            durations,
-            color_filter=color_filter,
-            zoom_effect=zoom_effect,
-            caption=caption,
-            auto_captions=auto_captions,
-            visual_effects=visual_effects_enabled,  # 🔥 NEW!
-            script=result['script'] if visual_effects_enabled else None  # Pass script for emotion detection
+            durations
         )
-        
-        # If SRT enabled, also generate output info
-        if srt_path:
-            progress_state['srt_file'] = str(srt_path)
         
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'
         progress_state['video_path'] = output_filename
-        
+
         print(f"\n✅ SUCCESS! Video: {output_filename}")
-        print(f"   📝 Script: Gemini AI (10/10 quality!)")
-        print(f"   🎤 Voice: Edge-TTS - {voice_id} (FREE!)\n")
+        print(f"   Voice Engine: {voice_engine.upper()}")
+        print(f"   Voice: {voice_id}\n")
         
     except Exception as e:
         progress_state['status'] = 'error'
@@ -372,20 +330,21 @@ def generate_video_background(data):
         traceback.print_exc()
 
 
-def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect, color_filter, auto_captions_enabled, srt_enabled, emotion_captions, visual_effects_enabled):
-    """✅ Background generation with template + research + voice selection + ALL EFFECTS + VISUAL EMOTION EFFECTS"""
+def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id):
+    """✅ Background generation with template + research + voice selection"""
     global progress_state
-    
+
     try:
         progress_state['status'] = 'generating'
         progress_state['progress'] = 10
         
-        # Get voice ID for Inworld AI
-        voice_id = get_voice_id(voice_id)
+        # Determine voice engine
+        voice_engine, voice_id = get_voice_engine_and_id(voice_engine, voice_id)
         
-        print(f"📝 Generating script with Gemini AI (10/10 quality!)...")
-        print(f"🎤 Voice Engine: EDGE-TTS")
+        print(f"📝 Generating script with template...")
+        print(f"🎤 Voice Engine: {voice_engine.upper()}")
         print(f"🎤 Voice: {voice_id}")
+        print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
         # 📝 Generate script with Gemini (improved prompts!)
         result = enhanced_script_generator.generate_with_template(
@@ -489,56 +448,33 @@ def generate_with_template_background(topic, story_type, template, research_data
         
         progress_state['progress'] = 80
         progress_state['status'] = 'compiling_video'
-        
+
         print("🎬 Compiling video...")
-        print(f"   Zoom Effect: {zoom_effect}")
-        print(f"   Color Filter: {color_filter}")
-        print(f"   Visual Effects: {visual_effects_enabled}")
-        print(f"   Auto Captions: {len(auto_captions) if auto_captions else 0}")
-        print(f"   SRT Subtitles: {srt_enabled}")
         
-        # Compile video with ALL EFFECTS
+        # Compile video
         compiler = FFmpegCompiler()
         safe_topic = re.sub(r'[^a-zA-Z0-9_\-]', '', topic)[:50]
         output_filename = f"{safe_topic}_video.mp4"
-        
+
         time_per_image = audio_duration / len(image_paths) if image_paths else 5
         durations = [time_per_image] * len(image_paths)
-        
-        # Debug: Show timing calculation
-        print(f"   🔧 Video timing:")
-        print(f"      Images: {len(image_paths)}")
-        print(f"      Duration per image: {time_per_image:.1f}s")
-        print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} minutes)")
-        print(f"      Audio duration: {audio_duration:.1f}s ({audio_duration/60:.1f} minutes)")
-        if abs(sum(durations) - audio_duration) > 1:
-            print(f"   ⚠️  WARNING: Video/audio duration mismatch!")
         
         video_path = compiler.create_video(
             image_paths,
             str(audio_path),
             Path(f"output/videos/{output_filename}"),
-            durations,
-            color_filter=color_filter,
-            zoom_effect=zoom_effect,
-            caption=None,  # Manual captions not supported in template yet
-            auto_captions=auto_captions,
-            visual_effects=visual_effects_enabled,  # 🔥 NEW!
-            script=script_text if visual_effects_enabled else None  # For emotion detection
+            durations
         )
-        
-        # Store SRT path if generated
-        if srt_path:
-            progress_state['srt_file'] = str(srt_path)
         
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'
         progress_state['video_path'] = output_filename
-        
+
         print(f"\n✅ SUCCESS!")
         print(f"   Video: {output_filename}")
-        print(f"   📝 Script: Gemini AI - {len(script_text)} chars (10/10!)")
-        print(f"   🎤 Voice: Edge-TTS - {voice_id} (FREE!)")
+        print(f"   Script: {len(script_text)} chars")
+        print(f"   Voice Engine: {voice_engine.upper()}")
+        print(f"   Voice: {voice_id}")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
     
@@ -710,22 +646,12 @@ def generate_with_template_endpoint():
         voice_engine = data.get('voice_engine', 'inworld')
         voice_id = data.get('voice_id')
         
-        # ✅ Get effects and captions from request
-        zoom_effect = data.get('zoom_effect', False)
-        color_filter = data.get('color_filter', 'none')
-        visual_effects_enabled = data.get('visual_effects', False)  # 🔥 NEW!
-        auto_captions_enabled = data.get('auto_captions', False)
-        srt_enabled = data.get('srt_subtitles', False)
-        emotion_captions = data.get('emotion_captions', True)
-        
         print(f"\n🎬 Generating with template: {topic}")
         print(f"   Type: {story_type}")
         print(f"   Scenes: {num_scenes}")
         print(f"   Template: {'Yes' if template else 'No'}")
         print(f"   Research: {'Yes' if research_data else 'No'}")
-        print(f"   Zoom: {zoom_effect}")
-        print(f"   Filter: {color_filter}")
-        print(f"   Visual Effects: {visual_effects_enabled}")
+        print(f"   Voice Engine: {voice_engine}")
         
         progress_state = {
             'status': 'starting',
@@ -736,16 +662,17 @@ def generate_with_template_endpoint():
         
         thread = threading.Thread(
             target=generate_with_template_background,
-            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect, color_filter, auto_captions_enabled, srt_enabled, emotion_captions, visual_effects_enabled)
+            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id)
         )
         thread.start()
-        
+
         return jsonify({
             'success': True,
             'message': 'Generation started',
             'used_template': template is not None,
             'used_research': research_data is not None,
-            'voice_engine': voice_engine
+            'voice_engine': voice_engine,
+            'zoom_effect': zoom_effect
         }), 200
     
     except Exception as e:

@@ -178,7 +178,6 @@ export const GeneratorPage = () => {
         image_style: store.imageStyle,
         image_mode: store.imageMode,
         voice_id: store.voiceId,
-        voice_engine: store.voiceEngine,
         voice_speed: store.voiceSpeed,
         duration: store.duration,
         hook_intensity: store.hookIntensity,

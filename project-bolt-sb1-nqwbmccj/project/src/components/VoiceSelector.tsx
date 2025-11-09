@@ -1,5 +1,6 @@
 import { Mic2, Zap } from 'lucide-react';
 import { useVideoStore } from '../store/useVideoStore';
+<<<<<<< ours
 
 // ✅ EDGE-TTS VOICES - FREE & UNLIMITED!
 const EDGE_VOICES = [
@@ -22,6 +23,20 @@ export const VoiceSelector = () => {
   // Group by gender
   const femaleVoices = EDGE_VOICES.filter(v => v.gender === 'Female');
   const maleVoices = EDGE_VOICES.filter(v => v.gender === 'Male');
+=======
+import { VOICES } from '../constants/options';
+import { motion } from 'framer-motion';
+import { Volume2 } from 'lucide-react';
+
+export const VoiceSelector = () => {
+  const { voiceId, setVoiceId } = useVideoStore();
+  const groupedVoices = VOICES.reduce((acc, voice) => {
+    const group = voice.accent || 'Voices';
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(voice);
+    return acc;
+  }, {} as Record<string, typeof VOICES>);
+>>>>>>> theirs
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
@@ -33,6 +48,7 @@ export const VoiceSelector = () => {
         <p className="text-gray-600">Choose your narrator's voice (Edge-TTS - FREE & Unlimited!)</p>
       </div>
 
+<<<<<<< ours
       {/* Edge-TTS Info */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border-2 border-blue-200">
         <div className="flex items-center space-x-2 mb-2">
@@ -107,6 +123,68 @@ export const VoiceSelector = () => {
             </button>
           ))}
         </div>
+=======
+      {/* Voice Groups */}
+      <div className="space-y-6">
+        {Object.entries(groupedVoices).map(([accent, voices]) => (
+          <div key={accent} className="space-y-3">
+            <h3 className="text-lg font-bold text-gray-700 border-b-2 border-indigo-200 pb-2">
+              {accent} Voices ({voices.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {voices.map((voice) => (
+                <motion.button
+                  key={voice.id}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => setVoiceId(voice.id)}
+                  className={`text-left p-4 rounded-lg border-2 transition-all ${
+                    voiceId === voice.id
+                      ? 'border-indigo-600 bg-indigo-50 shadow-md ring-2 ring-indigo-200'
+                      : 'border-gray-200 hover:border-indigo-300 hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-3 flex-1">
+                      <span className="text-2xl">{voice.icon}</span>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-gray-900 text-sm">{voice.name}</h4>
+                        <p className="text-xs text-gray-500">
+                          {voice.accent} • Microsoft Edge TTS
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 p-2 hover:bg-indigo-100 rounded-full transition-colors">
+                      <Volume2 className="w-5 h-5 text-indigo-600" />
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-700 mb-2 leading-tight">
+                    {voice.description}
+                  </p>
+
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-600">
+                      <span className="font-medium">Tone:</span> {voice.tone}
+                    </p>
+                    <p className="text-xs text-indigo-600 font-medium">
+                      Best for: {voice.bestFor}
+                    </p>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Info Section */}
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+        <p className="text-sm text-blue-900">
+          <span className="font-bold">💡 Tip:</span> All voices are generated with Microsoft
+          Edge TTS, so you get fast, reliable narration without extra setup.
+        </p>
+>>>>>>> theirs
       </div>
 
       {/* Current Selection */}
