@@ -129,6 +129,9 @@ export const GeneratorPage = () => {
           research_data: null,
           duration: store.duration,
           num_scenes: store.numScenes,
+          voice_id: store.voiceId,
+          voice_engine: store.voiceEngine,
+          voice_speed: store.voiceSpeed,
         }),
       });
 

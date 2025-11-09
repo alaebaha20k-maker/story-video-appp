@@ -207,11 +207,19 @@ def map_voice_id(engine, voice_id=None):
 
     if engine == 'kokoro':
         if voice_id:
+            # If voice_id already starts with standard Kokoro prefixes, use it directly
+            if voice_id.startswith(('af_', 'am_', 'bf_', 'bm_')):
+                return voice_id
+            # Otherwise try legacy mapping
             return KOKORO_VOICE_MAP.get(voice_id, voice_id)
         return DEFAULT_VOICES['kokoro']
 
     if engine == 'edge':
         if voice_id:
+            # If voice_id matches Edge-TTS format, use it directly
+            if 'Neural' in voice_id or voice_id.startswith('en-'):
+                return voice_id
+            # Otherwise try legacy mapping
             return EDGE_VOICE_MAP.get(voice_id, voice_id)
         return DEFAULT_VOICES['edge']
 
@@ -441,6 +449,7 @@ def generate_video_background(data):
         # Determine voice preferences
         preferred_engine = data.get('voice_engine')
         requested_voice_id = data.get('voice_id')
+        voice_speed = data.get('voice_speed', 1.0)
 
         # Get zoom effect setting (default: True for better UX)
         zoom_effect = data.get('zoom_effect', True)
@@ -450,6 +459,7 @@ def generate_video_background(data):
 
         print(f"🎤 Requested Engine: {preferred_engine or 'auto'}")
         print(f"🎤 Requested Voice ID: {requested_voice_id or 'auto'}")
+        print(f"🎤 Voice Speed: {voice_speed}x")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
         # Script
@@ -502,7 +512,7 @@ def generate_video_background(data):
             result['script'],
             preferred_engine=preferred_engine,
             voice_id=requested_voice_id,
-            speed=data.get('voice_speed', 1.0),
+            speed=voice_speed,
             status_callback=_voice_status,
         )
 
@@ -552,7 +562,7 @@ def generate_video_background(data):
         traceback.print_exc()
 
 
-def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id,
+def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, voice_speed=1.0,
 zoom_effect=True):
     """✅ Background generation with template + research + voice selection + zoom effect"""
     global progress_state
@@ -620,7 +630,7 @@ zoom_effect=True):
             script_text,
             preferred_engine=preferred_engine,
             voice_id=requested_voice_id,
-            speed=1.0,
+            speed=voice_speed,
             status_callback=_voice_status,
         )
 
@@ -873,6 +883,7 @@ def generate_with_template_endpoint():
         num_scenes = int(data.get('num_scenes', 10))
         voice_engine = data.get('voice_engine', 'kokoro')
         voice_id = data.get('voice_id')
+        voice_speed = float(data.get('voice_speed', 1.0))
         zoom_effect = data.get('zoom_effect', True)  # Default: True for better UX
 
         print(f"\n🎬 Generating with template: {topic}")
@@ -880,6 +891,8 @@ def generate_with_template_endpoint():
         print(f"   Template: {'Yes' if template else 'No'}")
         print(f"   Research: {'Yes' if research_data else 'No'}")
         print(f"   Voice Engine: {voice_engine}")
+        print(f"   Voice ID: {voice_id}")
+        print(f"   Voice Speed: {voice_speed}x")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
 
         progress_state = {
@@ -893,7 +906,7 @@ def generate_with_template_endpoint():
         
         thread = threading.Thread(
             target=generate_with_template_background,
-            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, zoom_effect)
+            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, voice_speed, zoom_effect)
         )
         thread.start()
 
