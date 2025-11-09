@@ -13,10 +13,19 @@ class FFmpegCompiler:
         image_paths: List[Path],
         audio_path: Path,
         output_path: Path,
-        durations: List[float]
+        durations: List[float],
+        zoom_effect: bool = True
     ):
-        """Create video with FFmpeg - FAST!"""
-        
+        """Create video with FFmpeg - FAST!
+
+        Args:
+            image_paths: List of image file paths
+            audio_path: Path to audio file
+            output_path: Path for output video
+            durations: Duration for each image
+            zoom_effect: Enable zoom effect (default: True for better UX)
+        """
+
         # Create concat file
         concat_file = Path("concat.txt")
         with open(concat_file, 'w') as f:
@@ -25,7 +34,21 @@ class FFmpegCompiler:
                 f.write(f"duration {dur}\n")
             # Repeat last image for proper ending
             f.write(f"file '{image_paths[-1]}'\n")
-        
+
+        # Build video filter based on zoom_effect setting
+        if zoom_effect:
+            # Zoom effect: gentle zoom in for cinematic feel
+            video_filter_parts = (
+                "scale=1920:1080,"
+                "zoompan=z='min(zoom+0.0015,1.1)':d=1:"
+                "x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1920x1080,"
+                "fps=24"
+            )
+            video_filter = ''.join(video_filter_parts)
+        else:
+            # No zoom: simple scale
+            video_filter = 'scale=1920:1080,fps=24'
+
         # FFmpeg command
         cmd = [
             'ffmpeg',
@@ -33,7 +56,7 @@ class FFmpegCompiler:
             '-safe', '0',
             '-i', str(concat_file),
             '-i', str(audio_path),
-            '-vf', 'scale=1920:1080,fps=24',
+            '-vf', video_filter,
             '-c:v', 'libx264',
             '-preset', 'ultrafast',  # Ultra-fast encoding (CPU-optimized!)
             '-crf', '23',  # Good quality (18-28 range, 23 is balanced)
@@ -44,13 +67,16 @@ class FFmpegCompiler:
             '-y',  # Overwrite output
             str(output_path)
         ]
-        
+
         subprocess.run(cmd, check=True)
         
         # Cleanup
         concat_file.unlink()
-        
+
         return output_path
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 8a672db9f56fce6ed963282e2210b52ac39849e2
 ffmpeg_compiler = FFmpegCompiler()

@@ -80,9 +80,20 @@ IMAGE_SETTINGS = {
 # 🎤 VOICE ENGINE SETTINGS - EDGE-TTS ONLY
 # ═══════════════════════════════════════════════════════════════
 
+<<<<<<< HEAD
 # Voice engine priority (Edge is the only supported option)
 VOICE_ENGINE = "edge"
 VOICE_PRIORITY = ["edge"]
+=======
+# Voice engine priority (will try in this order)
+VOICE_ENGINE = "kokoro"  # Options: "kokoro", "edge"
+VOICE_PRIORITY = [
+    "kokoro",
+    "playht",
+    "edge",
+    "gtts",
+]  # Fallback order
+>>>>>>> 8a672db9f56fce6ed963282e2210b52ac39849e2
 
 # 🎤 EDGE-TTS SETTINGS (Primary)
 EDGE_TTS_SETTINGS = {

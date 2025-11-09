@@ -135,6 +135,7 @@ export const GeneratorPage = () => {
           research_data: null,
           duration: store.duration,
           num_scenes: store.numScenes,
+<<<<<<< HEAD
           // ✅ ADD ALL SETTINGS (voice, zoom, filters, effects!)
           voice_id: store.voiceId,
           voice_engine: store.voiceEngine,
@@ -144,6 +145,11 @@ export const GeneratorPage = () => {
           auto_captions: store.autoCaptions,
           srt_subtitles: false,  // Can enable later if needed
           emotion_captions: true,
+=======
+          voice_id: store.voiceId,
+          voice_engine: store.voiceEngine,
+          voice_speed: store.voiceSpeed,
+>>>>>>> 8a672db9f56fce6ed963282e2210b52ac39849e2
         }),
       });
 
