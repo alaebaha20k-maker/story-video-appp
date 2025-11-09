@@ -22,6 +22,7 @@ interface GenerateVideoRequest {
   image_style: string;
   image_mode: string;
   voice_id: string;
+  voice_engine?: string;
   voice_speed?: number;
   num_scenes: number;
   hook_intensity: string;

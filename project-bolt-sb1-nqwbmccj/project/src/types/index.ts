@@ -29,7 +29,7 @@ export interface Voice {
   icon: string;
   description: string;
   accent: string;
-  engine: 'edge';
+  engine: 'kokoro' | 'edge';
   bestFor: string;
   tone: string;
 }
@@ -45,6 +45,7 @@ export interface GenerationRequest {
   image_style: string;
   image_mode: string;
   voice_id: string;
+  voice_engine?: 'kokoro' | 'edge';
   voice_speed?: number;
   duration: number;
   hook_intensity?: string;
