@@ -88,9 +88,9 @@ VOICE_PRIORITY = [
     "gtts",
 ]  # Fallback order
 
-# 🎤 KOKORO TTS SETTINGS (48 professional voices, FREE, high quality)
+# 🎤 KOKORO TTS SETTINGS (disabled)
 KOKORO_SETTINGS = {
-    "enabled": True,
+    "enabled": False,
     "device": "cpu",  # Change to "cuda" for GPU acceleration (210× faster!)
     "sample_rate": 24000,
     "default_voice": "af_bella",  # Warm female voice
