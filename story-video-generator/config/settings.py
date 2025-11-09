@@ -81,7 +81,12 @@ IMAGE_SETTINGS = {
 
 # Voice engine priority (will try in this order)
 VOICE_ENGINE = "kokoro"  # Options: "kokoro", "edge"
-VOICE_PRIORITY = ["kokoro", "edge"]  # Fallback order
+VOICE_PRIORITY = [
+    "kokoro",
+    "playht",
+    "edge",
+    "gtts",
+]  # Fallback order
 
 # 🎤 KOKORO TTS SETTINGS (48 professional voices, FREE, high quality)
 KOKORO_SETTINGS = {
