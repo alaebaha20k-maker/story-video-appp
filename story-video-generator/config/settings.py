@@ -76,67 +76,68 @@ IMAGE_SETTINGS = {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# 🎤 VOICE ENGINE SETTINGS - KOKORO TTS (PRIMARY) + EDGE-TTS (BACKUP)
+# 🎤 VOICE ENGINE SETTINGS - EDGE-TTS ONLY
 # ═══════════════════════════════════════════════════════════════
 
-# Voice engine priority (will try in this order)
-VOICE_ENGINE = "kokoro"  # Options: "kokoro", "edge"
-VOICE_PRIORITY = [
-    "kokoro",
-    "playht",
-    "edge",
-    "gtts",
-]  # Fallback order
+# Voice engine priority (Edge is the only supported option)
+VOICE_ENGINE = "edge"
+VOICE_PRIORITY = ["edge"]
 
-# 🎤 KOKORO TTS SETTINGS (48 professional voices, FREE, high quality)
-KOKORO_SETTINGS = {
-    "enabled": True,
-    "device": "cpu",  # Change to "cuda" for GPU acceleration (210× faster!)
-    "sample_rate": 24000,
-    "default_voice": "af_bella",  # Warm female voice
-    "default_speed": 1.0,
-    
-    # Voice categories for easy selection
-    "voice_categories": {
-        # Narrators
-        "narrator_male_deep": "am_adam",           # Deep, authoritative
-        "narrator_male_professional": "am_michael", # Clear, professional
-        "narrator_female_warm": "af_bella",        # Warm, engaging
-        "narrator_female_professional": "af_sarah", # Professional, clear
-        "narrator_female_energetic": "af_nova",    # Energetic, dynamic
-        
-        # British voices
-        "narrator_british_female": "bf_emma",      # British female
-        "narrator_british_male": "bm_george",      # British male
-        
-        # Story-specific
-        "horror_narrator": "am_adam",              # Deep, ominous
-        "documentary_narrator": "af_sarah",        # Professional, clear
-        "mystery_narrator": "bf_emma",             # British, mysterious
-        "fantasy_narrator": "af_nova",             # Energetic, epic
-    }
-}
-
-# 🎤 EDGE-TTS SETTINGS (Backup, also FREE)
+# 🎤 EDGE-TTS SETTINGS (Primary)
 EDGE_TTS_SETTINGS = {
     "enabled": True,
     "default_voice": "en-US-GuyNeural",
     "rate": "+0%",
     "volume": "+0%",
     "output_format": "mp3",
-    
+
     # Voice mapping
     "voice_categories": {
         "male_narrator_deep": "en-US-GuyNeural",
         "female_narrator": "en-US-AriaNeural",
         "female_young": "en-US-JennyNeural",
         "male_narrator_calm": "en-US-ChristopherNeural",
-        "female_narrator_warm": "en-US-SaraNeural"
+        "female_narrator_warm": "en-US-SaraNeural",
+        "male_narrator_dramatic": "en-US-DavisNeural",
+        "female_storyteller": "en-GB-LibbyNeural",
+        "narrator_british_female": "en-GB-SoniaNeural",
+        "narrator_british_male": "en-GB-RyanNeural",
     }
 }
 
-# Voice settings (legacy support - maps to Kokoro)
-VOICE_SETTINGS = KOKORO_SETTINGS.copy()
+
+# Human-friendly aliases for Edge voices used by API routes.
+EDGE_VOICE_MAP = {
+    "male_narrator_deep": "en-US-GuyNeural",
+    "male_narrator_calm": "en-US-ChristopherNeural",
+    "male_narrator_dramatic": "en-US-DavisNeural",
+    "female_narrator": "en-US-AriaNeural",
+    "female_narrator_warm": "en-US-SaraNeural",
+    "female_storyteller": "en-GB-LibbyNeural",
+    "female_young": "en-US-JennyNeural",
+    "narrator_british_female": "en-GB-SoniaNeural",
+    "narrator_british_male": "en-GB-RyanNeural",
+}
+
+
+def resolve_edge_voice(voice_id=None):
+    """Return the configured Edge voice identifier."""
+    if voice_id:
+        return EDGE_VOICE_MAP.get(voice_id, voice_id)
+    return EDGE_TTS_SETTINGS.get("default_voice", "en-US-AriaNeural")
+
+
+def get_voice_engine_and_id(requested_engine=None, requested_voice=None):
+    """Resolve the voice engine and identifier expected by downstream code."""
+    engine = "edge"
+    if requested_engine and requested_engine.lower() != "edge":
+        print(f"⚠️ Voice engine '{requested_engine}' requested but Edge-TTS is enforced.")
+
+    voice_id = resolve_edge_voice(requested_voice)
+    return engine, voice_id
+
+# Voice settings consumed by the Edge-only TTSEngine helper
+VOICE_SETTINGS = EDGE_TTS_SETTINGS.copy()
 
 # Pexels API settings
 PEXELS_SETTINGS = {
