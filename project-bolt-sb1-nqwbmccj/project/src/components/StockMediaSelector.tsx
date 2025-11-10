@@ -26,7 +26,7 @@ export const StockMediaSelector = () => {
       const query = searchQuery.trim() || stockKeywords[0] || 'nature';
 
       // ✅ REAL PEXELS API - FREE (80 requests/hour)
-      const PEXELS_API_KEY = 'YOUR_PEXELS_API_KEY_HERE'; // User needs to add their key
+      const PEXELS_API_KEY = 'a5vKJdfKyeJRobe6i2vgn2s9iNH7Sz22HsmUO9Tu4zvYX9QNTdzB3znp';
       const results: MediaItem[] = [];
 
       // Fetch images
