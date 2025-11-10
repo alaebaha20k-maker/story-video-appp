@@ -75,8 +75,5 @@ class FFmpegCompiler:
 
         return output_path
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 8a672db9f56fce6ed963282e2210b52ac39849e2
 ffmpeg_compiler = FFmpegCompiler()

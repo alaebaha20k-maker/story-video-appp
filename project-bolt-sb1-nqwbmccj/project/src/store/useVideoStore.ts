@@ -15,12 +15,7 @@ interface VideoStore {
   imageStyle: string;
   imageMode: string;
   voiceId: string;
-<<<<<<< ours
-  voiceEngine: 'kokoro' | 'edge';
   voiceSpeed: number;
-=======
-  voiceSpeed: number;              // ✅ NEW: Voice speed control (0.5-2.0)
->>>>>>> theirs
   duration: number;
   hookIntensity: string;
   pacing: string;
@@ -52,12 +47,7 @@ interface VideoStore {
   setImageStyle: (style: string) => void;
   setImageMode: (mode: string) => void;
   setVoiceId: (id: string) => void;
-<<<<<<< ours
-  setVoiceEngine: (engine: 'kokoro' | 'edge') => void;
   setVoiceSpeed: (speed: number) => void;
-=======
-  setVoiceSpeed: (speed: number) => void;               // ✅ NEW
->>>>>>> theirs
   setDuration: (duration: number) => void;
   setHookIntensity: (intensity: string) => void;
   setPacing: (pacing: string) => void;
@@ -88,14 +78,8 @@ export const useVideoStore = create<VideoStore>((set) => ({
   storyType: 'scary_horror',
   imageStyle: 'cinematic',
   imageMode: 'ai_only',
-<<<<<<< ours
   voiceId: 'guy',  // Default Edge-TTS voice (male)
-  voiceEngine: 'edge',
   voiceSpeed: 1.0,
-=======
-  voiceId: 'male_narrator_deep',  // ✅ Default Edge alias
-  voiceSpeed: 1.0,        // ✅ NEW: Normal speed
->>>>>>> theirs
   duration: 5,
   hookIntensity: 'medium',
   pacing: 'medium',
@@ -127,12 +111,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setImageStyle: (imageStyle) => set({ imageStyle }),
   setImageMode: (imageMode) => set({ imageMode }),
   setVoiceId: (voiceId) => set({ voiceId }),
-<<<<<<< ours
-  setVoiceEngine: (voiceEngine) => set({ voiceEngine }),
   setVoiceSpeed: (voiceSpeed) => set({ voiceSpeed: Math.max(0.5, Math.min(2.0, voiceSpeed)) }),
-=======
-  setVoiceSpeed: (voiceSpeed) => set({ voiceSpeed: Math.max(0.5, Math.min(2.0, voiceSpeed)) }),  // ✅ NEW: Clamp 0.5-2.0
->>>>>>> theirs
   setDuration: (duration) => set({ duration }),
   setHookIntensity: (hookIntensity) => set({ hookIntensity }),
   setPacing: (pacing) => set({ pacing }),
