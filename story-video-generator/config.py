@@ -13,7 +13,7 @@ import os
 # Get from environment variable or use default
 COLAB_SERVER_URL = os.getenv(
     'COLAB_SERVER_URL',
-    'https://your-ngrok-url-here.ngrok-free.dev'  # ← UPDATE THIS!
+    'https://contemplable-suzy-unfussing.ngrok-free.dev'  # ✅ UPDATED!
 )
 
 # API Endpoints
