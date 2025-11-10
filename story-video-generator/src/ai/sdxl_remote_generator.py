@@ -22,9 +22,26 @@ SDXL_API_URL = "https://contemplable-suzy-unfussing.ngrok-free.dev/generate_imag
 
 
 # Image style mapping to SDXL-Turbo style modifiers
+# Updated to match Google Colab server styles
 STYLE_MODIFIERS = {
-    'cinematic': 'cinematic film still, dramatic lighting, 35mm photograph, film grain, highly detailed',
+    # Colab Server Styles (14 styles)
     'cinematic_film': 'cinematic film photography, movie scene, epic composition, professional color grading',
+    'documentary_real': 'documentary photography, photorealistic, natural lighting, real world scene, authentic',
+    'anime_style': 'anime style, detailed anime art, vibrant colors, japanese animation style',
+    'horror_creepy': 'dark horror atmosphere, ominous lighting, disturbing scene, nightmare fuel, creepy',
+    'comic_book': 'comic book style, bold lines, dynamic composition, pop art colors, graphic novel',
+    'historical_photo': 'historical photograph, vintage authentic, period accurate, archival quality',
+    'sci_fi_future': 'sci-fi concept art, futuristic, technological, neon lighting, cyberpunk aesthetic',
+    'dark_noir': 'film noir style, dramatic shadows, high contrast, moody atmosphere, dark aesthetic',
+    'fantasy_epic': 'fantasy art, magical atmosphere, ethereal lighting, mystical scene, epic scale',
+    'render_3d': '3D render, CGI, highly detailed, professional 3D graphics, photorealistic rendering',
+    'sketch_drawing': 'pencil sketch, hand drawn, artistic line work, sketch art style',
+    'watercolor': 'watercolor painting, soft colors, artistic brushwork, paper texture',
+    'oil_painting': 'oil painting, traditional art, brushstroke texture, classical style',
+    'retro_vintage': 'vintage photography, retro aesthetic, aged film look, nostalgic atmosphere',
+
+    # Legacy support (for backward compatibility)
+    'cinematic': 'cinematic film still, dramatic lighting, 35mm photograph, film grain, highly detailed',
     'realistic': 'photorealistic, ultra detailed, 8k uhd, high quality photograph, professional photography',
     'artistic': 'artistic masterpiece, painterly style, vibrant colors, creative composition',
     'anime': 'anime style, detailed anime art, vibrant colors, japanese animation style',
@@ -33,8 +50,6 @@ STYLE_MODIFIERS = {
     'fantasy': 'fantasy art, magical atmosphere, ethereal lighting, mystical scene',
     'sci_fi': 'sci-fi concept art, futuristic, technological, neon lighting, cyberpunk aesthetic',
     'horror': 'dark horror atmosphere, ominous lighting, disturbing scene, nightmare fuel',
-    'oil_painting': 'oil painting, traditional art, brushstroke texture, classical style',
-    'watercolor': 'watercolor painting, soft colors, artistic brushwork, paper texture',
     'vintage': 'vintage photography, retro aesthetic, aged film look, nostalgic atmosphere',
     'neon': 'neon lights, vibrant colors, glowing elements, cyberpunk cityscape',
 }

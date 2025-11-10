@@ -16,22 +16,22 @@ from src.utils.logger import logger
 KOKORO_API_URL = "https://contemplable-suzy-unfussing.ngrok-free.dev/generate_audio"
 
 # Voice Mapping: Frontend Voice IDs → Kokoro API Voices
-# Maps 11 frontend options to 6 available Kokoro voices
+# Maps frontend options to Google Colab Kokoro API voices
 VOICE_MAPPING = {
     # Male Voices
-    'guy': 'am_adam',              # Default male → Male Deep
-    'andrew': 'am_adam',           # Male Clear → Male Deep
-    'christopher': 'am_michael',   # Male Friendly → Male Friendly
-    'brian': 'am_michael',         # Male British → Male Friendly
-    'george': 'bm_george',         # Male Deep → British Male
+    'guy': 'adam_narration',           # Default male → Adam Narration
+    'andrew': 'adam_narration',        # Male Clear → Adam Narration
+    'christopher': 'michael',          # Male Friendly → Michael
+    'brian': 'adam_business',          # Male British → Adam Business
+    'george': 'george_gb',             # Male Deep → George GB
 
     # Female Voices
-    'aria': 'af_sarah',            # Default female → Female Clear
-    'jenny': 'af_nicole',          # Female Friendly → Female Warm
-    'sara': 'af_sarah',            # Female Clear → Female Clear
-    'jane': 'af_nicole',           # Female Warm → Female Warm
-    'libby': 'bf_emma',            # Female British → British Female
-    'emma': 'bf_emma',             # Female Expressive → British Female
+    'aria': 'sarah_pro',               # Default female → Sarah Pro
+    'jenny': 'nicole',                 # Female Friendly → Nicole
+    'sara': 'sarah_natural',           # Female Clear → Sarah Natural
+    'jane': 'nicole',                  # Female Warm → Nicole
+    'libby': 'emma_gb',                # Female British → Emma GB
+    'emma': 'emma_gb',                 # Female Expressive → Emma GB
 }
 
 
@@ -43,9 +43,9 @@ def get_kokoro_voice(edge_voice_id: str) -> str:
         edge_voice_id: Frontend voice identifier (guy, aria, christopher, etc.)
 
     Returns:
-        Kokoro API voice name (am_adam, af_sarah, etc.)
+        Kokoro API voice name (adam_narration, sarah_pro, nicole, etc.)
     """
-    kokoro_voice = VOICE_MAPPING.get(edge_voice_id.lower(), 'af_sarah')
+    kokoro_voice = VOICE_MAPPING.get(edge_voice_id.lower(), 'sarah_pro')
     logger.info(f"🎭 Voice mapping: {edge_voice_id} → {kokoro_voice}")
     return kokoro_voice
 
@@ -153,7 +153,7 @@ def check_kokoro_api_health() -> bool:
     try:
         # Try to connect to the API with a short timeout
         response = requests.get(
-            KOKORO_API_URL.replace('/generate', '/health'),  # Try health endpoint
+            KOKORO_API_URL.replace('/generate_audio', '/health'),  # Try health endpoint
             timeout=5
         )
         return response.ok
@@ -162,7 +162,7 @@ def check_kokoro_api_health() -> bool:
         try:
             response = requests.post(
                 KOKORO_API_URL,
-                json={"text": "test", "voice": "af_sarah", "speed": 1.0},
+                json={"text": "test", "voice": "sarah_pro", "speed": 1.0},
                 timeout=10
             )
             return response.ok
