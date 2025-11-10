@@ -15,10 +15,6 @@ from src.ai.script_analyzer import script_analyzer
 from src.research.fact_searcher import fact_searcher
 from src.ai.enhanced_script_generator import enhanced_script_generator
 
-# ✅ NEW: ADVANCED SCRIPT ANALYSIS
-from src.ai.narration_extractor import narration_extractor
-from src.ai.image_prompt_extractor import image_prompt_extractor
-
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
@@ -200,71 +196,20 @@ def generate_video_background(data):
         )
         
         print(f"   ✅ Script: {len(result['script'])} characters")
-
-        # ✨ ADVANCED ANALYSIS (Optional - NEW FEATURE)
-        use_advanced_analysis = data.get('use_advanced_analysis', False)
-
-        if use_advanced_analysis:
-            print("✨ Advanced Analysis ENABLED")
-
-            # Extract clean narration
-            progress_state['status'] = 'Analyzing script for narration...'
-            progress_state['progress'] = 15
-            print("📊 Step 2a/5: Extracting clean narration...")
-
-            narration_scenes = narration_extractor.extract_narration(
-                result['script'],
-                num_scenes=data.get('num_scenes', 10)
-            )
-            print(f"   ✅ Narration: {len(narration_scenes)} clean scenes extracted")
-
-            # Generate detailed image prompts
-            progress_state['status'] = 'Creating detailed image prompts...'
-            progress_state['progress'] = 20
-            print("🎨 Step 2b/5: Generating detailed image prompts...")
-
-            image_prompt_scenes = image_prompt_extractor.generate_prompts(
-                result['script'],
-                num_scenes=data.get('num_scenes', 10),
-                image_style=data.get('image_style', 'cinematic_film'),
-                story_type=data.get('story_type', 'scary_horror')
-            )
-            print(f"   ✅ Image Prompts: {len(image_prompt_scenes)} detailed prompts generated")
-
-            # Replace the scenes in result with analyzed ones
-            result['narration_scenes'] = narration_scenes
-            result['image_prompt_scenes'] = image_prompt_scenes
-        else:
-            print("✨ Advanced Analysis DISABLED (using standard mode)")
-
+        
         # Images
         progress_state['status'] = 'Generating images...'
         progress_state['progress'] = 30
-        print("🎨 Step 3/5: Generating images..." if use_advanced_analysis else "🎨 Step 2/4: Generating images...")
+        print("🎨 Step 2/4: Generating images...")
         
         image_gen = create_image_generator(
-            data.get('image_style', 'cinematic_film'),
+            data.get('image_style', 'cinematic_film'), 
             data.get('story_type', 'scary_horror')
         )
         characters = {char: f"{char}, character" for char in result.get('characters', [])[:3]}
-
-        # Use detailed prompts if advanced analysis was enabled
-        if use_advanced_analysis and 'image_prompt_scenes' in result:
-            # Create scenes with image_description field from extracted prompts
-            scenes_with_prompts = []
-            for prompt_scene in result['image_prompt_scenes']:
-                scenes_with_prompts.append({
-                    'scene_num': prompt_scene['scene_number'],
-                    'image_description': prompt_scene['image_prompt'],  # Detailed prompt
-                    'content': ''  # Not used when image_description exists
-                })
-            images = image_gen.generate_batch(scenes_with_prompts, characters)
-        else:
-            # Standard mode - use original scenes
-            images = image_gen.generate_batch(result['scenes'], characters)
-
+        images = image_gen.generate_batch(result['scenes'], characters)
         image_paths = [Path(img['filepath']) for img in images if img]
-
+        
         print(f"   ✅ Images: {len(image_paths)} generated")
         print(f"   🔍 DEBUG: Image paths:")
         for i, img_path in enumerate(image_paths):
@@ -297,7 +242,7 @@ def generate_video_background(data):
             speed=voice_speed,
             output_path=str(audio_path)
         )
-
+        
         audio_duration = get_audio_duration(audio_path)
         print(f"   ✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
         
@@ -314,7 +259,7 @@ def generate_video_background(data):
         # Video
         progress_state['status'] = 'Compiling video...'
         progress_state['progress'] = 80
-        print("🎬 Step 5/5: Compiling video..." if use_advanced_analysis else "🎬 Step 4/4: Compiling video...")
+        print("🎬 Step 4/4: Compiling video...")
 
         compiler = FFmpegCompiler()
         safe_topic = sanitize_filename(data.get('topic', 'video'))
