@@ -78,7 +78,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   storyType: 'scary_horror',
   imageStyle: 'cinematic',
   imageMode: 'ai_only',
-  voiceId: 'guy',  // Default Edge-TTS voice (male)
+  voiceId: 'guy',  // Default Kokoro TTS voice (Adam - male)
   voiceSpeed: 1.0,
   duration: 5,
   hookIntensity: 'medium',

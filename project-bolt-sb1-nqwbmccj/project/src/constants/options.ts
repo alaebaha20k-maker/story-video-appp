@@ -332,7 +332,7 @@ export const IMAGE_MODES: ImageMode[] = [
 ];
 
 // ═══════════════════════════════════════════════════════════════
-// ✅ EDGE-TTS VOICES
+// ✅ KOKORO TTS VOICES (GPU-POWERED)
 // ═══════════════════════════════════════════════════════════════
 
 export const VOICES: Voice[] = [
@@ -342,7 +342,7 @@ export const VOICES: Voice[] = [
     icon: '🎙️',
     description: 'Deep, cinematic narrator with a dramatic presence.',
     accent: 'American',
-    engine: 'edge',
+    engine: 'kokoro',
     bestFor: 'Horror, documentaries, epic trailers',
     tone: 'Deep, resonant',
   },
@@ -352,7 +352,7 @@ export const VOICES: Voice[] = [
     icon: '🧠',
     description: 'Thoughtful and steady storyteller for educational content.',
     accent: 'American',
-    engine: 'edge',
+    engine: 'kokoro',
     bestFor: 'Educational, explainers, documentaries',
     tone: 'Calm, reassuring',
   },
@@ -362,7 +362,7 @@ export const VOICES: Voice[] = [
     icon: '🔥',
     description: 'Powerful voice that adds intensity and urgency.',
     accent: 'American',
-    engine: 'edge',
+    engine: 'kokoro',
     bestFor: 'Thrillers, sports, suspense',
     tone: 'Intense, powerful',
   },
@@ -372,7 +372,7 @@ export const VOICES: Voice[] = [
     icon: '🎵',
     description: 'Professional narrator with a warm, engaging delivery.',
     accent: 'American',
-    engine: 'edge',
+    engine: 'kokoro',
     bestFor: 'Lifestyle, tutorials, professional content',
     tone: 'Warm, clear',
   },
@@ -382,7 +382,7 @@ export const VOICES: Voice[] = [
     icon: '💖',
     description: 'Comforting storyteller that feels personal and heartfelt.',
     accent: 'American',
-    engine: 'edge',
+    engine: 'kokoro',
     bestFor: 'Inspiration, wellness, testimonials',
     tone: 'Compassionate, warm',
   },
@@ -392,7 +392,7 @@ export const VOICES: Voice[] = [
     icon: '🌟',
     description: 'Bright and modern narrator perfect for upbeat videos.',
     accent: 'American',
-    engine: 'edge',
+    engine: 'kokoro',
     bestFor: 'YouTube, ads, youth content',
     tone: 'Energetic, friendly',
   },
@@ -402,7 +402,7 @@ export const VOICES: Voice[] = [
     icon: '🇬🇧✨',
     description: 'Elegant British voice with a warm storytelling style.',
     accent: 'British',
-    engine: 'edge',
+    engine: 'kokoro',
     bestFor: 'Fantasy, history, documentaries',
     tone: 'Elegant, expressive',
   },
@@ -412,7 +412,7 @@ export const VOICES: Voice[] = [
     icon: '🇬🇧',
     description: 'Polished and sophisticated British narrator.',
     accent: 'British',
-    engine: 'edge',
+    engine: 'kokoro',
     bestFor: 'Luxury, narration, storytelling',
     tone: 'Refined, smooth',
   },
@@ -422,7 +422,7 @@ export const VOICES: Voice[] = [
     icon: '🎩',
     description: 'Classic British narrator ideal for documentaries.',
     accent: 'British',
-    engine: 'edge',
+    engine: 'kokoro',
     bestFor: 'Documentaries, nature, mystery',
     tone: 'Authoritative, calm',
   },

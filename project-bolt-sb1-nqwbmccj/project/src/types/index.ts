@@ -29,7 +29,7 @@ export interface Voice {
   icon: string;
   description: string;
   accent: string;
-  engine: 'edge';
+  engine: 'kokoro';
   bestFor: string;
   tone: string;
 }
