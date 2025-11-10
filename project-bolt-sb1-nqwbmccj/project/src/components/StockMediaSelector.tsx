@@ -6,7 +6,8 @@ interface MediaItem {
   id: number;
   type: 'image' | 'video';
   thumbnail: string;
-  videoUrl?: string;
+  largeUrl?: string;     // For high-res images
+  videoUrl?: string;      // For video URLs
   photographer: string;
 }
 
@@ -23,31 +24,68 @@ export const StockMediaSelector = () => {
     setLoading(true);
     try {
       const query = searchQuery.trim() || stockKeywords[0] || 'nature';
-      
-      // Mock data for demonstration (replace with actual Pexels API calls)
-      const mockData: MediaItem[] = [
-        {
-          id: 1,
-          type: 'image',
-          thumbnail: 'https://images.pexels.com/photos/248797/pexels-photo-248797.jpeg?auto=compress&cs=tinysrgb&w=400',
-          photographer: 'Pixabay'
-        },
-        {
-          id: 2,
-          type: 'video',
-          thumbnail: 'https://images.pexels.com/videos/3045163/free-video-3045163.jpg?auto=compress&cs=tinysrgb&w=400',
-          videoUrl: 'https://player.vimeo.com/external/374155469.hd.mp4',
-          photographer: 'Pressmaster'
-        },
-        {
-          id: 3,
-          type: 'image',
-          thumbnail: 'https://images.pexels.com/photos/414612/pexels-photo-414612.jpeg?auto=compress&cs=tinysrgb&w=400',
-          photographer: 'James Wheeler'
-        },
-      ];
 
-      setMediaItems(mockData);
+      // ✅ REAL PEXELS API - FREE (80 requests/hour)
+      const PEXELS_API_KEY = 'YOUR_PEXELS_API_KEY_HERE'; // User needs to add their key
+      const results: MediaItem[] = [];
+
+      // Fetch images
+      if (activeTab === 'images' || activeTab === 'both') {
+        try {
+          const imageResponse = await fetch(
+            `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=20`,
+            {
+              headers: {
+                Authorization: PEXELS_API_KEY
+              }
+            }
+          );
+
+          if (imageResponse.ok) {
+            const imageData = await imageResponse.json();
+            const images = imageData.photos.map((photo: any) => ({
+              id: photo.id,
+              type: 'image' as const,
+              thumbnail: photo.src.medium,
+              largeUrl: photo.src.large2x,
+              photographer: photo.photographer
+            }));
+            results.push(...images);
+          }
+        } catch (err) {
+          console.warn('Image search failed:', err);
+        }
+      }
+
+      // Fetch videos
+      if (activeTab === 'videos' || activeTab === 'both') {
+        try {
+          const videoResponse = await fetch(
+            `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=20`,
+            {
+              headers: {
+                Authorization: PEXELS_API_KEY
+              }
+            }
+          );
+
+          if (videoResponse.ok) {
+            const videoData = await videoResponse.json();
+            const videos = videoData.videos.map((video: any) => ({
+              id: video.id,
+              type: 'video' as const,
+              thumbnail: video.image,
+              videoUrl: video.video_files.find((f: any) => f.quality === 'hd')?.link || video.video_files[0]?.link,
+              photographer: video.user.name
+            }));
+            results.push(...videos);
+          }
+        } catch (err) {
+          console.warn('Video search failed:', err);
+        }
+      }
+
+      setMediaItems(results);
     } catch (error) {
       console.error('Failed to fetch media:', error);
     } finally {
@@ -75,7 +113,24 @@ export const StockMediaSelector = () => {
     <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
       <div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">Stock Media Library</h2>
-        <p className="text-gray-600">Search and select images & videos from Pexels</p>
+        <p className="text-gray-600">Search and select images & videos from Pexels (FREE)</p>
+      </div>
+
+      {/* API Key Notice */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+        <p className="text-blue-900 font-medium">🔑 Pexels API Key Required</p>
+        <p className="text-blue-700 mt-1">
+          Get your FREE API key from{' '}
+          <a
+            href="https://www.pexels.com/api/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-blue-900"
+          >
+            pexels.com/api
+          </a>
+          {' '}and add it to <code className="bg-blue-100 px-1 rounded">StockMediaSelector.tsx</code> line 28
+        </p>
       </div>
 
       {/* Search Bar */}
