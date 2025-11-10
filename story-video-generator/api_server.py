@@ -20,7 +20,8 @@ from src.ai.narration_extractor import narration_extractor
 from src.ai.image_prompt_extractor import image_prompt_extractor
 
 # ✅ EXISTING IMPORTS
-from src.ai.image_generator import create_image_generator
+# from src.ai.image_generator import create_image_generator  # Old Pollinations
+from src.ai.sdxl_remote_generator import create_image_generator  # NEW: Remote SDXL-Turbo
 from src.editor.ffmpeg_compiler import FFmpegCompiler
 
 # ✅ VOICE: KOKORO TTS (Remote API)
@@ -777,10 +778,11 @@ if __name__ == '__main__':
     print("   - Variable speed control (0.5x - 2.0x)")
     
     print("")
-    print("🎨 IMAGES: FLUX.1 Schnell (10/10 QUALITY, FREE)")
-    print("   - Pollinations AI")
+    print("🎨 IMAGES: SDXL-Turbo (Remote GPU - Google Colab)")
+    print("   - Ultra-fast GPU generation")
+    print("   - 1920x1080 HD quality")
+    print("   - All frontend styles supported")
     print("   - Unique per scene")
-    print("   - Cinematic variety")
     
     print("")
     print("🎬 VIDEO: FFmpeg + All Effects")
@@ -799,9 +801,12 @@ if __name__ == '__main__':
     print("   POST /api/clear-cache - Clear cache")
     print("="*60)
     print("\n🏆 PROFESSIONAL YOUTUBE VIDEO GENERATOR READY!")
-    print("⚡ GPU-POWERED: Kokoro TTS (voice) + Gemini (scripts) + FLUX (images)!")
-    print("🚀 Fast: 3-10 minutes for 10-60 minute videos")
-    print("🎬 Quality: 10/10 - Professional YouTube content with GPU voices!")
+    print("⚡ 100% GPU-POWERED: Kokoro TTS + SDXL-Turbo (Remote Colab)")
+    print("🎤 Voice: Kokoro TTS (6 GPU voices)")
+    print("🎨 Images: SDXL-Turbo (GPU accelerated)")
+    print("📝 Scripts: Gemini AI (Google)")
+    print("🚀 Fast: 2-5 minutes for 10-60 minute videos")
+    print("🎬 Quality: 10/10 - Professional YouTube content!")
     print("="*60 + "\n")
     
     app.run(host='0.0.0.0', port=5000, debug=True)

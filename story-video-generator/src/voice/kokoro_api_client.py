@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from src.utils.logger import logger
 
 # Remote Kokoro API endpoint (Google Colab + ngrok)
-KOKORO_API_URL = "https://contemplable-suzy-unfussing.ngrok-free.dev/generate"
+KOKORO_API_URL = "https://contemplable-suzy-unfussing.ngrok-free.dev/generate_audio"
 
 # Voice Mapping: Frontend Voice IDs → Kokoro API Voices
 # Maps 11 frontend options to 6 available Kokoro voices
