@@ -15,6 +15,10 @@ from src.ai.script_analyzer import script_analyzer
 from src.research.fact_searcher import fact_searcher
 from src.ai.enhanced_script_generator import enhanced_script_generator
 
+# ✅ NEW: ADVANCED SCRIPT ANALYSIS
+from src.ai.narration_extractor import narration_extractor
+from src.ai.image_prompt_extractor import image_prompt_extractor
+
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
