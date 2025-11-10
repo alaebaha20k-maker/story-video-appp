@@ -1,5 +1,5 @@
 """
-<® IMAGE PROMPT EXTRACTOR - Generates Detailed Visual Prompts from Scripts
+üé® IMAGE PROMPT EXTRACTOR - Generates Detailed Visual Prompts from Scripts
 Creates professional AI-ready image prompts from narrative text
 """
 
@@ -54,7 +54,7 @@ class ImagePromptExtractor:
         Returns:
             List of dicts with scene_number and detailed image_prompt
         """
-        logger.info(f"<® Generating {num_scenes} detailed image prompts ({image_style})...")
+        logger.info(f"üé® Generating {num_scenes} detailed image prompts ({image_style})...")
 
         # Map image styles to descriptive terms
         style_descriptions = {
@@ -145,7 +145,7 @@ Generate {num_scenes} professional image prompts now:
             # Parse prompts
             prompts = self._parse_image_prompts(generated_text, num_scenes)
 
-            logger.info(f" Generated {len(prompts)} detailed image prompts")
+            logger.info(f"‚úÖ Generated {len(prompts)} detailed image prompts")
 
             return prompts
 
@@ -199,7 +199,7 @@ Generate {num_scenes} professional image prompts now:
         story_type: str
     ) -> List[Dict]:
         """Generate simple fallback prompts if AI generation fails"""
-        logger.warning("† Using fallback image prompts")
+        logger.warning("‚ö†Ô∏è Using fallback image prompts")
 
         # Extract first words from script to get context
         words = script_text.split()[:100]

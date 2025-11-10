@@ -1,5 +1,5 @@
 """
-=� NARRATION EXTRACTOR - Extracts Clean Narration from Mixed Scripts
+📝 NARRATION EXTRACTOR - Extracts Clean Narration from Mixed Scripts
 Separates spoken narration from visual descriptions using AI analysis
 """
 
@@ -50,7 +50,7 @@ class NarrationExtractor:
         Returns:
             List of dicts with scene_number and narration text
         """
-        logger.info(f"= Extracting clean narration ({num_scenes} scenes)...")
+        logger.info(f"✅ Extracting clean narration ({num_scenes} scenes)...")
 
         prompt = f"""You are a script editor. Your task is to extract ONLY the narration (spoken words) from this script and organize it into {num_scenes} scenes.
 
@@ -91,12 +91,12 @@ Begin extraction:
             # Parse scenes
             scenes = self._parse_narration_scenes(extracted_text, num_scenes)
 
-            logger.info(f" Extracted {len(scenes)} narration scenes")
+            logger.info(f"✅ Extracted {len(scenes)} narration scenes")
 
             return scenes
 
         except Exception as e:
-            logger.error(f"L Narration extraction failed: {e}")
+            logger.error(f"❌ Narration extraction failed: {e}")
             # Fallback: split original script into scenes
             return self._fallback_split(script_text, num_scenes)
 
@@ -136,7 +136,7 @@ Begin extraction:
 
     def _fallback_split(self, script_text: str, num_scenes: int) -> List[Dict]:
         """Fallback method if AI extraction fails"""
-        logger.warning("� Using fallback narration split")
+        logger.warning("⚠️ Using fallback narration split")
 
         paragraphs = [p.strip() for p in script_text.split('\n\n') if p.strip()]
         scene_length = max(len(paragraphs) // num_scenes, 1)
