@@ -1,10 +1,10 @@
 """
-⚡ FFMPEG COMPILER - Ultra-fast GPU rendering
+⚡ FFMPEG COMPILER - Ultra-fast rendering with zoom, transitions, and effects
 """
 
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Dict
 
 class FFmpegCompiler:
 
@@ -32,7 +32,7 @@ class FFmpegCompiler:
             for img, dur in zip(image_paths, durations):
                 f.write(f"file '{img}'\n")
                 f.write(f"duration {dur}\n")
-            # Repeat last image
+            # Repeat last image for proper ending
             f.write(f"file '{image_paths[-1]}'\n")
 
         # Build video filter based on zoom_effect setting
@@ -58,16 +58,22 @@ class FFmpegCompiler:
             '-i', str(audio_path),
             '-vf', video_filter,
             '-c:v', 'libx264',
-            '-preset', 'medium',
+            '-preset', 'ultrafast',  # Ultra-fast encoding (CPU-optimized!)
+            '-crf', '23',  # Good quality (18-28 range, 23 is balanced)
+            '-threads', '0',  # Use ALL available CPU cores
             '-c:a', 'aac',
-            '-shortest',
-            '-y',
+            '-b:a', '192k',  # High-quality audio
+            '-shortest',  # End when audio ends (perfect sync!)
+            '-y',  # Overwrite output
             str(output_path)
         ]
 
         subprocess.run(cmd, check=True)
+        
+        # Cleanup
         concat_file.unlink()
 
         return output_path
+
 
 ffmpeg_compiler = FFmpegCompiler()

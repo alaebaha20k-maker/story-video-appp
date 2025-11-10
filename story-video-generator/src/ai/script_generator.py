@@ -9,10 +9,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 try:
     import google.generativeai as genai
+    GENAI_AVAILABLE = True
 except ImportError:
-    print("❌ google-generativeai not installed")
-    print("Run: pip install google-generativeai")
-    sys.exit(1)
+    print("⚠️  google-generativeai not installed")
+    print("   Run: pip install google-generativeai")
+    genai = None
+    GENAI_AVAILABLE = False
 
 from typing import Dict, List
 import re
@@ -41,9 +43,18 @@ class ProScriptGenerator:
     """Professional multi-niche story generator"""
     
     def __init__(self):
+        if not GENAI_AVAILABLE:
+            print("⚠️  ProScriptGenerator: google-generativeai not available")
+            self.model = None
+            self.character_names = []
+            return
+        
         api_key = api_manager.get_key('gemini')
         if not api_key:
-            raise ValueError("Gemini API key required!")
+            print("⚠️  ProScriptGenerator: Gemini API key not found")
+            self.model = None
+            self.character_names = []
+            return
         
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(GEMINI_SETTINGS['model'])
@@ -57,6 +68,9 @@ class ProScriptGenerator:
         num_scenes: int = 10
     ) -> Dict:
         """Generate professional story"""
+        
+        if not self.model:
+            raise RuntimeError("Script generator not initialized - check API key and dependencies")
         
         if story_type not in STORY_TYPES:
             logger.warning(f"Unknown story type: {story_type}, using first available")
@@ -211,3 +225,6 @@ Now write the complete {duration}-minute story. Start with the hook immediately:
 
 # Global instance
 pro_script_generator = ProScriptGenerator()
+
+# Alias for backward compatibility
+script_generator = pro_script_generator

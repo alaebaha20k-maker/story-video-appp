@@ -19,7 +19,30 @@ from src.research.fact_searcher import fact_searcher
 
 
 class EnhancedScriptGenerator:
-    """Generate high-quality scripts using example templates + research"""
+    """Generate ULTIMATE quality scripts using Gemini AI with enhanced prompts!"""
+    
+    # 🏆 EXAMPLE HOOKS - Gemini will LEARN from these and create NEW ones!
+    EXAMPLE_HOOKS = [
+        # Horror/Scary
+        "I never believed my sister could come back from the dead. Until I answered her call.",
+        "The thing wearing my father's face sat down at the dinner table. Nobody else seemed to notice.",
+        "I found my daughter's diary. The last entry was dated three years after she disappeared.",
+        
+        # Romance/Emotional
+        "I fell in love with my best friend the moment she smiled at me. Three years too late.",
+        "The letter said 'I never stopped loving you.' It arrived ten years after his funeral.",
+        "She said yes. I said nothing. Because I couldn't remember proposing.",
+        
+        # Mystery/Thriller
+        "The detective asked about my alibi. I had one. For a murder that hasn't happened yet.",
+        "Every morning I wake up, it's the same day. Except one small thing is always different.",
+        "The photo showed me at a place I've never been. With people I've never met. Yesterday.",
+        
+        # Documentary/Real
+        "What they don't teach about the pyramids changes everything we thought we knew.",
+        "I discovered a secret that's been hiding in plain sight for 4,000 years.",
+        "The evidence was always there. We just weren't looking at it correctly.",
+    ]
     
     def __init__(self):
         api_key = api_manager.get_key('gemini')
@@ -30,13 +53,17 @@ class EnhancedScriptGenerator:
         self.model = genai.GenerativeModel(
             model_name=GEMINI_SETTINGS['model'],
             generation_config={
-                "temperature": 0.85,  # Creative but controlled
-                "top_p": 0.95,
-                "top_k": 40,
-                "max_output_tokens": 8192,
+                "temperature": 0.75,  # ✅ Balanced creativity
+                "top_p": 0.92,  # ✅ Tighter control for coherence
+                "top_k": 50,  # ✅ Better vocabulary variety
+                "max_output_tokens": 16384,  # ✅ Support 60-min scripts!
             }
         )
         self.character_names = []
+        
+        print(f"🏆 Enhanced Script Generator (Gemini) initialized")
+        print(f"   Using: Gemini AI with ULTIMATE prompts!")
+        print(f"   Hook generation: INTELLIGENT (learns from examples!)")
     
     def generate_with_template(
         self,
@@ -132,26 +159,63 @@ class EnhancedScriptGenerator:
         duration_minutes: int,
         num_scenes: int
     ) -> str:
-        """Build prompt that uses template structure"""
+        """Build ULTIMATE quality prompt with intelligent hook learning!"""
         
-        target_words = duration_minutes * 200  # ~200 words per minute
+        # ✅ Perfect timing: 150 words per minute (voice narration speed!)
+        target_words = duration_minutes * 150
         
-        # Base prompt
-        prompt = f"""You are a world-class scriptwriter creating a {style['name']} story.
+        # Get example hooks for Gemini to LEARN from
+        example_hooks_text = '\n'.join([f"   • {hook}" for hook in self.EXAMPLE_HOOKS])
+        
+        # Extract style values safely
+        style_name = style.get('name', 'story')
+        style_desc = style.get('description', 'engaging narrative')
+        style_tone = style.get('tone', 'compelling')
+        style_pacing = style.get('pacing', 'medium')
+        
+        # Base prompt with ULTIMATE quality requirements!
+        prompt = f"""You are a MASTER storyteller creating a {style_name} for professional YouTube videos.
 
-🎯 MISSION: Generate a compelling {duration_minutes}-minute script about: {topic}
+🎯 CRITICAL REQUIREMENTS:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 STORY REQUIREMENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC: {topic}
+DURATION: {duration_minutes} minutes
+TARGET: EXACTLY {target_words} words (150 words per minute of narration)
+SCENES: {num_scenes} distinct visual scenes
+TYPE: {style_desc}
+TONE: {style_tone}
+PACING: {style_pacing}
 
-Target: {target_words} words EXACTLY
-Type: {style['description']}
-Tone: {style['tone']}
-Pacing: {style['pacing']}
-Scenes: {num_scenes}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔥 INTELLIGENT HOOK CREATION (First 20-30 words):
+
+STUDY these example hooks to LEARN the pattern (DON'T COPY!):
+
+{example_hooks_text}
+
+ANALYZE what makes these hooks powerful:
+✅ Create immediate intrigue (viewers MUST know more)
+✅ Use CONTRAST or TWIST ("I believed X, then Y happened")
+✅ Raise questions that NEED answers
+✅ Specific and CONCRETE (not vague)
+✅ Create emotional connection
+✅ Promise a story worth watching
+
+NOW create a COMPLETELY NEW, ORIGINAL hook for "{topic}":
+
+Your hook MUST be:
+✅ 100% UNIQUE (NOT from examples - create something NEW!)
+✅ PERFECTLY matched to topic: {topic}
+✅ {style_name} tone and style
+✅ INSTANTLY attention-grabbing
+✅ Create curiosity viewers CAN'T resist
+✅ Specific, concrete details (not generic)
+✅ Emotionally compelling
+
+CRITICAL: Learn the STYLE from examples, create ORIGINAL content!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
         
         # Add research if available
@@ -198,85 +262,217 @@ Scenes: {num_scenes}
 
 """
         
-        # Add writing rules
-        prompt += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✍️ WRITING RULES (MUST FOLLOW)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # Add ULTIMATE writing rules for 10/10 quality
+        prompt += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✍️ PROFESSIONAL SCRIPTWRITING RULES (10/10 QUALITY!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ PRESENT TENSE ONLY ("She runs" not "She ran")
-✅ SHOW DON'T TELL ("hands trembled" not "was scared")
-✅ USE ALL 5 SENSES (sight, sound, smell, taste, touch)
-✅ CHARACTER NAMES STAY CONSISTENT
-✅ SPECIFIC > VAGUE ("rusty Ford truck" not "a car")
+🎬 NARRATIVE EXCELLENCE:
+✅ PRESENT TENSE ONLY ("I walk" not "I walked")
+✅ FIRST PERSON for immersion ("I", "my", "me", "I'm")
+✅ SHOW DON'T TELL ("my hands trembled" not "I was scared")
+✅ USE ALL 5 SENSES in EVERY paragraph!
+   - What I SEE (visual details)
+   - What I HEAR (sounds, voices)
+   - What I SMELL (scents, odors)
+   - What I TASTE (if relevant)
+   - What I FEEL/TOUCH (textures, sensations)
+✅ SPECIFIC DETAILS > VAGUE ("my father's rusty 1987 Ford F-150" not "a truck")
 ✅ ACTIVE VOICE (not passive)
-✅ NO LABELS or headers
-✅ DIALOGUE WITH CONTRACTIONS
-✅ VARIED SENTENCE LENGTH for rhythm
-✅ STRONG VOCABULARY without repetition
+✅ NO LABELS, NO HEADERS, NO METADATA
+✅ DIALOGUE WITH CONTRACTIONS ("don't", "can't", "I'm")
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎭 EMOTIONAL DEPTH (CRITICAL for YouTube!):
+✅ INTERNAL THOUGHTS - Show my mind ("I think...", "I realize...")
+✅ VISCERAL REACTIONS - Physical feelings ("heart races", "stomach churns")
+✅ SUBTEXT - What's unsaid matters ("she smiles, but her eyes are cold")
+✅ MICRO-DETAILS - Small observations reveal character
+✅ EMOTIONAL WAVES - Vary intensity (calm → tense → terrified → calm)
+✅ PACING RHYTHM - Mix sentence lengths:
+   - Short. Punchy. Dramatic.
+   - Longer flowing sentences that build momentum and carry emotion forward.
+   - Then back to short. Impact.
 
-WRITE EXACTLY {target_words} WORDS with MAXIMUM quality!
-Generate NOW (no preamble):"""
+💬 DIALOGUE MASTERY:
+✅ Use CONTRACTIONS ("don't", "can't", "I'm", "won't")
+✅ REALISTIC speech patterns (people don't talk in perfect sentences)
+✅ SUBTEXT (dialogue says one thing, means another)
+✅ CHARACTER VOICE (each person talks differently)
+
+🎨 CRITICAL: VISUAL STORYTELLING - {num_scenes} UNIQUE IMAGE DESCRIPTIONS!
+
+⚠️ MANDATORY: You MUST include EXACTLY {num_scenes} IMAGE: descriptions in your story!
+
+FORMAT FOR EACH IMAGE:
+IMAGE: [20-30 word detailed visual description]
+
+REQUIREMENTS FOR EACH IMAGE:
+✅ Include TOPIC elements: "{topic}" (MUST mention aliens if topic is aliens, etc!)
+✅ 20-30 words EXACTLY
+✅ UNIQUE visuals (never repeat!)
+✅ SPECIFIC details (exact lighting, mood, objects, actions)
+✅ CINEMATIC language (like a movie scene!)
+✅ VARIED compositions across all {num_scenes} images
+
+SHOT VARIETY - Use these {num_scenes} different types:
+1. Wide establishing shot - show the full scene
+2. Medium close-up - focus on character
+3. Dramatic angle - unique perspective
+4. Intimate close-up - emotional detail
+5. Environmental wide - setting/world
+6. Character focus - personality moment
+7. Detail shot - important object
+8. Tension shot - building stakes
+9. Climactic shot - peak moment
+10. Resolution shot - ending peace
+
+EXAMPLE FORMATS:
+
+For ALIEN topic:
+IMAGE: Silver-skinned alien with large dark eyes lying on kitchen floor, glowing blue blood pooling, spaceship wreckage visible through window, sci-fi atmosphere, wide establishing shot, dramatic lighting, high detail.
+
+For HORROR topic:
+IMAGE: Woman's trembling hand on old brass doorknob, dim hallway behind with shadows stretching, eerie silence, single flickering bulb overhead, horror atmosphere, close-up shot, cinematic lighting, suspenseful mood, high detail.
+
+For ROMANCE topic:
+IMAGE: Two people's hands almost touching across coffee shop table, warm golden hour lighting streaming through window, steam rising from cups, intimate medium shot, romantic atmosphere, soft focus background, heartwarming mood.
+
+⚠️ CRITICAL: Each IMAGE must MATCH the story moment AND the topic "{topic}"!
+
+🎯 QUALITY TARGETS (10/10!):
+✅ Emotional impact: 10/10 (MAXIMUM engagement!)
+✅ Character depth: 10/10 (Complex, relatable)
+✅ Visual imagery: 10/10 (All 5 senses constantly!)
+✅ Pacing & rhythm: 10/10 (Professional variation)
+✅ Dialogue authenticity: 10/10 (Sounds real)
+✅ Sensory immersion: 10/10 (Reader feels they're there)
+✅ Plot coherence: 10/10 (No holes, perfect flow)
+✅ Satisfying ending: 10/10 (Emotional payoff)
+
+⚡ VOICE OPTIMIZATION (CRITICAL!):
+✅ RHYTHM - Vary sentence length for natural speech
+✅ PAUSES - Use periods and commas strategically
+✅ CRESCENDOS - Build intensity to peaks
+✅ SILENCE - Short sentences for dramatic pauses
+✅ REPETITION - Use for emphasis ("I trusted them. I trusted them completely.")
+✅ READ-ALOUD TEST - Every sentence must sound natural when spoken
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 YOUR MISSION:
+
+Write EXACTLY {target_words} words of EXTRAORDINARY quality!
+
+MANDATORY REQUIREMENTS:
+✅ EXACTLY {num_scenes} IMAGE: descriptions (COUNT THEM! Must have {num_scenes}!)
+✅ Present tense, first person throughout
+✅ All 5 senses in EVERY paragraph
+✅ Each IMAGE includes topic "{topic}" elements!
+✅ Emotional, visceral, deeply engaging
+✅ Perfect for voice narration (read-aloud friendly)
+✅ Vivid, unique visual scenes for EACH image (all different!)
+✅ Hook that IMMEDIATELY grabs attention
+✅ Satisfying, memorable ending
+✅ Professional story structure
+
+🏆 QUALITY GOAL: Create a script so good that:
+- Viewers can't stop watching
+- They FEEL the emotions
+- They SEE the scenes in their mind
+- They remember it after watching
+- They share it with others
+- They subscribe for more
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ BEFORE YOU START WRITING:
+1. Plan {num_scenes} DIFFERENT image scenes
+2. Each image MUST include "{topic}" elements
+3. Each image MUST be visually DIFFERENT from others
+4. Distribute images evenly throughout story
+
+NOW Generate the complete {target_words}-word script with {num_scenes} IMAGE: descriptions.
+NO preamble, NO commentary, NO explanations - JUST the story with IMAGES!
+
+REMEMBER: {num_scenes} IMAGES REQUIRED - COUNT THEM!"""
         
         return prompt
     
     def _format_template_instructions(self, template: Dict, target_words: int) -> str:
-        """Format template as instructions for Gemini"""
+        """Format template as CRYSTAL CLEAR instructions for Gemini"""
         
-        setup_pct = int((template.get("setup_length", 150) / target_words) * 100)
-        rise_pct = int((template.get("rise_length", 200) / target_words) * 100)
+        # Extract template values safely
+        template_hook = template.get('hook_example', 'Create compelling hook')
+        template_tone_list = template.get('tone', ['engaging'])
+        template_tone = ', '.join(template_tone_list) if isinstance(template_tone_list, list) else str(template_tone_list)
         
-        instructions = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📐 FOLLOW THIS TEMPLATE STRUCTURE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        instructions = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 CRITICAL: ANALYZE THIS EXAMPLE SCRIPT TEMPLATE!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-This template is from a high-quality example script.
-REPLICATE this exact structure but with NEW content for: {template.get('topic', 'unknown')}
+This template is from a HIGH-QUALITY example script that worked PERFECTLY.
 
-【 HOOK 】- REPLICATE THIS STYLE:
-"{template.get('hook_example', 'Hook goes here')}"
+YOUR TASK:
+1. STUDY the template carefully
+2. ANALYZE what makes it effective  
+3. LEARN the writing strategy and structure
+4. CREATE a COMPLETELY NEW story using the SAME strategy
+5. Keep the QUALITY and STYLE, change the CONTENT!
 
-Hook Style: {template.get('hook_style', 'unknown')}
-✅ Use SAME hook style
-✅ Start with SAME intensity
-✅ Make audience lean in immediately
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-【 SETUP 】- ~{template.get('setup_length', 150)} words
-Use SAME approach:
-- Introduce character with personality
-- Set SPECIFIC location with details
-- Create sympathy/interest
-- Match this pacing: {template.get('sentence_variation', 'medium')}
+【 TEMPLATE HOOK EXAMPLE 】
+"{template_hook}"
 
-【 RISING ACTION 】- ~{template.get('rise_length', 200)} words  
-Build tension LIKE THIS EXAMPLE:
-{template.get('rising_action_example', '[Example would go here]')[:200]}...
+ANALYZE THIS HOOK:
+- What makes it compelling?
+- How does it grab attention?
+- What's the pattern/structure?
 
-✅ Same escalation pattern
-✅ Same number of complications
-✅ Same tone shift
+NOW CREATE YOUR NEW HOOK:
+- Use SAME strategy (contrast, twist, question, etc.)
+- Make it JUST AS compelling
+- But about YOUR new topic (not the template topic!)
+- Create UNIQUE hook, not copy!
 
-【 CLIMAX 】- ~{template.get('climax_length', 100)} words
-Peak moment SIMILAR TO:
-{template.get('climax_example', '[Example would go here]')[:150]}...
+【 TEMPLATE TONE 】
+{template_tone}
 
-【 RESOLUTION 】- ~{template.get('end_length', 80)} words
-End LIKE THIS:
-{template.get('ending_example', '[Example would go here]')[:150]}...
+MATCH THIS TONE:
+- Same emotional level
+- Same intensity
+- Same style
+- But NEW story!
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📌 KEY PATTERNS TO REPLICATE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【 TEMPLATE STRUCTURE 】
+Setup: ~{template.get('setup_length', 150)} words
+Rising: ~{template.get('rise_length', 200)} words
+Climax: ~{template.get('climax_length', 100)} words
+Ending: ~{template.get('end_length', 80)} words
 
-Tone: {', '.join(template.get('tone', []))}
-Patterns: {', '.join(template.get('key_patterns', []))}
-Sentence Variation: {template.get('sentence_variation', 'medium')}
+USE SAME PROPORTIONS:
+- Same pacing rhythm
+- Same emotional progression
+- Same story arc shape
+- But NEW content for your topic!
 
-✅ Match all these patterns
-✅ Use same emotional beats
-✅ Keep same rhythm and pacing
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+🔥 CRITICAL INSTRUCTIONS:
+
+1. DON'T copy the template story!
+2. DO copy the template STRATEGY!
+3. If template hook uses "contrast" → Your hook uses "contrast"
+4. If template builds tension slowly → Your story builds tension slowly
+5. If template has emotional ending → Your story has emotional ending
+6. CREATE entirely NEW story, SAME quality level!
+
+THINK OF IT LIKE:
+- Template is the BLUEPRINT
+- You're building a NEW HOUSE with same blueprint
+- Different materials (new topic), same structure (proven strategy)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
         
         return instructions
@@ -295,23 +491,143 @@ Sentence Variation: {template.get('sentence_variation', 'medium')}
         return sorted(list(names))[:10]
     
     def _parse_scenes(self, text: str, num_scenes: int) -> List[Dict]:
-        """Parse text into scenes"""
-        paragraphs = text.split('\n\n')
-        scene_length = len(paragraphs) // max(num_scenes, 1)
+        """Parse text into scenes with proper IMAGE descriptions"""
+        
+        # First, try to extract IMAGE: descriptions from script
+        image_descriptions = re.findall(r'IMAGE:\s*(.+?)(?:\n|$)', text, re.IGNORECASE)
+        
+        if image_descriptions and len(image_descriptions) >= num_scenes:
+            # Use explicit IMAGE: descriptions from script
+            logger.info(f"   ✅ Found {len(image_descriptions)} IMAGE descriptions in script")
+            
+            scenes = []
+            for i in range(min(num_scenes, len(image_descriptions))):
+                # Find the text around this image description
+                img_desc = image_descriptions[i]
+                
+                scenes.append({
+                    'scene_number': i + 1,
+                    'image_description': img_desc.strip(),
+                    'content': img_desc.strip(),  # For character detection
+                    'has_explicit_image': True
+                })
+            
+            return scenes
+        
+        # Fallback: FORCE creation of exactly num_scenes images!
+        logger.warning(f"   ⚠️  Only found {len(image_descriptions)} IMAGE descriptions!")
+        logger.info(f"   🔧 FORCING creation of {num_scenes} topic-specific images...")
+        
+        # Split text into paragraphs
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        if not paragraphs:
+            paragraphs = [text[:500]]  # Use first part of text
         
         scenes = []
+        scene_length = max(1, len(paragraphs) // num_scenes)
+        
+        # FORCE generation of EXACTLY num_scenes images!
         for i in range(num_scenes):
-            start = i * scene_length
-            end = start + scene_length
-            scene_text = '\n\n'.join(paragraphs[start:end])
+            start_idx = i * scene_length
+            end_idx = min(start_idx + scene_length, len(paragraphs))
+            
+            # Get scene text
+            scene_paragraphs = paragraphs[start_idx:end_idx] if start_idx < len(paragraphs) else paragraphs[-1:]
+            scene_text = ' '.join(scene_paragraphs)[:200] if scene_paragraphs else text[i*100:(i+1)*100]
+            
+            # Create SPECIFIC image description
+            # FORCE topic inclusion and variety!
+            description = self._create_topic_specific_image(
+                scene_text,
+                scene_num=i + 1,
+                num_scenes=num_scenes
+            )
             
             scenes.append({
-                'scene_num': i + 1,
+                'scene_number': i + 1,
+                'image_description': description,
                 'content': scene_text[:200],
-                'char_count': len(scene_text)
+                'has_explicit_image': False
             })
         
+        logger.info(f"   ✅ Created {len(scenes)} topic-specific image descriptions")
         return scenes
+    
+    def _create_topic_specific_image(self, text: str, scene_num: int, num_scenes: int) -> str:
+        """Create TOPIC-SPECIFIC image description - FORCES correct content!"""
+        
+        # Shot types for variety (cycle through these)
+        shot_types = [
+            "wide establishing shot, cinematic",
+            "medium close-up, character focus",
+            "dramatic low angle, tension",
+            "intimate close-up, emotional",
+            "atmospheric wide, environmental",
+            "over-shoulder, interaction",
+            "extreme close-up, detail",
+            "dutch angle, dramatic",
+            "climactic wide, peak moment",
+            "resolution shot, peaceful"
+        ]
+        
+        shot_type = shot_types[(scene_num - 1) % len(shot_types)]
+        
+        # Extract key snippet from text (first significant words)
+        text_clean = text.replace('\n', ' ').strip()
+        key_words = ' '.join(text_clean.split()[:15])  # First 15 words
+        
+        # Build SPECIFIC description with text content
+        description = f"{key_words}, {shot_type}, cinematic lighting, high detail, professional composition, photorealistic"
+        
+        return description
+    
+    def _create_image_description_from_text(self, text: str, scene_num: int, story_type: str) -> str:
+        """Create detailed image description from story text"""
+        
+        # Extract key elements (characters, objects, actions, emotions)
+        words = text.lower().split()[:50]  # First 50 words of scene
+        
+        # Detect scene elements
+        has_character = any(name.lower() in ' '.join(words) for name in self.character_names[:3])
+        has_action = any(word in ' '.join(words) for word in ['run', 'walk', 'look', 'turn', 'move', 'open', 'close'])
+        has_emotion = any(word in ' '.join(words) for word in ['fear', 'joy', 'sad', 'angry', 'love', 'terror', 'happy'])
+        
+        # Build rich description
+        description_parts = []
+        
+        # Add main subject
+        if has_character and self.character_names:
+            description_parts.append(f"{self.character_names[0]}")
+        else:
+            description_parts.append("Main character")
+        
+        # Add key text snippet (cleaned)
+        clean_snippet = text[:80].replace('\n', ' ').strip()
+        if clean_snippet:
+            description_parts.append(clean_snippet)
+        
+        # Add cinematic elements
+        description_parts.append(f"{story_type} atmosphere")
+        description_parts.append("cinematic lighting")
+        description_parts.append("high detail")
+        
+        # Add composition based on scene number
+        compositions = [
+            "establishing wide shot",
+            "medium close-up",
+            "dramatic angle",
+            "intimate close-up",
+            "atmospheric wide",
+            "character focus",
+            "environmental detail",
+            "tension building shot",
+            "climactic moment",
+            "emotional resolution"
+        ]
+        if scene_num <= len(compositions):
+            description_parts.append(compositions[scene_num - 1])
+        
+        return ', '.join(description_parts)
 
 
 # Create singleton instance

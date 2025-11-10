@@ -7,10 +7,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from moviepy.editor import (
-    VideoClip, ImageClip, AudioFileClip, CompositeVideoClip,
+    VideoClip, ImageClip, AudioFileClip, CompositeVideoClip, VideoFileClip,
     concatenate_videoclips, ColorClip
 )
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 import random
 
 from src.editor.effects import effects
@@ -21,12 +21,47 @@ from src.utils.logger import logger
 
 
 class VideoCompiler:
-    """Compiles final video from images, audio, and effects"""
+    """Compiles final video from images, videos, audio, and effects"""
     
     def __init__(self):
         self.resolution = (1920, 1080)
         self.fps = 30
         self.default_zoom = 1.1
+    
+    def _is_video_file(self, path: Path) -> bool:
+        """Check if file is a video"""
+        video_extensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv', '.flv']
+        return path.suffix.lower() in video_extensions
+    
+    def _create_clip_from_media(
+        self,
+        media_path: Path,
+        duration: float,
+        effect_type: str = "simple_zoom"
+    ) -> VideoClip:
+        """Create a clip from either image or video file"""
+        
+        if self._is_video_file(media_path):
+            # Load video clip
+            logger.info(f"   Loading video clip: {media_path.name}")
+            video_clip = VideoFileClip(str(media_path))
+            
+            # If video is longer than needed duration, trim it
+            if video_clip.duration > duration:
+                video_clip = video_clip.subclip(0, duration)
+            # If video is shorter, loop it
+            elif video_clip.duration < duration:
+                loops_needed = int(duration / video_clip.duration) + 1
+                video_clip = video_clip.loop(n=loops_needed).subclip(0, duration)
+            
+            # Resize to target resolution
+            video_clip = video_clip.resize(self.resolution)
+            return video_clip
+        else:
+            # Load image and apply effect (existing behavior)
+            clip = effects.apply_effect(media_path, duration, effect_type)
+            clip = clip.resize(self.resolution)
+            return clip
     
     def create_video_from_images(
         self,
@@ -37,25 +72,24 @@ class VideoCompiler:
         transition_type: str = "crossfade",
         transition_duration: float = 1.0
     ) -> Path:
-        """Create video from images with audio"""
+        """Create video from images/videos with audio"""
         
-        logger.info(f"🎬 Compiling video from {len(image_timeline)} images...")
+        logger.info(f"🎬 Compiling video from {len(image_timeline)} media files...")
         
-        # Create clips from images
+        # Create clips from images/videos
         clips = []
         
         for i, item in enumerate(image_timeline):
-            logger.info(f"   Processing image {i+1}/{len(image_timeline)}: {item['image_path'].name}")
+            media_path = item['image_path']
+            media_type = "video" if self._is_video_file(media_path) else "image"
+            logger.info(f"   Processing {media_type} {i+1}/{len(image_timeline)}: {media_path.name}")
             
-            # Apply effect to image
-            clip = effects.apply_effect(
-                item['image_path'],
+            # Create clip from either image or video
+            clip = self._create_clip_from_media(
+                media_path,
                 item['duration'],
                 effect_type
             )
-            
-            # Resize to target resolution
-            clip = clip.resize(self.resolution)
             
             clips.append(clip)
         

@@ -1,14 +1,21 @@
 import { create } from 'zustand';
 import { GenerationProgress, VideoResult, Character } from '../types';
 
+interface StockMediaItem {
+  id: number;
+  type: 'image' | 'video';
+  thumbnail: string;
+  videoUrl?: string;
+  photographer: string;
+}
+
 interface VideoStore {
   topic: string;
   storyType: string;
   imageStyle: string;
   imageMode: string;
   voiceId: string;
-  voiceEngine: 'kokoro' | 'edge';  // ✅ NEW: Voice engine selector
-  voiceSpeed: number;              // ✅ NEW: Voice speed control (0.5-2.0)
+  voiceSpeed: number;
   duration: number;
   hookIntensity: string;
   pacing: string;
@@ -16,7 +23,20 @@ interface VideoStore {
   characters: Character[];
   manualImages: File[];
   stockKeywords: string[];
+  selectedStockMedia: StockMediaItem[];
   useAdvancedAnalysis: boolean;  // ✅ NEW: Advanced Script Analysis toggle
+
+  // Filters and Effects
+  colorFilter: string;
+  zoomEffect: boolean;
+
+  // Captions
+  autoCaptions: boolean;  // NEW: Auto captions from script
+  captionEnabled: boolean;
+  captionText: string;
+  captionStyle: string;
+  captionPosition: string;
+  captionAnimation: string;
 
   isGenerating: boolean;
   progress: GenerationProgress | null;
@@ -28,8 +48,7 @@ interface VideoStore {
   setImageStyle: (style: string) => void;
   setImageMode: (mode: string) => void;
   setVoiceId: (id: string) => void;
-  setVoiceEngine: (engine: 'kokoro' | 'edge') => void;  // ✅ NEW
-  setVoiceSpeed: (speed: number) => void;               // ✅ NEW
+  setVoiceSpeed: (speed: number) => void;
   setDuration: (duration: number) => void;
   setHookIntensity: (intensity: string) => void;
   setPacing: (pacing: string) => void;
@@ -37,7 +56,17 @@ interface VideoStore {
   setCharacters: (characters: Character[]) => void;
   setManualImages: (images: File[]) => void;
   setStockKeywords: (keywords: string[]) => void;
+  setSelectedStockMedia: (media: StockMediaItem[]) => void;
   setUseAdvancedAnalysis: (use: boolean) => void;  // ✅ NEW
+
+  setColorFilter: (filter: string) => void;
+  setZoomEffect: (enabled: boolean) => void;
+  setAutoCaptions: (enabled: boolean) => void;  // NEW
+  setCaptionEnabled: (enabled: boolean) => void;
+  setCaptionText: (text: string) => void;
+  setCaptionStyle: (style: string) => void;
+  setCaptionPosition: (position: string) => void;
+  setCaptionAnimation: (animation: string) => void;
 
   startGeneration: () => void;
   updateProgress: (progress: GenerationProgress) => void;
@@ -51,9 +80,8 @@ export const useVideoStore = create<VideoStore>((set) => ({
   storyType: 'scary_horror',
   imageStyle: 'cinematic',
   imageMode: 'ai_only',
-  voiceId: 'af_bella',  // ✅ Default to Kokoro voice
-  voiceEngine: 'kokoro',  // ✅ NEW: Default to Kokoro
-  voiceSpeed: 1.0,        // ✅ NEW: Normal speed
+  voiceId: 'guy',  // Default Edge-TTS voice (male)
+  voiceSpeed: 1.0,
   duration: 5,
   hookIntensity: 'medium',
   pacing: 'medium',
@@ -61,7 +89,20 @@ export const useVideoStore = create<VideoStore>((set) => ({
   characters: [],
   manualImages: [],
   stockKeywords: [],
+  selectedStockMedia: [],
   useAdvancedAnalysis: false,  // ✅ NEW: Default to OFF
+
+  // Filters and Effects
+  colorFilter: 'none',
+  zoomEffect: false,
+
+  // Captions
+  autoCaptions: false,  // NEW: Auto captions from script
+  captionEnabled: false,
+  captionText: '',
+  captionStyle: 'simple',
+  captionPosition: 'bottom',
+  captionAnimation: 'fade_in',
 
   isGenerating: false,
   progress: null,
@@ -73,8 +114,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setImageStyle: (imageStyle) => set({ imageStyle }),
   setImageMode: (imageMode) => set({ imageMode }),
   setVoiceId: (voiceId) => set({ voiceId }),
-  setVoiceEngine: (voiceEngine) => set({ voiceEngine }),  // ✅ NEW
-  setVoiceSpeed: (voiceSpeed) => set({ voiceSpeed: Math.max(0.5, Math.min(2.0, voiceSpeed)) }),  // ✅ NEW: Clamp 0.5-2.0
+  setVoiceSpeed: (voiceSpeed) => set({ voiceSpeed: Math.max(0.5, Math.min(2.0, voiceSpeed)) }),
   setDuration: (duration) => set({ duration }),
   setHookIntensity: (hookIntensity) => set({ hookIntensity }),
   setPacing: (pacing) => set({ pacing }),
@@ -82,7 +122,17 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setCharacters: (characters) => set({ characters }),
   setManualImages: (manualImages) => set({ manualImages }),
   setStockKeywords: (stockKeywords) => set({ stockKeywords }),
+  setSelectedStockMedia: (selectedStockMedia) => set({ selectedStockMedia }),
   setUseAdvancedAnalysis: (useAdvancedAnalysis) => set({ useAdvancedAnalysis }),  // ✅ NEW
+
+  setColorFilter: (colorFilter) => set({ colorFilter }),
+  setZoomEffect: (zoomEffect) => set({ zoomEffect }),
+  setAutoCaptions: (autoCaptions) => set({ autoCaptions }),  // NEW
+  setCaptionEnabled: (captionEnabled) => set({ captionEnabled }),
+  setCaptionText: (captionText) => set({ captionText }),
+  setCaptionStyle: (captionStyle) => set({ captionStyle }),
+  setCaptionPosition: (captionPosition) => set({ captionPosition }),
+  setCaptionAnimation: (captionAnimation) => set({ captionAnimation }),
 
   startGeneration: () => set({ isGenerating: true, progress: null, result: null, error: null }),
   updateProgress: (progress) => set({ progress }),
