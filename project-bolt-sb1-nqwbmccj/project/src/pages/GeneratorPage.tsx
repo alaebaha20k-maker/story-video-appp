@@ -186,6 +186,7 @@ export const GeneratorPage = () => {
         num_scenes: store.numScenes,
         characters: store.characters.filter(c => c.name && c.description),
         stock_keywords: store.stockKeywords,
+        use_advanced_analysis: store.useAdvancedAnalysis,  // ✅ NEW
         // Filters and Effects
         color_filter: store.colorFilter,
         zoom_effect: store.zoomEffect,
