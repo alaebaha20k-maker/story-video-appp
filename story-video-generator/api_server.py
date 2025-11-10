@@ -1,5 +1,5 @@
 """
-🔌 API SERVER - With Kokoro TTS (PRIMARY) + Edge-TTS (BACKUP)
+🔌 API SERVER - With Remote Kokoro TTS (Google Colab GPU)
 """
 
 from flask import Flask, request, jsonify, send_file
@@ -9,8 +9,6 @@ import os
 import threading
 import re
 from pydub import AudioSegment
-import asyncio
-import edge_tts
 
 # ✅ IMPORTS FOR TEMPLATES + RESEARCH
 from src.ai.script_analyzer import script_analyzer
@@ -20,6 +18,9 @@ from src.ai.enhanced_script_generator import enhanced_script_generator
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
+
+# ✅ VOICE: KOKORO TTS (Remote API)
+from src.voice.kokoro_api_client import generate_kokoro_audio, get_kokoro_voice
 
 app = Flask(__name__)
 
@@ -42,13 +43,13 @@ progress_state = {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# 🎤 EDGE-TTS - FREE, RELIABLE, ALWAYS WORKS!
+# 🎤 KOKORO TTS - REMOTE GPU-POWERED (Google Colab)
 # ═══════════════════════════════════════════════════════════════
 
-print(f"\n🔧 Using Edge-TTS (Microsoft) - FREE & UNLIMITED!")
-print("✅ Edge-TTS ready - No API key needed!")
-print("   💰 FREE & UNLIMITED forever!")
-print("   🎬 10+ professional voices!")
+print(f"\n🔧 Using Kokoro TTS (Remote Google Colab GPU)")
+print("✅ Kokoro API ready - High-quality voice generation!")
+print("   ⚡ GPU-powered for better quality & speed!")
+print("   🎬 6 professional voices (American + British)!")
 
 # ═══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
@@ -62,121 +63,56 @@ def sanitize_filename(filename):
 
 
 def get_voice_id(voice_id=None):
-    """Get Edge-TTS voice ID"""
-    
-    # ✅ Map to Edge-TTS voices (Microsoft)
-    voice_map = {
-        # Male voices
-        'guy': 'en-US-GuyNeural',
-        'andrew': 'en-US-AndrewNeural',
-        'brian': 'en-US-BrianNeural',
-        'christopher': 'en-US-ChristopherNeural',
-        'roger': 'en-US-RogerNeural',
-        
-        # Female voices
-        'aria': 'en-US-AriaNeural',
-        'jenny': 'en-US-JennyNeural',
-        'sara': 'en-US-SaraNeural',
-        'nancy': 'en-US-NancyNeural',
-        'michelle': 'en-US-MichelleNeural',
-        
-        # Old mappings
-        'matthew': 'en-US-GuyNeural',
-        'joey': 'en-US-ChristopherNeural',
-        'justin': 'en-US-RogerNeural',
-        'joanna': 'en-US-AriaNeural',
-        'salli': 'en-US-JennyNeural',
-        'kimberly': 'en-US-SaraNeural',
-        'ivy': 'en-US-NancyNeural',
-    }
-    
-    # Use mapping or default
-    if voice_id:
-        voice_id = voice_map.get(voice_id.lower() if isinstance(voice_id, str) else 'en-US-GuyNeural', 'en-US-GuyNeural')
-    else:
-        voice_id = 'en-US-GuyNeural'  # Default male voice
-    
-    print(f"   🔧 Voice for Edge-TTS: {voice_id}")
-    return voice_id
+    """Get voice ID for Kokoro TTS (uses mapping from kokoro_api_client)"""
+
+    # Default to 'guy' if not provided
+    if not voice_id:
+        voice_id = 'guy'
+
+    # Use the Kokoro voice mapper
+    kokoro_voice = get_kokoro_voice(voice_id)
+
+    print(f"   🔧 Voice for Kokoro: {voice_id} → {kokoro_voice}")
+    return voice_id  # Return frontend voice ID, will be mapped in generation
 
 
-def generate_audio_edge(text, voice="en-US-GuyNeural", output_path="narration.mp3"):
-    """✅ Generate audio using Edge-TTS - FREE, RELIABLE, ALWAYS WORKS!"""
-    print(f"\n🎤 Generating audio with Edge-TTS (Microsoft - FREE!)...")
+def generate_audio_kokoro(text, voice="guy", speed=1.0, output_path="narration.wav"):
+    """✅ Generate audio using Remote Kokoro TTS (Google Colab GPU)"""
+    print(f"\n🎤 Generating audio with Kokoro TTS (GPU-Powered!)...")
     print(f"   Voice: {voice}")
+    print(f"   Speed: {speed}x")
     print(f"   Text length: {len(text)} characters")
     print(f"   Output path: {output_path}")
-    print(f"   💰 Cost: $0 (FREE!)")
-    
+
     try:
-        # Generate with Edge-TTS
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        audio_path = loop.run_until_complete(
-            generate_audio_edge_tts(text, voice, output_path)
+        # Generate with Kokoro API
+        audio_path = generate_kokoro_audio(
+            text=text,
+            voice=voice,
+            speed=speed,
+            output_path=output_path,
+            timeout=600  # 10 minutes timeout for long texts
         )
-        loop.close()
-        
-        print(f"✅ Edge-TTS generation SUCCESS!")
-        print(f"   🎬 Good quality for YouTube - FREE forever!")
+
+        print(f"✅ Kokoro TTS generation SUCCESS!")
+        print(f"   🎬 High-quality GPU-generated voice!")
         return audio_path
-        
+
     except Exception as e:
         print(f"\n{'='*60}")
-        print(f"❌ EDGE-TTS GENERATION FAILED!")
+        print(f"❌ KOKORO TTS GENERATION FAILED!")
         print(f"{'='*60}")
         print(f"Error: {e}")
         print(f"Voice: {voice}")
+        print(f"Speed: {speed}x")
         print(f"Text length: {len(text)}")
         print(f"\n💡 Troubleshooting:")
-        print(f"   1. Check internet connection")
-        print(f"   2. Try a different voice")
-        print(f"   3. Check text length")
+        print(f"   1. Check if Google Colab server is running")
+        print(f"   2. Verify ngrok URL is correct")
+        print(f"   3. Check internet connection")
+        print(f"   4. Try a different voice")
         print(f"{'='*60}\n")
         raise
-
-
-async def generate_audio_edge_tts(text, voice="en-US-GuyNeural", output_path="narration.mp3"):
-    """✅ Edge-TTS fallback - Always works!"""
-    from pydub import AudioSegment
-    
-    print(f"   🎤 Edge-TTS generating...")
-    
-    # For long text, use chunking
-    if len(text) > 3000:
-        chunks = _split_text_smart(text, max_chars=2000)
-        print(f"   Split into {len(chunks)} chunks for Edge-TTS")
-        
-        temp_dir = Path("output/temp/edge_chunks")
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Generate chunks in parallel
-        tasks = []
-        chunk_files = []
-        
-        for i, chunk in enumerate(chunks):
-            chunk_file = temp_dir / f"chunk_{i:03d}.mp3"
-            chunk_files.append(chunk_file)
-            communicate = edge_tts.Communicate(chunk, voice, rate="+10%")
-            tasks.append(communicate.save(str(chunk_file)))
-        
-        await asyncio.gather(*tasks)
-        
-        # Combine chunks
-        combined = AudioSegment.empty()
-        for chunk_file in chunk_files:
-            if chunk_file.exists():
-                audio_chunk = AudioSegment.from_mp3(str(chunk_file))
-                combined += audio_chunk
-                chunk_file.unlink()
-        
-        combined.export(str(output_path), format="mp3", bitrate="192k")
-    else:
-        # Short text - generate directly
-        communicate = edge_tts.Communicate(text, voice, rate="+10%")
-        await communicate.save(str(output_path))
-    
-    return str(output_path)
 
 
 def _split_text_smart(text, max_chars=2000):
@@ -232,16 +168,16 @@ def generate_video_background(data):
     try:
         print(f"\n🎬 Starting generation: {data.get('topic', 'Untitled')}")
         
-        # Get voice from user (Edge-TTS only)
+        # Get voice from user (Kokoro TTS)
         voice_id = get_voice_id(data.get('voice_id'))
         zoom_effect = data.get('zoom_effect', True)
-        
-        print(f"🎤 Voice Engine: EDGE-TTS (Microsoft)")
+
+        print(f"🎤 Voice Engine: KOKORO TTS (Remote GPU)")
         print(f"🎤 Voice ID: {voice_id}")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
-        
+
         # Update progress state
-        progress_state['voice_engine'] = 'edge'
+        progress_state['voice_engine'] = 'kokoro'
         progress_state['voice_id'] = voice_id
         
         # Script
@@ -280,18 +216,30 @@ def generate_video_background(data):
             exists = "EXISTS" if img_path.exists() else "MISSING!"
             print(f"      Image {i+1}: {img_path.name} - {exists}")
         
-        # Voice Generation - Edge-TTS
-        progress_state['status'] = 'Generating voice with Edge-TTS...'
+        # Voice Generation - Kokoro TTS
+        progress_state['status'] = 'Generating voice with Kokoro TTS...'
         progress_state['progress'] = 60
-        print(f"🎤 Step 3/4: Generating voice with Edge-TTS (FREE!)...")
-        
-        audio_path = Path("output/temp/narration.mp3")
+        print(f"🎤 Step 4/5: Generating voice with Kokoro TTS (GPU!)..." if use_advanced_analysis else "🎤 Step 3/4: Generating voice with Kokoro TTS (GPU!)...")
+
+        audio_path = Path("output/temp/narration.wav")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # ✅ EDGE-TTS - FREE & UNLIMITED!
-        generate_audio_edge(
-            text=result['script'],
+
+        # ✨ Use clean narration if advanced analysis was enabled
+        if use_advanced_analysis and 'narration_scenes' in result:
+            # Combine all narration scenes into one text
+            narration_text = '\n\n'.join([scene['narration'] for scene in result['narration_scenes']])
+            print(f"   Using CLEAN narration ({len(narration_text)} chars)")
+        else:
+            # Standard mode - use full script
+            narration_text = result['script']
+            print(f"   Using FULL script ({len(narration_text)} chars)")
+
+        # ✅ KOKORO TTS - GPU-POWERED!
+        voice_speed = data.get('voice_speed', 1.0)
+        generate_audio_kokoro(
+            text=narration_text,
             voice=voice_id,
+            speed=voice_speed,
             output_path=str(audio_path)
         )
         
@@ -330,7 +278,7 @@ def generate_video_background(data):
         progress_state['video_path'] = output_filename
 
         print(f"\n✅ SUCCESS! Video: {output_filename}")
-        print(f"   Voice Engine: Edge-TTS (Microsoft)")
+        print(f"   Voice Engine: Kokoro TTS (Remote GPU)")
         print(f"   Voice: {voice_id}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}\n")
         
@@ -351,14 +299,15 @@ zoom_effect=True):
         progress_state['status'] = 'generating'
         progress_state['progress'] = 10
         
-        # Get voice (Edge-TTS only)
+        # Get voice (Kokoro TTS)
         voice_id = get_voice_id(voice_id)
-        progress_state['voice_engine'] = 'edge'
+        progress_state['voice_engine'] = 'kokoro'
         progress_state['voice_id'] = voice_id
 
         print(f"📝 Generating script with template...")
-        print(f"🎤 Voice Engine: EDGE-TTS (Microsoft)")
+        print(f"🎤 Voice Engine: KOKORO TTS (Remote GPU)")
         print(f"🎤 Voice: {voice_id}")
+        print(f"🎤 Speed: {voice_speed}x")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         
         # 📝 Generate script with Gemini (improved prompts!)
@@ -421,18 +370,19 @@ zoom_effect=True):
             print(f"      Image {i+1}: {img_path.name} - {exists}")
         
         progress_state['progress'] = 70
-        progress_state['status'] = 'generating_voice_edge'
-        
-        print(f"🎤 Generating voice with Edge-TTS (FREE!)...")
-        
-        # Generate audio with Edge-TTS
-        audio_path = Path("output/temp/narration.mp3")
+        progress_state['status'] = 'generating_voice_kokoro'
+
+        print(f"🎤 Generating voice with Kokoro TTS (GPU!)...")
+
+        # Generate audio with Kokoro TTS
+        audio_path = Path("output/temp/narration.wav")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # ✅ EDGE-TTS - FREE & UNLIMITED!
-        generate_audio_edge(
+
+        # ✅ KOKORO TTS - GPU-POWERED!
+        generate_audio_kokoro(
             text=script_text,
             voice=voice_id,
+            speed=voice_speed,
             output_path=str(audio_path)
         )
         
@@ -467,8 +417,9 @@ zoom_effect=True):
         print(f"\n✅ SUCCESS!")
         print(f"   Video: {output_filename}")
         print(f"   Script: {len(script_text)} chars")
-        print(f"   Voice Engine: Edge-TTS (Microsoft)")
+        print(f"   Voice Engine: Kokoro TTS (Remote GPU)")
         print(f"   Voice: {voice_id}")
+        print(f"   Speed: {voice_speed}x")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
@@ -491,35 +442,38 @@ def health():
     return jsonify({
         'status': 'ok',
         'message': 'API Server running',
-        'voice_engine': 'edge_tts',
+        'voice_engine': 'kokoro_tts',
         'script_engine': 'gemini_ai'
     }), 200
 
 
 @app.route('/api/voices', methods=['GET', 'OPTIONS'])
 def list_voices():
-    """✅ List all available Edge-TTS voices"""
+    """✅ List all available Kokoro TTS voices"""
     if request.method == 'OPTIONS':
         return '', 204
-    
-    # Edge-TTS voices (Microsoft)
+
+    # Kokoro TTS voices (Remote GPU API)
     voices = {
-        'guy': {'engine': 'edge', 'name': 'Guy', 'gender': 'male', 'style': 'Natural & Clear', 'best_for': 'General narration'},
-        'andrew': {'engine': 'edge', 'name': 'Andrew', 'gender': 'male', 'style': 'Professional', 'best_for': 'Business content'},
-        'christopher': {'engine': 'edge', 'name': 'Christopher', 'gender': 'male', 'style': 'Casual & Friendly', 'best_for': 'Vlogs, tutorials'},
-        'roger': {'engine': 'edge', 'name': 'Roger', 'gender': 'male', 'style': 'Authoritative', 'best_for': 'News, documentaries'},
-        'aria': {'engine': 'edge', 'name': 'Aria', 'gender': 'female', 'style': 'Natural & Warm', 'best_for': 'Stories, lifestyle'},
-        'jenny': {'engine': 'edge', 'name': 'Jenny', 'gender': 'female', 'style': 'Cheerful & Clear', 'best_for': 'Education, tutorials'},
-        'sara': {'engine': 'edge', 'name': 'Sara', 'gender': 'female', 'style': 'Young & Energetic', 'best_for': 'Adventure, action'},
-        'nancy': {'engine': 'edge', 'name': 'Nancy', 'gender': 'female', 'style': 'Professional', 'best_for': 'Business, formal'},
+        'guy': {'engine': 'kokoro', 'name': 'Adam', 'gender': 'male', 'style': 'Deep & Natural', 'best_for': 'General narration', 'kokoro_voice': 'am_adam'},
+        'andrew': {'engine': 'kokoro', 'name': 'Adam', 'gender': 'male', 'style': 'Deep & Natural', 'best_for': 'Business content', 'kokoro_voice': 'am_adam'},
+        'christopher': {'engine': 'kokoro', 'name': 'Michael', 'gender': 'male', 'style': 'Friendly & Warm', 'best_for': 'Vlogs, tutorials', 'kokoro_voice': 'am_michael'},
+        'brian': {'engine': 'kokoro', 'name': 'Michael', 'gender': 'male', 'style': 'Friendly', 'best_for': 'Tutorials', 'kokoro_voice': 'am_michael'},
+        'george': {'engine': 'kokoro', 'name': 'George (British)', 'gender': 'male', 'style': 'British Authoritative', 'best_for': 'Documentaries', 'kokoro_voice': 'bm_george'},
+        'aria': {'engine': 'kokoro', 'name': 'Sarah', 'gender': 'female', 'style': 'Clear & Professional', 'best_for': 'Stories, lifestyle', 'kokoro_voice': 'af_sarah'},
+        'jenny': {'engine': 'kokoro', 'name': 'Nicole', 'gender': 'female', 'style': 'Warm & Friendly', 'best_for': 'Education, tutorials', 'kokoro_voice': 'af_nicole'},
+        'sara': {'engine': 'kokoro', 'name': 'Sarah', 'gender': 'female', 'style': 'Clear & Natural', 'best_for': 'Adventure, action', 'kokoro_voice': 'af_sarah'},
+        'jane': {'engine': 'kokoro', 'name': 'Nicole', 'gender': 'female', 'style': 'Warm', 'best_for': 'Stories', 'kokoro_voice': 'af_nicole'},
+        'libby': {'engine': 'kokoro', 'name': 'Emma (British)', 'gender': 'female', 'style': 'British Professional', 'best_for': 'Business, formal', 'kokoro_voice': 'bf_emma'},
+        'emma': {'engine': 'kokoro', 'name': 'Emma (British)', 'gender': 'female', 'style': 'British Expressive', 'best_for': 'Narration', 'kokoro_voice': 'bf_emma'},
     }
-    
+
     return jsonify({
         'voices': voices,
-        'engine': 'edge_tts',
+        'engine': 'kokoro_tts',
         'total': len(voices),
-        'cost': 'FREE',
-        'unlimited': True
+        'gpu_powered': True,
+        'remote_api': True
     }), 200
 
 
@@ -732,11 +686,11 @@ if __name__ == '__main__':
     print("   - Unique IMAGE descriptions")
     
     print("")
-    print("🎤 VOICE: EDGE-TTS (Microsoft - FREE & UNLIMITED!)")
-    print("   - 8 professional voices")
-    print("   - FREE forever, no API key")
-    print("   - Reliable, always works")
-    print("   - $0 Forever!")
+    print("🎤 VOICE: KOKORO TTS (Remote GPU - Google Colab)")
+    print("   - 11 frontend voices → 6 Kokoro voices")
+    print("   - GPU-powered for high quality")
+    print("   - American + British accents")
+    print("   - Variable speed control (0.5x - 2.0x)")
     
     print("")
     print("🎨 IMAGES: FLUX.1 Schnell (10/10 QUALITY, FREE)")
@@ -761,9 +715,9 @@ if __name__ == '__main__':
     print("   POST /api/clear-cache - Clear cache")
     print("="*60)
     print("\n🏆 PROFESSIONAL YOUTUBE VIDEO GENERATOR READY!")
-    print("💰 FREE - Puter TTS (voice) + Gemini (scripts) + FLUX (images)!")
-    print("⚡ Fast: 3-10 minutes for 10-60 minute videos")
-    print("🎬 Quality: 10/10 - Professional YouTube content!")
+    print("⚡ GPU-POWERED: Kokoro TTS (voice) + Gemini (scripts) + FLUX (images)!")
+    print("🚀 Fast: 3-10 minutes for 10-60 minute videos")
+    print("🎬 Quality: 10/10 - Professional YouTube content with GPU voices!")
     print("="*60 + "\n")
     
     app.run(host='0.0.0.0', port=5000, debug=True)
