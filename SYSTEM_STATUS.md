@@ -77,6 +77,60 @@ Last Updated: 2025-11-10
 - ✅ Zoom effect toggle
 - ✅ Template system
 - ✅ Research integration
+- ✅ Media source priority system ✨ NEW!
+  - Sequential priority mode (drag-to-reorder)
+  - Interleaved pattern mode (custom mixing)
+  - Real-time pattern preview
+  - Smart endpoint routing
+
+---
+
+## 🎬 MEDIA SOURCE PRIORITY SYSTEM
+
+**Status**: ✅ 100% COMPLETE (Frontend + Backend)
+
+### Frontend UI:
+```typescript
+Component: MediaSourcePriority.tsx (10.5 KB)
+Location: project-bolt-sb1-nqwbmccj/project/src/components/
+
+Features:
+├─ Sequential Mode: Drag to reorder (Stock → AI → Manual)
+├─ Pattern Mode: Custom interleave ("ai,stock,ai,manual")
+├─ Add/Remove sources with buttons
+├─ Real-time pattern preview
+└─ Framer Motion animations
+```
+
+### Backend Integration:
+```python
+Endpoint: /api/generate-mixed-media
+Manager: src/utils/media_source_manager.py
+
+Features:
+├─ Priority-based ordering
+├─ Pattern-based interleaving
+├─ Stock media download (Pexels)
+├─ Manual file uploads
+└─ AI generation fallback
+```
+
+### State Management:
+```typescript
+Zustand Store Fields:
+├─ mediaPriority: string[]  (default: ['ai', 'stock', 'manual'])
+├─ mediaPattern: string     (default: '')
+├─ setMediaPriority()
+└─ setMediaPattern()
+```
+
+### Smart Routing:
+- Automatically uses `/api/generate-mixed-media` when:
+  - Custom priority order set
+  - Pattern mode enabled
+  - Stock media selected
+  - Manual files uploaded
+- Falls back to `/api/generate-video` for simple AI-only generation
 
 ---
 
