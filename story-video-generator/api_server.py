@@ -30,6 +30,9 @@ from src.voice.kokoro_api_client import generate_kokoro_audio, get_kokoro_voice
 # ✅ CAPTIONS: SRT Generator
 from src.utils.caption_generator import caption_generator
 
+# ✅ MEDIA SOURCE MANAGER: Mix AI, Stock, Manual
+from src.utils.media_source_manager import MediaSourceManager
+
 app = Flask(__name__)
 
 # CORS for all origins
@@ -789,12 +792,258 @@ def cache_stats_endpoint():
 def clear_cache_endpoint():
     if request.method == 'OPTIONS':
         return '', 204
-    
+
     try:
         fact_searcher.clear_cache()
         return jsonify({'success': True, 'message': 'Cache cleared'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════
+# MEDIA SOURCE MIXING (AI + Stock + Manual)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/generate-mixed-media', methods=['POST', 'OPTIONS'])
+def generate_mixed_media():
+    """✅ Generate video with mixed media sources (AI + Stock + Manual)"""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    global progress_state
+
+    try:
+        data = request.json
+
+        if not data.get('topic'):
+            return jsonify({'error': 'Topic required'}), 400
+
+        # Extract config
+        topic = data.get('topic', '')
+        story_type = data.get('story_type', 'scary_horror')
+        num_scenes = int(data.get('num_scenes', 10))
+        voice_id = data.get('voice_id', 'aria')
+        voice_speed = float(data.get('voice_speed', 1.0))
+        zoom_effect = data.get('zoom_effect', True)
+        enable_captions = data.get('enable_captions', False)
+        image_style = data.get('image_style', 'cinematic_film')
+
+        # Media source config
+        media_config = data.get('media_config', {})
+        priority_order = media_config.get('priority', ['ai', 'stock', 'manual'])
+        pattern = media_config.get('pattern', None)  # Optional interleave pattern
+
+        # Source data
+        stock_items = media_config.get('stock_items', [])  # URLs from Pexels
+        manual_files = media_config.get('manual_files', [])  # Uploaded file paths
+        generate_ai = media_config.get('generate_ai', True)
+
+        print(f"\n🎬 Generating MIXED MEDIA video: {topic}")
+        print(f"   Priority: {' → '.join(priority_order)}")
+        if pattern:
+            print(f"   Pattern: {pattern}")
+        print(f"   Scenes: {num_scenes}")
+        print(f"   AI: {'Yes' if generate_ai else 'No'}")
+        print(f"   Stock: {len(stock_items)} items")
+        print(f"   Manual: {len(manual_files)} files")
+
+        progress_state = {
+            'status': 'generating',
+            'progress': 0,
+            'video_path': None,
+            'error': None,
+            'voice_engine': 'kokoro',
+            'voice_id': voice_id,
+        }
+
+        # Start background generation
+        thread = threading.Thread(
+            target=generate_mixed_media_background,
+            args=(
+                topic, story_type, num_scenes, voice_id, voice_speed,
+                zoom_effect, enable_captions, image_style,
+                priority_order, pattern, stock_items, manual_files, generate_ai
+            )
+        )
+        thread.start()
+
+        return jsonify({
+            'success': True,
+            'message': 'Mixed media generation started',
+            'media_config': {
+                'priority': priority_order,
+                'pattern': pattern,
+                'ai': generate_ai,
+                'stock_count': len(stock_items),
+                'manual_count': len(manual_files)
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Mixed media generation failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def generate_mixed_media_background(
+    topic, story_type, num_scenes, voice_id, voice_speed,
+    zoom_effect, enable_captions, image_style,
+    priority_order, pattern, stock_items, manual_files, generate_ai
+):
+    """Background worker for mixed media generation"""
+    global progress_state
+
+    try:
+        progress_state['status'] = 'generating_script'
+        progress_state['progress'] = 10
+
+        print(f"📝 Step 1/5: Generating script...")
+
+        # Generate script
+        result = enhanced_script_generator.generate_with_template(
+            topic=topic,
+            story_type=story_type,
+            template=None,
+            research_data=None,
+            duration_minutes=num_scenes / 6,  # Estimate
+            num_scenes=num_scenes
+        )
+
+        script_text = result['script']
+        scenes = result.get('scenes', [])
+
+        progress_state['progress'] = 30
+
+        # Initialize media manager
+        manager = MediaSourceManager()
+        manager.set_priority_order(priority_order)
+
+        # Generate AI images if requested
+        if generate_ai:
+            progress_state['status'] = 'generating_ai_images'
+            progress_state['progress'] = 40
+            print(f"🎨 Step 2/5: Generating AI images...")
+
+            generator = create_image_generator(image_style, story_type)
+            ai_results = generator.generate_batch(scenes)
+
+            ai_paths = [Path(r['filepath']) for r in ai_results if r]
+            manager.add_ai_images(ai_paths)
+
+        # Add stock media
+        if stock_items:
+            progress_state['status'] = 'processing_stock'
+            progress_state['progress'] = 50
+            print(f"📸 Step 3/5: Processing stock media...")
+
+            manager.add_stock_media(stock_items)
+
+        # Add manual uploads
+        if manual_files:
+            progress_state['status'] = 'processing_manual'
+            progress_state['progress'] = 55
+            print(f"📁 Step 3.5/5: Processing manual uploads...")
+
+            manual_paths = [Path(f) for f in manual_files]
+            manager.add_manual_uploads(manual_paths)
+
+        # Merge sources
+        progress_state['status'] = 'merging_sources'
+        progress_state['progress'] = 60
+        print(f"🔀 Step 4/5: Merging media sources...")
+
+        if pattern:
+            # Use interleaved pattern
+            merged_sources = manager.apply_interleaved_pattern(
+                pattern=pattern,
+                num_scenes=num_scenes,
+                download_stock=True
+            )
+        else:
+            # Use priority order
+            merged_sources = manager.merge_sources(
+                num_scenes=num_scenes,
+                download_stock=True
+            )
+
+        # Get final image paths
+        image_paths = manager.get_image_paths(merged_sources)
+
+        print(f"   ✅ Final: {len(image_paths)} images ready")
+
+        # Generate audio
+        progress_state['status'] = 'generating_audio'
+        progress_state['progress'] = 70
+        print(f"🎤 Step 5/5: Generating audio...")
+
+        audio_path = Path("output/temp/narration.wav")
+        audio_path.parent.mkdir(parents=True, exist_ok=True)
+
+        generate_audio_kokoro(
+            text=script_text,
+            voice=voice_id,
+            speed=voice_speed,
+            output_path=str(audio_path)
+        )
+
+        audio_duration = get_audio_duration(audio_path)
+
+        # Calculate durations
+        time_per_image = audio_duration / len(image_paths)
+        durations = [time_per_image] * len(image_paths)
+
+        # Generate captions if requested
+        caption_srt_path = None
+        if enable_captions:
+            progress_state['status'] = 'generating_captions'
+            progress_state['progress'] = 75
+            print(f"📝 Generating captions...")
+
+            caption_srt_path = Path("output/temp/captions.srt")
+            caption_srt_path.parent.mkdir(parents=True, exist_ok=True)
+
+            caption_generator.generate_srt(
+                text=script_text,
+                audio_duration=audio_duration,
+                output_path=str(caption_srt_path)
+            )
+
+        # Compile video
+        progress_state['status'] = 'compiling_video'
+        progress_state['progress'] = 80
+        print(f"🎬 Compiling video...")
+
+        compiler = FFmpegCompiler()
+        safe_topic = sanitize_filename(topic)
+        output_filename = f"{safe_topic}_mixed.mp4"
+
+        video_path = compiler.create_video(
+            image_paths,
+            str(audio_path),
+            Path(f"output/videos/{output_filename}"),
+            durations,
+            zoom_effect=zoom_effect,
+            caption_srt_path=str(caption_srt_path) if caption_srt_path else None
+        )
+
+        progress_state['progress'] = 100
+        progress_state['status'] = 'complete'
+        progress_state['video_path'] = output_filename
+
+        # Show stats
+        stats = manager.get_stats()
+        print(f"\n✅ SUCCESS! Mixed media video: {output_filename}")
+        print(f"   AI images: {stats['ai_count']}")
+        print(f"   Stock media: {stats['stock_count']}")
+        print(f"   Manual uploads: {stats['manual_count']}")
+        print(f"   Zoom: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"   Captions: {'ENABLED' if enable_captions else 'DISABLED'}\n")
+
+    except Exception as e:
+        progress_state['status'] = 'error'
+        progress_state['error'] = str(e)
+        print(f"\n❌ ERROR: {e}\n")
+        import traceback
+        traceback.print_exc()
 
 
 # ═══════════════════════════════════════════════════════════════
