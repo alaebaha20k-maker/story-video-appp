@@ -138,22 +138,42 @@ def _split_text_smart(text, max_chars=2000):
 
 
 def get_audio_duration(audio_path):
-    """Get duration of audio file (MP3 or WAV)"""
+    """✅ UNIVERSAL: Get exact duration of ANY audio file (MP3, WAV, etc.)"""
     try:
+        import subprocess
+        import json
+
         audio_path = str(audio_path)
 
-        if audio_path.endswith('.mp3'):
-            audio = AudioSegment.from_mp3(audio_path)
-        elif audio_path.endswith('.wav'):
-            audio = AudioSegment.from_wav(audio_path)
+        # Use ffprobe for EXACT duration (works with any format)
+        result = subprocess.run([
+            'ffprobe', '-v', 'error',
+            '-show_entries', 'format=duration',
+            '-of', 'json',
+            audio_path
+        ], capture_output=True, text=True, timeout=10)
+
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            duration = float(data['format']['duration'])
+            print(f"   📊 Exact audio duration: {duration:.2f}s ({duration/60:.2f} minutes)")
+            return duration
         else:
-            # Try to detect format
-            audio = AudioSegment.from_file(audio_path)
-        
-        duration = len(audio) / 1000.0  # Convert to seconds
-        return duration
+            # Fallback to pydub if ffprobe fails
+            if audio_path.endswith('.mp3'):
+                audio = AudioSegment.from_mp3(audio_path)
+            elif audio_path.endswith('.wav'):
+                audio = AudioSegment.from_wav(audio_path)
+            else:
+                audio = AudioSegment.from_file(audio_path)
+
+            duration = len(audio) / 1000.0  # Convert to seconds
+            print(f"   📊 Audio duration (pydub): {duration:.2f}s")
+            return duration
+
     except Exception as e:
-        print(f"❌ Error reading audio: {e}")
+        print(f"❌ Error reading audio duration: {e}")
+        print(f"   ⚠️  Using fallback duration: 5.0 seconds")
         return 5.0  # Fallback
 
 
@@ -196,18 +216,69 @@ def generate_video_background(data):
         )
         
         print(f"   ✅ Script: {len(result['script'])} characters")
-        
+
+        # ✨ Check if Advanced Analysis is enabled
+        use_advanced_analysis = data.get('use_advanced_analysis', False)
+
+        if use_advanced_analysis:
+            print("✨ Advanced Analysis ENABLED")
+
+            # Extract clean narration
+            progress_state['status'] = 'Analyzing script for narration...'
+            progress_state['progress'] = 15
+            print("📊 Step 2a/5: Extracting clean narration...")
+
+            narration_scenes = narration_extractor.extract_narration(
+                result['script'],
+                num_scenes=data.get('num_scenes', 10)
+            )
+            print(f"   ✅ Narration: {len(narration_scenes)} clean scenes extracted")
+
+            # Generate detailed image prompts
+            progress_state['status'] = 'Creating detailed image prompts...'
+            progress_state['progress'] = 20
+            print("🎨 Step 2b/5: Generating detailed image prompts...")
+
+            image_prompt_scenes = image_prompt_extractor.generate_prompts(
+                result['script'],
+                num_scenes=data.get('num_scenes', 10),
+                image_style=data.get('image_style', 'cinematic_film'),
+                story_type=data.get('story_type', 'scary_horror')
+            )
+            print(f"   ✅ Image Prompts: {len(image_prompt_scenes)} detailed prompts generated")
+
+            # Replace the scenes in result with analyzed ones
+            result['narration_scenes'] = narration_scenes
+            result['image_prompt_scenes'] = image_prompt_scenes
+        else:
+            print("✨ Advanced Analysis DISABLED (using standard mode)")
+
         # Images
         progress_state['status'] = 'Generating images...'
         progress_state['progress'] = 30
         print("🎨 Step 2/4: Generating images...")
         
         image_gen = create_image_generator(
-            data.get('image_style', 'cinematic_film'), 
+            data.get('image_style', 'cinematic_film'),
             data.get('story_type', 'scary_horror')
         )
         characters = {char: f"{char}, character" for char in result.get('characters', [])[:3]}
-        images = image_gen.generate_batch(result['scenes'], characters)
+
+        # Use detailed prompts if advanced analysis was enabled
+        if use_advanced_analysis and 'image_prompt_scenes' in result:
+            # Create scenes with image_description field from extracted prompts
+            scenes_with_prompts = []
+            for prompt_scene in result['image_prompt_scenes']:
+                scenes_with_prompts.append({
+                    'scene_num': prompt_scene['scene_number'],
+                    'image_description': prompt_scene['image_prompt'],  # Detailed prompt
+                    'content': ''  # Not used when image_description exists
+                })
+            images = image_gen.generate_batch(scenes_with_prompts, characters)
+        else:
+            # Standard mode - use original scenes
+            images = image_gen.generate_batch(result['scenes'], characters)
+
         image_paths = [Path(img['filepath']) for img in images if img]
         
         print(f"   ✅ Images: {len(image_paths)} generated")
@@ -243,18 +314,27 @@ def generate_video_background(data):
             output_path=str(audio_path)
         )
         
+        # ✅ UNIVERSAL DYNAMIC AUDIO/VIDEO SYNC
         audio_duration = get_audio_duration(audio_path)
-        print(f"   ✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
-        
-        # Calculate durations - MATCH VIDEO TO AUDIO!
-        time_per_image = audio_duration / len(image_paths) if image_paths else 5
-        durations = [time_per_image] * len(image_paths)
-        
-        # Debug: Show calculation
-        print(f"   🔧 Image timing:")
-        print(f"      Images: {len(image_paths)}")
-        print(f"      Duration per image: {time_per_image:.1f}s")
-        print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} minutes)")
+        print(f"   ✅ Audio generated: {audio_duration:.2f}s ({audio_duration/60:.2f} minutes)")
+
+        # Check if we have images
+        if not image_paths or len(image_paths) == 0:
+            raise Exception("❌ No images were generated! Cannot create video without images.")
+
+        # ✅ DYNAMIC CALCULATION - Works with ANY number of images
+        num_images = len(image_paths)
+        time_per_image = audio_duration / num_images
+
+        print(f"\n   📊 UNIVERSAL VIDEO SYNC:")
+        print(f"      Audio Duration: {audio_duration:.2f}s")
+        print(f"      Number of Images: {num_images}")
+        print(f"      Duration per Image: {time_per_image:.2f}s")
+        print(f"      Total Video Length: {audio_duration:.2f}s (matches audio exactly)")
+        print(f"      ✅ Video will end EXACTLY when audio ends (no extra silence)\n")
+
+        # Create duration list for FFmpeg
+        durations = [time_per_image] * num_images
         
         # Video
         progress_state['status'] = 'Compiling video...'
