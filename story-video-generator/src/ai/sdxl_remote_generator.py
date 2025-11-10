@@ -15,10 +15,11 @@ import threading
 from src.ai.ultra_image_prompts import create_prompt_builder
 from src.utils.file_handler import file_handler
 from src.utils.logger import logger
+from config import SDXL_API_URL, SDXL_BATCH_API_URL
 
 
 # Remote SDXL-Turbo API endpoint (Google Colab + ngrok)
-SDXL_API_URL = "https://contemplable-suzy-unfussing.ngrok-free.dev/generate_image"
+# URL is loaded from config.py - update config.py with your ngrok URL!
 
 
 # Image style mapping to SDXL-Turbo style modifiers

@@ -11,9 +11,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.utils.logger import logger
+from config import KOKORO_API_URL
 
 # Remote Kokoro API endpoint (Google Colab + ngrok)
-KOKORO_API_URL = "https://contemplable-suzy-unfussing.ngrok-free.dev/generate_audio"
+# URL is loaded from config.py - update config.py with your ngrok URL!
 
 # Voice Mapping: Frontend Voice IDs → Kokoro API Voices
 # Maps frontend options to Google Colab Kokoro API voices
