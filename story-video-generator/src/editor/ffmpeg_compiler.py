@@ -14,7 +14,8 @@ class FFmpegCompiler:
         audio_path: Path,
         output_path: Path,
         durations: List[float],
-        zoom_effect: bool = True
+        zoom_effect: bool = True,
+        caption_srt_path: Optional[str] = None
     ):
         """✅ UNIVERSAL: Create video from ANY number of images + ANY audio duration
 
@@ -23,6 +24,7 @@ class FFmpegCompiler:
         - Works with 30s, 10min, 1hr audio
         - Perfect sync (video ends when audio ends)
         - All images distributed evenly
+        - Optional captions with cool styling
 
         Args:
             image_paths: List of image file paths (ANY number)
@@ -30,6 +32,7 @@ class FFmpegCompiler:
             output_path: Path for output video
             durations: Duration for each image (calculated dynamically)
             zoom_effect: Enable zoom effect (default: True for better UX)
+            caption_srt_path: Optional path to SRT subtitle file for captions
         """
 
         print(f"   🎬 Creating video with {len(image_paths)} images...")
@@ -61,6 +64,38 @@ class FFmpegCompiler:
             # No zoom: simple scale
             video_filter = 'scale=1920:1080,fps=24'
 
+        # Add captions if provided
+        if caption_srt_path and Path(caption_srt_path).exists():
+            print(f"   📝 Adding captions from: {caption_srt_path}")
+            # Escape path for FFmpeg filter (Windows and Unix compatible)
+            escaped_srt_path = str(caption_srt_path).replace('\\', '/').replace(':', r'\:')
+
+            # Beautiful caption styling:
+            # - Bottom center position
+            # - Bold white text with black outline
+            # - Semi-transparent black background
+            # - Cool modern font
+            subtitle_style = (
+                f"subtitles={escaped_srt_path}:"
+                "force_style='"
+                "FontName=Arial,"  # Modern readable font
+                "FontSize=24,"  # Optimal size for 1080p
+                "Bold=1,"  # Bold for better visibility
+                "PrimaryColour=&H00FFFFFF,"  # White text
+                "OutlineColour=&H00000000,"  # Black outline
+                "BackColour=&H80000000,"  # Semi-transparent black background
+                "Outline=2,"  # Thick outline for visibility
+                "Shadow=1,"  # Subtle shadow
+                "MarginV=60,"  # 60px from bottom
+                "Alignment=2"  # Bottom center
+                "'"
+            )
+            video_filter = f"{video_filter},{subtitle_style}"
+            print(f"   ✨ Captions enabled with cool styling!")
+        else:
+            if caption_srt_path:
+                print(f"   ⚠️  Caption file not found: {caption_srt_path}")
+
         # FFmpeg command
         cmd = [
             'ffmpeg',
@@ -90,6 +125,9 @@ class FFmpegCompiler:
         print(f"   📁 Output: {output_path}")
         print(f"   🎬 Contains {len(image_paths)} images synced to audio")
         print(f"   ⏱️  Duration: {sum(durations):.2f}s")
+        if caption_srt_path and Path(caption_srt_path).exists():
+            print(f"   📝 Captions: ENABLED (synced with voice)")
+        print(f"   🎥 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
 
         return output_path
 

@@ -27,6 +27,9 @@ from src.editor.ffmpeg_compiler import FFmpegCompiler
 # ✅ VOICE: KOKORO TTS (Remote API)
 from src.voice.kokoro_api_client import generate_kokoro_audio, get_kokoro_voice
 
+# ✅ CAPTIONS: SRT Generator
+from src.utils.caption_generator import caption_generator
+
 app = Flask(__name__)
 
 # CORS for all origins
@@ -196,10 +199,12 @@ def generate_video_background(data):
         # Get voice from user (Kokoro TTS)
         voice_id = get_voice_id(data.get('voice_id'))
         zoom_effect = data.get('zoom_effect', True)
+        enable_captions = data.get('enable_captions', False)
 
         print(f"🎤 Voice Engine: KOKORO TTS (Remote GPU)")
         print(f"🎤 Voice ID: {voice_id}")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"📝 Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
 
         # Update progress state
         progress_state['voice_engine'] = 'kokoro'
@@ -340,7 +345,23 @@ def generate_video_background(data):
 
         # Create duration list for FFmpeg
         durations = [time_per_image] * num_images
-        
+
+        # Generate captions if enabled
+        caption_srt_path = None
+        if enable_captions:
+            progress_state['status'] = 'Generating captions...'
+            progress_state['progress'] = 75
+            print("📝 Generating captions with voice sync...")
+
+            caption_srt_path = Path("output/temp/captions.srt")
+            caption_srt_path.parent.mkdir(parents=True, exist_ok=True)
+
+            caption_generator.generate_srt(
+                text=narration_text,
+                audio_duration=audio_duration,
+                output_path=str(caption_srt_path)
+            )
+
         # Video
         progress_state['status'] = 'Compiling video...'
         progress_state['progress'] = 80
@@ -355,7 +376,8 @@ def generate_video_background(data):
             str(audio_path),
             Path(f"output/videos/{output_filename}"),
             durations,
-            zoom_effect=zoom_effect
+            zoom_effect=zoom_effect,
+            caption_srt_path=str(caption_srt_path) if caption_srt_path else None
         )
         
         progress_state['progress'] = 100
@@ -365,7 +387,8 @@ def generate_video_background(data):
         print(f"\n✅ SUCCESS! Video: {output_filename}")
         print(f"   Voice Engine: Kokoro TTS (Remote GPU)")
         print(f"   Voice: {voice_id}")
-        print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}\n")
+        print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"   Captions: {'ENABLED' if enable_captions else 'DISABLED'}\n")
         
     except Exception as e:
         progress_state['status'] = 'error'
@@ -376,14 +399,14 @@ def generate_video_background(data):
 
 
 def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, voice_speed=1.0,
-zoom_effect=True):
-    """✅ Background generation with template + research + voice selection + zoom effect"""
+zoom_effect=True, enable_captions=False):
+    """✅ Background generation with template + research + voice selection + zoom effect + captions"""
     global progress_state
 
     try:
         progress_state['status'] = 'generating'
         progress_state['progress'] = 10
-        
+
         # Get voice (Kokoro TTS)
         voice_id = get_voice_id(voice_id)
         progress_state['voice_engine'] = 'kokoro'
@@ -394,6 +417,7 @@ zoom_effect=True):
         print(f"🎤 Voice: {voice_id}")
         print(f"🎤 Speed: {voice_speed}x")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"📝 Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
         
         # 📝 Generate script with Gemini (improved prompts!)
         result = enhanced_script_generator.generate_with_template(
@@ -473,7 +497,23 @@ zoom_effect=True):
         
         audio_duration = get_audio_duration(audio_path)
         print(f"✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
-        
+
+        # Generate captions if enabled
+        caption_srt_path = None
+        if enable_captions:
+            progress_state['status'] = 'Generating captions...'
+            progress_state['progress'] = 75
+            print("📝 Generating captions with voice sync...")
+
+            caption_srt_path = Path("output/temp/captions_template.srt")
+            caption_srt_path.parent.mkdir(parents=True, exist_ok=True)
+
+            caption_generator.generate_srt(
+                text=script_text,
+                audio_duration=audio_duration,
+                output_path=str(caption_srt_path)
+            )
+
         progress_state['progress'] = 80
         progress_state['status'] = 'compiling_video'
 
@@ -492,7 +532,8 @@ zoom_effect=True):
             str(audio_path),
             Path(f"output/videos/{output_filename}"),
             durations,
-            zoom_effect=zoom_effect
+            zoom_effect=zoom_effect,
+            caption_srt_path=str(caption_srt_path) if caption_srt_path else None
         )
 
         progress_state['progress'] = 100
@@ -506,6 +547,7 @@ zoom_effect=True):
         print(f"   Voice: {voice_id}")
         print(f"   Speed: {voice_speed}x")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"   Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
 
@@ -688,6 +730,7 @@ def generate_with_template_endpoint():
         voice_id = data.get('voice_id')
         voice_speed = float(data.get('voice_speed', 1.0))
         zoom_effect = data.get('zoom_effect', True)  # Default: True for better UX
+        enable_captions = data.get('enable_captions', False)  # Default: False
 
         print(f"\n🎬 Generating with template: {topic}")
         print(f"   Type: {story_type}")
@@ -698,6 +741,7 @@ def generate_with_template_endpoint():
         print(f"   Voice ID: {voice_id}")
         print(f"   Voice Speed: {voice_speed}x")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"   Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
 
         progress_state = {
             'status': 'starting',
@@ -710,7 +754,7 @@ def generate_with_template_endpoint():
         
         thread = threading.Thread(
             target=generate_with_template_background,
-            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, voice_speed, zoom_effect)
+            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, voice_speed, zoom_effect, enable_captions)
         )
         thread.start()
 
@@ -720,7 +764,8 @@ def generate_with_template_endpoint():
             'used_template': template is not None,
             'used_research': research_data is not None,
             'voice_engine': voice_engine,
-            'zoom_effect': zoom_effect
+            'zoom_effect': zoom_effect,
+            'enable_captions': enable_captions
         }), 200
     
     except Exception as e:
