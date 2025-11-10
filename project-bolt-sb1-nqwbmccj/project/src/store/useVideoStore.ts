@@ -25,6 +25,10 @@ interface VideoStore {
   stockKeywords: string[];
   selectedStockMedia: StockMediaItem[];
 
+  // Media Source Priority
+  mediaPriority: string[];
+  mediaPattern: string;
+
   // Filters and Effects
   colorFilter: string;
   zoomEffect: boolean;
@@ -56,7 +60,10 @@ interface VideoStore {
   setManualImages: (images: File[]) => void;
   setStockKeywords: (keywords: string[]) => void;
   setSelectedStockMedia: (media: StockMediaItem[]) => void;
-  
+
+  setMediaPriority: (priority: string[]) => void;
+  setMediaPattern: (pattern: string) => void;
+
   setColorFilter: (filter: string) => void;
   setZoomEffect: (enabled: boolean) => void;
   setAutoCaptions: (enabled: boolean) => void;  // NEW
@@ -88,7 +95,11 @@ export const useVideoStore = create<VideoStore>((set) => ({
   manualImages: [],
   stockKeywords: [],
   selectedStockMedia: [],
-  
+
+  // Media Source Priority
+  mediaPriority: ['ai', 'stock', 'manual'],
+  mediaPattern: '',
+
   // Filters and Effects
   colorFilter: 'none',
   zoomEffect: false,
@@ -120,7 +131,10 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setManualImages: (manualImages) => set({ manualImages }),
   setStockKeywords: (stockKeywords) => set({ stockKeywords }),
   setSelectedStockMedia: (selectedStockMedia) => set({ selectedStockMedia }),
-  
+
+  setMediaPriority: (mediaPriority) => set({ mediaPriority }),
+  setMediaPattern: (mediaPattern) => set({ mediaPattern }),
+
   setColorFilter: (colorFilter) => set({ colorFilter }),
   setZoomEffect: (zoomEffect) => set({ zoomEffect }),
   setAutoCaptions: (autoCaptions) => set({ autoCaptions }),  // NEW

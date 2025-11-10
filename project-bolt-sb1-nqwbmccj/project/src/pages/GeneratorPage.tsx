@@ -18,6 +18,7 @@ import { VideoResult } from '../components/VideoResult';
 import { ExampleScriptUpload } from '../components/ExampleScriptUpload';
 import { VideoFilters } from '../components/VideoFilters';
 import { CaptionEditor } from '../components/CaptionEditor';
+import { MediaSourcePriority } from '../components/MediaSourcePriority';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface ExampleScript {
@@ -173,32 +174,79 @@ export const GeneratorPage = () => {
       store.startGeneration();
       toast.loading('Starting generation...');
 
-      await generateVideo({
-        topic: store.topic,
-        story_type: store.storyType,
-        image_style: store.imageStyle,
-        image_mode: store.imageMode,
-        voice_id: store.voiceId,
-        voice_speed: store.voiceSpeed,
-        duration: store.duration,
-        hook_intensity: store.hookIntensity,
-        pacing: store.pacing,
-        num_scenes: store.numScenes,
-        characters: store.characters.filter(c => c.name && c.description),
-        stock_keywords: store.stockKeywords,
-        // Filters and Effects
-        color_filter: store.colorFilter,
-        zoom_effect: store.zoomEffect,
-        // Auto Captions
-        auto_captions: store.autoCaptions,
-        // Manual Captions (single text)
-        caption: store.captionEnabled ? {
-          text: store.captionText,
-          style: store.captionStyle,
-          position: store.captionPosition,
-          animation: store.captionAnimation,
-        } : undefined,
-      });
+      // Check if we should use mixed media generation
+      const useMixedMedia =
+        store.mediaPattern.trim() !== '' ||
+        JSON.stringify(store.mediaPriority) !== JSON.stringify(['ai', 'stock', 'manual']) ||
+        store.selectedStockMedia.length > 0 ||
+        store.manualImages.length > 0;
+
+      if (useMixedMedia) {
+        // Use mixed media endpoint
+        const response = await fetch('http://localhost:5000/api/generate-mixed-media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: store.topic,
+            story_type: store.storyType,
+            num_scenes: store.numScenes,
+            voice_id: store.voiceId,
+            voice_speed: store.voiceSpeed,
+            duration: store.duration,
+            image_style: store.imageStyle,
+            color_filter: store.colorFilter,
+            zoom_effect: store.zoomEffect,
+            auto_captions: store.autoCaptions,
+            caption: store.captionEnabled ? {
+              text: store.captionText,
+              style: store.captionStyle,
+              position: store.captionPosition,
+              animation: store.captionAnimation,
+            } : undefined,
+            media_config: {
+              priority: store.mediaPriority,
+              pattern: store.mediaPattern,
+              generate_ai: true,
+              stock_items: store.selectedStockMedia.map(item => ({
+                url: item.videoUrl || item.thumbnail,
+                type: item.type,
+                photographer: item.photographer
+              })),
+              manual_files: store.manualImages.map(f => f.name)
+            }
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Mixed media generation failed');
+        }
+      } else {
+        // Use standard generation endpoint
+        await generateVideo({
+          topic: store.topic,
+          story_type: store.storyType,
+          image_style: store.imageStyle,
+          image_mode: store.imageMode,
+          voice_id: store.voiceId,
+          voice_speed: store.voiceSpeed,
+          duration: store.duration,
+          hook_intensity: store.hookIntensity,
+          pacing: store.pacing,
+          num_scenes: store.numScenes,
+          characters: store.characters.filter(c => c.name && c.description),
+          stock_keywords: store.stockKeywords,
+          color_filter: store.colorFilter,
+          zoom_effect: store.zoomEffect,
+          auto_captions: store.autoCaptions,
+          caption: store.captionEnabled ? {
+            text: store.captionText,
+            style: store.captionStyle,
+            position: store.captionPosition,
+            animation: store.captionAnimation,
+          } : undefined,
+        });
+      }
 
       toast.dismiss();
       setIsPolling(true);
@@ -257,6 +305,9 @@ export const GeneratorPage = () => {
       <AdvancedSettings />
       <ImageStyleSelector />
       <ImageModeSelector />
+
+      {/* 🎬 MEDIA SOURCE PRIORITY */}
+      <MediaSourcePriority />
 
       {showUpload && <ImageUpload />}
       {showStock && (
