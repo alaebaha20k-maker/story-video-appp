@@ -24,12 +24,11 @@ interface VideoStore {
   manualImages: File[];
   stockKeywords: string[];
   selectedStockMedia: StockMediaItem[];
-  useAdvancedAnalysis: boolean;  // ✅ NEW: Advanced Script Analysis toggle
 
   // Filters and Effects
   colorFilter: string;
   zoomEffect: boolean;
-
+  
   // Captions
   autoCaptions: boolean;  // NEW: Auto captions from script
   captionEnabled: boolean;
@@ -57,8 +56,7 @@ interface VideoStore {
   setManualImages: (images: File[]) => void;
   setStockKeywords: (keywords: string[]) => void;
   setSelectedStockMedia: (media: StockMediaItem[]) => void;
-  setUseAdvancedAnalysis: (use: boolean) => void;  // ✅ NEW
-
+  
   setColorFilter: (filter: string) => void;
   setZoomEffect: (enabled: boolean) => void;
   setAutoCaptions: (enabled: boolean) => void;  // NEW
@@ -90,12 +88,11 @@ export const useVideoStore = create<VideoStore>((set) => ({
   manualImages: [],
   stockKeywords: [],
   selectedStockMedia: [],
-  useAdvancedAnalysis: false,  // ✅ NEW: Default to OFF
-
+  
   // Filters and Effects
   colorFilter: 'none',
   zoomEffect: false,
-
+  
   // Captions
   autoCaptions: false,  // NEW: Auto captions from script
   captionEnabled: false,
@@ -123,8 +120,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setManualImages: (manualImages) => set({ manualImages }),
   setStockKeywords: (stockKeywords) => set({ stockKeywords }),
   setSelectedStockMedia: (selectedStockMedia) => set({ selectedStockMedia }),
-  setUseAdvancedAnalysis: (useAdvancedAnalysis) => set({ useAdvancedAnalysis }),  // ✅ NEW
-
+  
   setColorFilter: (colorFilter) => set({ colorFilter }),
   setZoomEffect: (zoomEffect) => set({ zoomEffect }),
   setAutoCaptions: (autoCaptions) => set({ autoCaptions }),  // NEW
