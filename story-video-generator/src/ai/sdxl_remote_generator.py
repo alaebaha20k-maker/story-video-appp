@@ -168,9 +168,12 @@ class SDXLRemoteGenerator:
         self,
         scenes: List[Dict],
         characters: Dict[str, str] = None,
-        max_workers: int = 10
+        max_workers: int = 25
     ) -> List[Optional[Dict]]:
-        """Generate multiple images in parallel using remote SDXL-Turbo API"""
+        """Generate multiple images in parallel using remote SDXL-Turbo API
+
+        Optimized for 1-hour videos with 25 parallel workers (2.5x faster!)
+        """
 
         # Register characters
         if characters:
