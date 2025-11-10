@@ -5,7 +5,7 @@ import { HOOK_INTENSITIES, PACING_STYLES } from '../constants/options';
 
 export const AdvancedSettings = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { hookIntensity, pacing, numScenes, setHookIntensity, setPacing, setNumScenes } =
+  const { hookIntensity, pacing, numScenes, useAdvancedAnalysis, setHookIntensity, setPacing, setNumScenes, setUseAdvancedAnalysis } =
     useVideoStore();
 
   return (
@@ -82,6 +82,38 @@ export const AdvancedSettings = () => {
               <span>20</span>
             </div>
             <p className="text-sm text-gray-600 mt-2">More scenes = more images generated</p>
+          </div>
+
+          {/* ✨ NEW: Advanced Script Analysis Toggle */}
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex items-start space-x-3">
+              <input
+                id="advancedAnalysis"
+                type="checkbox"
+                checked={useAdvancedAnalysis}
+                onChange={(e) => setUseAdvancedAnalysis(e.target.checked)}
+                className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+              />
+              <div className="flex-1">
+                <label htmlFor="advancedAnalysis" className="block text-sm font-medium text-gray-700 cursor-pointer">
+                  ✨ Advanced Script Analysis (NEW)
+                </label>
+                <p className="text-xs text-gray-600 mt-1">
+                  Separates narration from visual descriptions for cleaner voice output and more detailed image prompts.
+                  <span className="font-semibold text-indigo-600"> Adds ~10 seconds to generation.</span>
+                </p>
+                <div className="mt-2 text-xs bg-indigo-50 border border-indigo-200 rounded-lg p-2">
+                  <div className="flex items-center space-x-1">
+                    <span className="text-indigo-700">✓</span>
+                    <span className="text-indigo-700">Clean narration (no image prompts spoken)</span>
+                  </div>
+                  <div className="flex items-center space-x-1 mt-1">
+                    <span className="text-indigo-700">✓</span>
+                    <span className="text-indigo-700">Professional AI-generated image prompts</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

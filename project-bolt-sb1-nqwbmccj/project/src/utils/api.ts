@@ -29,6 +29,7 @@ interface GenerateVideoRequest {
   pacing: string;
   characters?: any[];
   stock_keywords?: string[];
+  use_advanced_analysis?: boolean;  // ✅ NEW: Advanced Script Analysis
 }
 
 // ✅ GENERATE VIDEO

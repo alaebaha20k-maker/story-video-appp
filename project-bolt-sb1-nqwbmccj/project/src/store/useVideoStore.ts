@@ -16,6 +16,7 @@ interface VideoStore {
   characters: Character[];
   manualImages: File[];
   stockKeywords: string[];
+  useAdvancedAnalysis: boolean;  // ✅ NEW: Advanced Script Analysis toggle
 
   isGenerating: boolean;
   progress: GenerationProgress | null;
@@ -36,6 +37,7 @@ interface VideoStore {
   setCharacters: (characters: Character[]) => void;
   setManualImages: (images: File[]) => void;
   setStockKeywords: (keywords: string[]) => void;
+  setUseAdvancedAnalysis: (use: boolean) => void;  // ✅ NEW
 
   startGeneration: () => void;
   updateProgress: (progress: GenerationProgress) => void;
@@ -59,6 +61,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   characters: [],
   manualImages: [],
   stockKeywords: [],
+  useAdvancedAnalysis: false,  // ✅ NEW: Default to OFF
 
   isGenerating: false,
   progress: null,
@@ -79,6 +82,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setCharacters: (characters) => set({ characters }),
   setManualImages: (manualImages) => set({ manualImages }),
   setStockKeywords: (stockKeywords) => set({ stockKeywords }),
+  setUseAdvancedAnalysis: (useAdvancedAnalysis) => set({ useAdvancedAnalysis }),  // ✅ NEW
 
   startGeneration: () => set({ isGenerating: true, progress: null, result: null, error: null }),
   updateProgress: (progress) => set({ progress }),
