@@ -142,6 +142,8 @@ class FFmpegCompiler:
             # ═══════════════════════════════════════════════════════════════
 
             print(f"\n   📹 PASS 1/2: Creating {len(media_paths)} individual scene videos...")
+            if self.gpu_available:
+                print(f"      🚀 Using GPU acceleration for faster rendering!")
             scene_files = []
 
             for i, (media_path, duration) in enumerate(zip(media_paths, durations)):
@@ -157,33 +159,62 @@ class FFmpegCompiler:
                     if video_duration < duration:
                         # Loop video
                         loops = int(duration / video_duration) + 1
-                        cmd = [
-                            'ffmpeg', '-i', str(media_path),
-                            '-vf', (
-                                f"loop={loops}:size=1:start=0,"
-                                f"trim=duration={duration},"
-                                f"scale=1920:1080:force_original_aspect_ratio=decrease,"
-                                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
-                                f"fps=24,setpts=PTS-STARTPTS"
-                            ),
-                            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
-                            '-an',  # No audio in scene videos
-                            '-y', str(scene_output)
-                        ]
+                        if self.gpu_available:
+                            cmd = [
+                                'ffmpeg', '-i', str(media_path),
+                                '-vf', (
+                                    f"loop={loops}:size=1:start=0,"
+                                    f"trim=duration={duration},"
+                                    f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                    f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                    f"fps=24,setpts=PTS-STARTPTS"
+                                ),
+                                '-c:v', 'h264_nvenc', '-preset', 'p1', '-cq', '25',
+                                '-an',  # No audio in scene videos
+                                '-y', str(scene_output)
+                            ]
+                        else:
+                            cmd = [
+                                'ffmpeg', '-i', str(media_path),
+                                '-vf', (
+                                    f"loop={loops}:size=1:start=0,"
+                                    f"trim=duration={duration},"
+                                    f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                    f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                    f"fps=24,setpts=PTS-STARTPTS"
+                                ),
+                                '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '22',
+                                '-an',
+                                '-y', str(scene_output)
+                            ]
                     else:
                         # Trim video
-                        cmd = [
-                            'ffmpeg', '-i', str(media_path),
-                            '-vf', (
-                                f"trim=duration={duration},"
-                                f"scale=1920:1080:force_original_aspect_ratio=decrease,"
-                                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
-                                f"fps=24,setpts=PTS-STARTPTS"
-                            ),
-                            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
-                            '-an',
-                            '-y', str(scene_output)
-                        ]
+                        if self.gpu_available:
+                            cmd = [
+                                'ffmpeg', '-i', str(media_path),
+                                '-vf', (
+                                    f"trim=duration={duration},"
+                                    f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                    f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                    f"fps=24,setpts=PTS-STARTPTS"
+                                ),
+                                '-c:v', 'h264_nvenc', '-preset', 'p1', '-cq', '25',
+                                '-an',
+                                '-y', str(scene_output)
+                            ]
+                        else:
+                            cmd = [
+                                'ffmpeg', '-i', str(media_path),
+                                '-vf', (
+                                    f"trim=duration={duration},"
+                                    f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                    f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                    f"fps=24,setpts=PTS-STARTPTS"
+                                ),
+                                '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '22',
+                                '-an',
+                                '-y', str(scene_output)
+                            ]
                 else:
                     # IMAGE: Apply zoom if enabled
                     # ✅ TWO-PASS METHOD: No duration limit! Each scene is independent
@@ -191,33 +222,62 @@ class FFmpegCompiler:
                         # With zoom (works for ANY duration in two-pass mode)
                         frames = int(duration * 24)
                         if duration > 180:
-                            print(f"(zoom: {frames} frames)", end=' ')
-                        cmd = [
-                            'ffmpeg',
-                            '-loop', '1', '-t', str(duration), '-i', str(media_path),
-                            '-vf', (
-                                f"scale=1920:1080:force_original_aspect_ratio=decrease,"
-                                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
-                                f"zoompan=z='min(zoom+0.0015,1.1)':d={frames}:"
-                                f"x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1920x1080,"
-                                f"fps=24"
-                            ),
-                            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
-                            '-y', str(scene_output)
-                        ]
+                            print(f"(zoom: {frames}f)", end=' ')
+
+                        if self.gpu_available:
+                            cmd = [
+                                'ffmpeg',
+                                '-loop', '1', '-t', str(duration), '-i', str(media_path),
+                                '-vf', (
+                                    f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                    f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                    f"zoompan=z='min(zoom+0.0015,1.1)':d={frames}:"
+                                    f"x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1920x1080,"
+                                    f"fps=24"
+                                ),
+                                '-c:v', 'h264_nvenc', '-preset', 'p1', '-cq', '25',
+                                '-y', str(scene_output)
+                            ]
+                        else:
+                            cmd = [
+                                'ffmpeg',
+                                '-loop', '1', '-t', str(duration), '-i', str(media_path),
+                                '-vf', (
+                                    f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                    f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                    f"zoompan=z='min(zoom+0.0015,1.1)':d={frames}:"
+                                    f"x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1920x1080,"
+                                    f"fps=24"
+                                ),
+                                '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '22',
+                                '-y', str(scene_output)
+                            ]
                     else:
                         # Static image (zoom disabled by user)
-                        cmd = [
-                            'ffmpeg',
-                            '-loop', '1', '-t', str(duration), '-i', str(media_path),
-                            '-vf', (
-                                f"scale=1920:1080:force_original_aspect_ratio=decrease,"
-                                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
-                                f"fps=24"
-                            ),
-                            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
-                            '-y', str(scene_output)
-                        ]
+                        if self.gpu_available:
+                            cmd = [
+                                'ffmpeg',
+                                '-loop', '1', '-t', str(duration), '-i', str(media_path),
+                                '-vf', (
+                                    f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                    f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                    f"fps=24"
+                                ),
+                                '-c:v', 'h264_nvenc', '-preset', 'p1', '-cq', '25',
+                                '-y', str(scene_output)
+                            ]
+                        else:
+                            cmd = [
+                                'ffmpeg',
+                                '-loop', '1', '-t', str(duration), '-i', str(media_path),
+                                '-vf', (
+                                    f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                    f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                    f"fps=24"
+                                ),
+                                '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '22',
+                                '-y', str(scene_output)
+                            ]
 
                 # Run FFmpeg for this scene
                 subprocess.run(cmd, check=True, capture_output=True)
