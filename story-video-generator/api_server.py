@@ -204,10 +204,20 @@ def generate_video_background(data):
         zoom_effect = data.get('zoom_effect', True)
         enable_captions = data.get('enable_captions', False)
 
+        # ✅ NEW: Get color filter and caption options
+        color_filter = data.get('color_filter', 'none')
+        caption_data = data.get('caption', {})
+        caption_style = caption_data.get('style', 'simple') if caption_data else 'simple'
+        caption_position = caption_data.get('position', 'bottom') if caption_data else 'bottom'
+
         print(f"🎤 Voice Engine: KOKORO TTS (Remote GPU)")
         print(f"🎤 Voice ID: {voice_id}")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         print(f"📝 Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
+        if color_filter != 'none':
+            print(f"🎨 Color Filter: {color_filter}")
+        if enable_captions:
+            print(f"   Caption Style: {caption_style}, Position: {caption_position}")
 
         # Update progress state
         progress_state['voice_engine'] = 'kokoro'
@@ -380,7 +390,10 @@ def generate_video_background(data):
             Path(f"output/videos/{output_filename}"),
             durations,
             zoom_effect=zoom_effect,
-            caption_srt_path=str(caption_srt_path) if caption_srt_path else None
+            caption_srt_path=str(caption_srt_path) if caption_srt_path else None,
+            color_filter=color_filter,  # ✅ NEW: Color filter
+            caption_style=caption_style,  # ✅ NEW: Caption style
+            caption_position=caption_position  # ✅ NEW: Caption position
         )
         
         progress_state['progress'] = 100
@@ -402,8 +415,8 @@ def generate_video_background(data):
 
 
 def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, voice_speed=1.0,
-zoom_effect=True, enable_captions=False):
-    """✅ Background generation with template + research + voice selection + zoom effect + captions"""
+zoom_effect=True, enable_captions=False, color_filter='none', caption_style='simple', caption_position='bottom'):
+    """✅ Background generation with template + research + voice selection + zoom effect + captions + color filters"""
     global progress_state
 
     try:
@@ -536,7 +549,10 @@ zoom_effect=True, enable_captions=False):
             Path(f"output/videos/{output_filename}"),
             durations,
             zoom_effect=zoom_effect,
-            caption_srt_path=str(caption_srt_path) if caption_srt_path else None
+            caption_srt_path=str(caption_srt_path) if caption_srt_path else None,
+            color_filter=color_filter,  # ✅ NEW: Color filter
+            caption_style=caption_style,  # ✅ NEW: Caption style
+            caption_position=caption_position  # ✅ NEW: Caption position
         )
 
         progress_state['progress'] = 100
@@ -887,9 +903,10 @@ def generate_mixed_media():
 def generate_mixed_media_background(
     topic, story_type, num_scenes, voice_id, voice_speed,
     zoom_effect, enable_captions, image_style,
-    priority_order, pattern, stock_items, manual_files, generate_ai
+    priority_order, pattern, stock_items, manual_files, generate_ai,
+    color_filter='none', caption_style='simple', caption_position='bottom'
 ):
-    """Background worker for mixed media generation"""
+    """Background worker for mixed media generation with color filters and caption styles"""
     global progress_state
 
     try:
@@ -1022,7 +1039,10 @@ def generate_mixed_media_background(
             Path(f"output/videos/{output_filename}"),
             durations,
             zoom_effect=zoom_effect,
-            caption_srt_path=str(caption_srt_path) if caption_srt_path else None
+            caption_srt_path=str(caption_srt_path) if caption_srt_path else None,
+            color_filter=color_filter,  # ✅ NEW: Color filter
+            caption_style=caption_style,  # ✅ NEW: Caption style
+            caption_position=caption_position  # ✅ NEW: Caption position
         )
 
         progress_state['progress'] = 100
