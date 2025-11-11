@@ -28,17 +28,27 @@ interface GenerateVideoRequest {
   pacing: string;
   characters?: any[];
   stock_keywords?: string[];
+  use_advanced_analysis?: boolean; // ✅ FIX #2: Enable advanced analysis
 }
 
 // ✅ GENERATE VIDEO
 export const generateVideo = async (requestData: GenerateVideoRequest) => {
   try {
+    // ✅ FIX #2: Always enable Advanced Analysis for best quality
+    // This provides:
+    // - Clean narration extraction (no camera angles in voice)
+    // - Detailed 40-60 word image prompts (separate from narration)
+    const enhancedRequest = {
+      ...requestData,
+      use_advanced_analysis: requestData.use_advanced_analysis ?? true, // Default to TRUE
+    };
+
     const response = await fetch(`${API_URL}/api/generate-video`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestData),
+      body: JSON.stringify(enhancedRequest),
     });
 
     if (!response.ok) {

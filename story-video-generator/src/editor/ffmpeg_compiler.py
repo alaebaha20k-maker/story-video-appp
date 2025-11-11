@@ -18,7 +18,8 @@ class FFmpegCompiler:
         'warm': 'eq=saturation=1.2,colortemperature=8000',
         'cool': 'eq=saturation=0.8,colortemperature=4000',
         'vibrant': 'eq=saturation=1.5:contrast=1.2',
-        'vintage': 'curves=vintage,eq=contrast=0.9',
+        # ✅ FIX #8: Cross-compatible vintage filter (works on all FFmpeg versions)
+        'vintage': 'eq=contrast=0.9:saturation=0.8:gamma=1.1,colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131',
         'noir': 'hue=s=0',  # Black and white
         'dramatic': 'eq=contrast=1.3:brightness=-0.1',
         'horror': 'eq=contrast=1.2:brightness=-0.2:saturation=0.7,colorchannelmixer=rr=1:gg=0.8:bb=0.6',
@@ -27,11 +28,42 @@ class FFmpegCompiler:
 
     def __init__(self):
         """Initialize FFmpeg compiler and detect GPU acceleration"""
+        # ✅ FIX #5: Check if FFmpeg and FFprobe are installed
+        if not self._check_ffmpeg_installed():
+            raise RuntimeError(
+                "\n❌ FFmpeg not found! Please install FFmpeg:\n"
+                "  • Ubuntu/Debian: sudo apt-get install ffmpeg\n"
+                "  • macOS: brew install ffmpeg\n"
+                "  • Windows: Download from ffmpeg.org\n"
+                "  • Or visit: https://ffmpeg.org/download.html\n"
+            )
+
         self.gpu_available = self._check_gpu_support()
         if self.gpu_available:
             print("🚀 GPU acceleration detected! Using NVIDIA NVENC for 5x faster encoding")
         else:
             print("💻 Using CPU encoding (install NVIDIA drivers for GPU acceleration)")
+
+    def _check_ffmpeg_installed(self) -> bool:
+        """Check if FFmpeg and FFprobe are installed"""
+        try:
+            # Check ffmpeg
+            subprocess.run(
+                ['ffmpeg', '-version'],
+                capture_output=True,
+                timeout=5,
+                check=True
+            )
+            # Check ffprobe
+            subprocess.run(
+                ['ffprobe', '-version'],
+                capture_output=True,
+                timeout=5,
+                check=True
+            )
+            return True
+        except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
+            return False
 
     def _check_gpu_support(self) -> bool:
         """Check if NVIDIA GPU encoding is available"""

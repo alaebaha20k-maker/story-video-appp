@@ -33,6 +33,60 @@ from src.utils.caption_generator import caption_generator
 # ✅ MEDIA SOURCE MANAGER: Mix AI, Stock, Manual
 from src.utils.media_source_manager import MediaSourceManager
 
+# ✅ FIX #10: Check dependencies at startup
+def check_dependencies():
+    """Check if all required dependencies are installed"""
+    import sys
+    missing = []
+
+    # Check critical dependencies
+    try:
+        import google.generativeai
+    except ImportError:
+        missing.append('google-generativeai (pip install google-generativeai)')
+
+    try:
+        import dotenv
+    except ImportError:
+        missing.append('python-dotenv (pip install python-dotenv)')
+
+    try:
+        import requests
+    except ImportError:
+        missing.append('requests (pip install requests)')
+
+    try:
+        import flask
+    except ImportError:
+        missing.append('flask (pip install flask)')
+
+    try:
+        import flask_cors
+    except ImportError:
+        missing.append('flask-cors (pip install flask-cors)')
+
+    try:
+        from pydub import AudioSegment
+    except ImportError:
+        missing.append('pydub (pip install pydub)')
+
+    if missing:
+        print("\n" + "="*70)
+        print("❌ MISSING DEPENDENCIES DETECTED!")
+        print("="*70)
+        for dep in missing:
+            print(f"  • {dep}")
+        print("\n💡 Install all dependencies with:")
+        print("   cd story-video-generator")
+        print("   pip install -r requirements.txt")
+        print("="*70 + "\n")
+        sys.exit(1)
+    else:
+        print("✅ All dependencies installed")
+
+# Run dependency check
+check_dependencies()
+
 app = Flask(__name__)
 
 # CORS for all origins
@@ -74,16 +128,23 @@ def sanitize_filename(filename):
 
 
 def get_voice_id(voice_id=None):
-    """Get voice ID for Kokoro TTS (uses mapping from kokoro_api_client)"""
+    """✅ FIX #6: Get voice ID for Kokoro TTS with validation"""
 
     # Default to 'guy' if not provided
     if not voice_id:
         voice_id = 'guy'
+        print(f"   ℹ️  No voice specified, using default: {voice_id}")
 
     # Use the Kokoro voice mapper
     kokoro_voice = get_kokoro_voice(voice_id)
 
-    print(f"   🔧 Voice for Kokoro: {voice_id} → {kokoro_voice}")
+    # ✅ Validate that voice mapping succeeded
+    if not kokoro_voice:
+        print(f"   ⚠️  WARNING: Unknown voice '{voice_id}', falling back to 'sarah_pro'")
+        kokoro_voice = 'sarah_pro'
+        voice_id = 'aria'  # Use frontend equivalent
+
+    print(f"   🔧 Voice mapping validated: {voice_id} → {kokoro_voice} ✓")
     return voice_id  # Return frontend voice ID, will be mapped in generation
 
 
@@ -198,7 +259,40 @@ def generate_video_background(data):
 
     try:
         print(f"\n🎬 Starting generation: {data.get('topic', 'Untitled')}")
-        
+
+        # ✅ FIX #3: Check Colab server health before starting generation
+        print("🔍 Checking Colab GPU server status...")
+        try:
+            from config import COLAB_SERVER_URL
+            health_response = requests.get(
+                f"{COLAB_SERVER_URL}/health",
+                timeout=5
+            )
+            if not health_response.ok:
+                raise Exception("Colab server not responding")
+
+            server_status = health_response.json()
+            print(f"✅ Colab server ready: {server_status.get('gpu', 'Unknown GPU')}")
+            print(f"   Models loaded: TTS={server_status.get('models_loaded', {}).get('tts', False)}, Image={server_status.get('models_loaded', {}).get('image', False)}")
+        except requests.exceptions.Timeout:
+            error_msg = "⏱️ Colab GPU server timeout. Please check if Google Colab notebook is running."
+            print(f"❌ {error_msg}")
+            progress_state['status'] = 'error'
+            progress_state['error'] = 'Colab GPU server is not responding. Please start the Google Colab notebook and ensure it\'s running.'
+            return
+        except requests.exceptions.ConnectionError:
+            error_msg = "🔌 Cannot connect to Colab GPU server. Please start the Google Colab notebook."
+            print(f"❌ {error_msg}")
+            progress_state['status'] = 'error'
+            progress_state['error'] = 'Colab GPU server is not running. Please:\n1. Open Google Colab notebook\n2. Run all cells\n3. Copy the ngrok URL\n4. Update config/__init__.py with the new URL'
+            return
+        except Exception as e:
+            error_msg = f"❌ Colab server check failed: {e}"
+            print(error_msg)
+            progress_state['status'] = 'error'
+            progress_state['error'] = f'Colab GPU server error: {str(e)}'
+            return
+
         # Get voice from user (Kokoro TTS)
         voice_id = get_voice_id(data.get('voice_id'))
         zoom_effect = data.get('zoom_effect', True)
@@ -277,10 +371,13 @@ def generate_video_background(data):
             print("✨ Advanced Analysis DISABLED (using standard mode)")
 
         # Images
-        progress_state['status'] = 'Generating images...'
+        # ✅ FIX #9: Add progress updates during image generation
+        num_images = data.get('num_scenes', 10)
+        progress_state['status'] = f'Generating {num_images} images with SDXL-Turbo GPU...'
         progress_state['progress'] = 30
-        print("🎨 Step 2/4: Generating images...")
-        
+        print(f"🎨 Step 2/4: Generating {num_images} images...")
+        print(f"   ⏱️  This may take 40-80 seconds (GPU processes images sequentially)")
+
         image_gen = create_image_generator(
             data.get('image_style', 'cinematic_film'),
             data.get('story_type', 'scary_horror')
@@ -297,10 +394,16 @@ def generate_video_background(data):
                     'image_description': prompt_scene['image_prompt'],  # Detailed prompt
                     'content': ''  # Not used when image_description exists
                 })
+
+            # ✅ Update progress during generation
+            progress_state['status'] = f'Generating images (0/{num_images})...'
             images = image_gen.generate_batch(scenes_with_prompts, characters)
+            progress_state['status'] = f'Images generated ({len([i for i in images if i])}/{num_images})'
         else:
             # Standard mode - use original scenes
+            progress_state['status'] = f'Generating images (0/{num_images})...'
             images = image_gen.generate_batch(result['scenes'], characters)
+            progress_state['status'] = f'Images generated ({len([i for i in images if i])}/{num_images})'
 
         image_paths = [Path(img['filepath']) for img in images if img]
         

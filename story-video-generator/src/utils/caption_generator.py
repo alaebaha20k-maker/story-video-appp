@@ -67,7 +67,7 @@ class CaptionGenerator:
         output_path: str
     ) -> str:
         """
-        Generate SRT subtitle file with perfect audio sync
+        ✅ FIX #7: Generate SRT subtitle file with perfect audio sync (supports long videos)
 
         Args:
             text: Full narration text
@@ -84,12 +84,26 @@ class CaptionGenerator:
             print("⚠️  No captions to generate (empty text)")
             return None
 
-        # Calculate timing for each chunk
+        # ✅ Adaptive timing based on audio duration
         time_per_chunk = audio_duration / len(chunks)
 
-        print(f"📝 Generating {len(chunks)} captions...")
-        print(f"   Audio duration: {audio_duration:.2f}s")
+        # ✅ Validation and warnings for long/short videos
+        if audio_duration > 3600:  # 1+ hour
+            print(f"📝 Generating {len(chunks)} captions for LONG video ({audio_duration/60:.1f} min)...")
+            if time_per_chunk < 0.5:
+                print(f"   ⚠️  WARNING: Captions are very fast ({time_per_chunk:.2f}s each)")
+                print(f"   💡 Consider increasing max_words_per_caption for longer display time")
+        elif audio_duration < 60:  # Less than 1 minute
+            print(f"📝 Generating {len(chunks)} captions for SHORT video ({audio_duration:.1f}s)...")
+        else:
+            print(f"📝 Generating {len(chunks)} captions...")
+
+        print(f"   Audio duration: {audio_duration:.2f}s ({audio_duration/60:.2f} min)")
         print(f"   Time per caption: {time_per_chunk:.2f}s")
+
+        # ✅ Additional validation
+        if time_per_chunk < 0.3:
+            print(f"   ⚠️  CRITICAL: Captions TOO FAST! Consider reducing num_scenes or using shorter text")
 
         # Generate SRT content
         srt_content = []
