@@ -103,6 +103,260 @@ class FFmpegCompiler:
         except:
             return 5.0  # Fallback duration
 
+    def _create_video_two_pass(
+        self,
+        media_paths: List[Path],
+        audio_path: Path,
+        output_path: Path,
+        durations: List[float],
+        zoom_effect: bool,
+        caption_srt_path: Optional[str],
+        color_filter: str,
+        caption_style: str,
+        caption_position: str
+    ):
+        """
+        ✅ TWO-PASS METHOD for very long videos (>30s per scene)
+
+        This method prevents FFmpeg crashes by:
+        1. Pass 1: Create each scene as a separate video file
+        2. Pass 2: Concatenate using concat demuxer (memory efficient)
+
+        Much more stable than concat filter for long videos!
+        """
+        import tempfile
+        import shutil
+
+        # Create temp directory for scene files
+        temp_dir = Path(tempfile.mkdtemp(prefix='video_scenes_'))
+
+        try:
+            # Analyze media types
+            images = [p for p in media_paths if not self._is_video(p)]
+            videos = [p for p in media_paths if self._is_video(p)]
+            print(f"   🖼️  Images: {len(images)}")
+            print(f"   🎥 Videos: {len(videos)}")
+
+            # ═══════════════════════════════════════════════════════════════
+            # PASS 1: Create individual scene videos
+            # ═══════════════════════════════════════════════════════════════
+
+            print(f"\n   📹 PASS 1/2: Creating {len(media_paths)} individual scene videos...")
+            scene_files = []
+
+            for i, (media_path, duration) in enumerate(zip(media_paths, durations)):
+                scene_output = temp_dir / f'scene_{i:03d}.mp4'
+                is_video = self._is_video(media_path)
+
+                print(f"      Scene {i+1}/{len(media_paths)}: {duration:.1f}s {'(video)' if is_video else '(image)'}", end=' ')
+
+                if is_video:
+                    # VIDEO: Trim/loop to duration, scale to 1920x1080
+                    video_duration = self._get_video_duration(media_path)
+
+                    if video_duration < duration:
+                        # Loop video
+                        loops = int(duration / video_duration) + 1
+                        cmd = [
+                            'ffmpeg', '-i', str(media_path),
+                            '-vf', (
+                                f"loop={loops}:size=1:start=0,"
+                                f"trim=duration={duration},"
+                                f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                f"fps=24,setpts=PTS-STARTPTS"
+                            ),
+                            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+                            '-an',  # No audio in scene videos
+                            '-y', str(scene_output)
+                        ]
+                    else:
+                        # Trim video
+                        cmd = [
+                            'ffmpeg', '-i', str(media_path),
+                            '-vf', (
+                                f"trim=duration={duration},"
+                                f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                f"fps=24,setpts=PTS-STARTPTS"
+                            ),
+                            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+                            '-an',
+                            '-y', str(scene_output)
+                        ]
+                else:
+                    # IMAGE: Apply zoom if enabled and duration ≤ 60s
+                    if zoom_effect and duration <= 60:
+                        # With zoom
+                        cmd = [
+                            'ffmpeg',
+                            '-loop', '1', '-t', str(duration), '-i', str(media_path),
+                            '-vf', (
+                                f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                f"zoompan=z='min(zoom+0.0015,1.1)':d={int(duration*24)}:"
+                                f"x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1920x1080,"
+                                f"fps=24"
+                            ),
+                            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+                            '-y', str(scene_output)
+                        ]
+                    else:
+                        # Static image (no zoom for long durations)
+                        if duration > 60 and zoom_effect:
+                            print(f"(zoom disabled)", end=' ')
+                        cmd = [
+                            'ffmpeg',
+                            '-loop', '1', '-t', str(duration), '-i', str(media_path),
+                            '-vf', (
+                                f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+                                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
+                                f"fps=24"
+                            ),
+                            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+                            '-y', str(scene_output)
+                        ]
+
+                # Run FFmpeg for this scene
+                subprocess.run(cmd, check=True, capture_output=True)
+                scene_files.append(scene_output)
+                print("✅")
+
+            # ═══════════════════════════════════════════════════════════════
+            # PASS 2: Concatenate all scenes + add audio + color filter + captions
+            # ═══════════════════════════════════════════════════════════════
+
+            print(f"\n   🔗 PASS 2/2: Concatenating {len(scene_files)} scenes + adding audio/effects...")
+
+            # Create concat list file
+            concat_list = temp_dir / 'concat_list.txt'
+            with open(concat_list, 'w') as f:
+                for scene_file in scene_files:
+                    # Use forward slashes for cross-platform compatibility
+                    f.write(f"file '{str(scene_file).replace(chr(92), '/')}'\n")
+
+            # Build filter chain for pass 2
+            filter_parts = []
+            final_label = 'vout'
+
+            # Apply color filter if specified
+            if color_filter and color_filter != 'none' and color_filter in self.COLOR_FILTERS:
+                color_filter_str = self.COLOR_FILTERS[color_filter]
+                if color_filter_str:
+                    filter_parts.append(f"[0:v]{color_filter_str}[vcolor]")
+                    final_label = 'vcolor'
+                    print(f"      🎨 Color filter: {color_filter}")
+
+            # Apply captions if provided
+            if caption_srt_path and Path(caption_srt_path).exists():
+                print(f"      📝 Adding captions from: {caption_srt_path}")
+                escaped_srt_path = str(caption_srt_path).replace('\\', '/').replace(':', r'\:')
+
+                # Caption styling (same as single-pass method)
+                caption_styles = {
+                    'simple': {'FontName': 'Arial', 'FontSize': '24', 'Bold': '1', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '2'},
+                    'bold': {'FontName': 'Arial Black', 'FontSize': '32', 'Bold': '1', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '3'},
+                    'minimal': {'FontName': 'Helvetica', 'FontSize': '20', 'Bold': '0', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '1'},
+                    'cinematic': {'FontName': 'Arial', 'FontSize': '26', 'Bold': '1', 'PrimaryColour': '&H00F0F0F0', 'OutlineColour': '&H00000000', 'BackColour': '&H80000000', 'Outline': '2', 'Shadow': '1'},
+                    'horror': {'FontName': 'Arial', 'FontSize': '28', 'Bold': '1', 'PrimaryColour': '&H000000FF', 'OutlineColour': '&H00000000', 'Outline': '3', 'Shadow': '2'},
+                    'elegant': {'FontName': 'Georgia', 'FontSize': '24', 'Bold': '0', 'Italic': '1', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '1'}
+                }
+
+                position_alignments = {'top': '8', 'center': '5', 'bottom': '2'}
+                style = caption_styles.get(caption_style, caption_styles['simple'])
+                alignment = position_alignments.get(caption_position, '2')
+
+                style_parts = [f"{k}={v}" for k, v in style.items()]
+                style_parts.append(f"Alignment={alignment}")
+
+                if caption_position == 'top':
+                    style_parts.append("MarginV=60")
+                elif caption_position == 'bottom':
+                    style_parts.append("MarginV=60")
+                else:
+                    style_parts.append("MarginV=0")
+
+                style_string = ','.join(style_parts)
+
+                subtitle_filter = f"[{final_label}]subtitles={escaped_srt_path}:force_style='{style_string}'[vfinal]"
+                filter_parts.append(subtitle_filter)
+                final_label = 'vfinal'
+
+            # Build final FFmpeg command
+            cmd = [
+                'ffmpeg',
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', str(concat_list),
+                '-i', str(audio_path)
+            ]
+
+            # Add filter_complex if needed
+            if filter_parts:
+                cmd.extend(['-filter_complex', ';'.join(filter_parts)])
+                cmd.extend(['-map', f'[{final_label}]'])
+            else:
+                cmd.extend(['-map', '0:v'])
+
+            cmd.extend(['-map', '1:a'])  # Audio from second input
+
+            # Encoding options
+            if self.gpu_available:
+                cmd.extend([
+                    '-c:v', 'h264_nvenc',
+                    '-preset', 'p4',
+                    '-cq', '23',
+                    '-b:v', '8M',
+                    '-maxrate', '12M',
+                    '-bufsize', '16M'
+                ])
+                print(f"      🚀 Using GPU encoding (5x faster!)")
+            else:
+                cmd.extend([
+                    '-c:v', 'libx264',
+                    '-preset', 'veryfast',
+                    '-crf', '23'
+                ])
+
+            cmd.extend([
+                '-movflags', '+faststart',
+                '-c:a', 'aac',
+                '-b:a', '192k',
+                '-shortest',
+                '-y',
+                str(output_path)
+            ])
+
+            print(f"      ⚙️  Running final FFmpeg pass...")
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+            print(f"\n   ✅ Video created successfully!")
+            print(f"   📁 Output: {output_path}")
+            print(f"   🎬 Contains {len(images)} images + {len(videos)} videos")
+            print(f"   ⏱️  Duration: {sum(durations):.2f}s ({sum(durations)/60:.2f} minutes)")
+
+            avg_duration = sum(durations) / len(durations) if durations else 0
+            if zoom_effect and avg_duration > 60:
+                print(f"   🎥 Zoom Effect: AUTO-DISABLED (video too long: {avg_duration:.1f}s per image)")
+            else:
+                print(f"   🎥 Zoom Effect: {'ENABLED (images only)' if zoom_effect else 'DISABLED'}")
+
+            if color_filter and color_filter != 'none':
+                print(f"   🎨 Color Filter: {color_filter}")
+            if caption_srt_path and Path(caption_srt_path).exists():
+                print(f"   📝 Captions: {caption_style} style, {caption_position} position")
+            print(f"   ✅ Perfect audio sync - video ends EXACTLY when voice ends!")
+            print(f"   🔄 Two-pass method used for stability")
+
+            return output_path
+
+        finally:
+            # Cleanup temp directory
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                pass
+
     def create_video(
         self,
         media_paths: List[Path],  # ✅ CHANGED: Now accepts images AND videos!
@@ -141,6 +395,17 @@ class FFmpegCompiler:
 
         print(f"\n   🎬 Creating video with {len(media_paths)} media items...")
         print(f"   📊 Total duration: {sum(durations):.2f}s ({sum(durations)/60:.2f} minutes)")
+
+        # ✅ NEW: For very long videos (>30s per scene), use two-pass method
+        avg_duration = sum(durations) / len(durations) if durations else 0
+        if avg_duration > 30:
+            print(f"   ⚠️  Long video detected ({avg_duration:.1f}s per scene)")
+            print(f"   🔄 Using TWO-PASS method for stability (prevents FFmpeg crash)...")
+            return self._create_video_two_pass(
+                media_paths, audio_path, output_path, durations,
+                zoom_effect, caption_srt_path, color_filter,
+                caption_style, caption_position
+            )
 
         # Analyze media types
         images = [p for p in media_paths if not self._is_video(p)]
