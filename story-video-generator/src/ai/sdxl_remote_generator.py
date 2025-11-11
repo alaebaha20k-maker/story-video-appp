@@ -247,38 +247,40 @@ class SDXLRemoteGenerator:
             response.raise_for_status()
             batch_results = response.json().get('results', [])
 
-            # ✅ Process results and save images
+            # ✅ CRITICAL FIX: Process results and DECODE base64 images
+            # Colab now returns base64 encoded images (not file paths)
+            # Backend must decode and save to local filesystem
             results = []
+            import base64
+
             for i, result in enumerate(batch_results):
-                if result.get('success') and result.get('image_path'):
-                    # Image was generated successfully by Colab
-                    # Save it to our temp directory
+                if result.get('success') and result.get('image_data'):
+                    # Image was generated successfully and returned as base64
                     scene_number = i + 1
                     filename = f"scene_{scene_number:03d}.png"
 
-                    # Download image from Colab
                     try:
-                        # The image_path from Colab is a local path on Colab server
-                        # We need to fetch it via another endpoint or it's already saved
-                        # For now, assume Colab returns the image in base64 or we fetch it
-                        # Since Colab batch endpoint returns file paths, we need to adjust
+                        # ✅ DECODE base64 to bytes
+                        image_base64 = result['image_data']
+                        image_bytes = base64.b64decode(image_base64)
 
-                        # Actually, let me check - Colab saves images and returns paths
-                        # We can't access Colab's local files directly
-                        # So we need to change approach or have Colab return base64
+                        # ✅ SAVE to backend's local temp directory
+                        filepath = file_handler.save_binary(
+                            image_bytes,
+                            filename,
+                            file_handler.temp_dir
+                        )
 
-                        # For now, mark as success with the Colab path
-                        # This needs adjustment based on actual Colab implementation
                         results.append({
-                            "filepath": result['image_path'],  # Colab's path
+                            "filepath": str(filepath),  # ✅ NOW it's a real local path
                             "scene_number": scene_number,
                             "prompt": batch_scenes[i]['description'],
                             "style": self.image_style,
                             "model": "SDXL-Turbo (Remote GPU)"
                         })
-                        logger.success(f"      ✅ Scene {scene_number} generated successfully")
+                        logger.success(f"      ✅ Scene {scene_number} downloaded and saved ({len(image_bytes):,} bytes)")
                     except Exception as e:
-                        logger.error(f"      ❌ Failed to process scene {scene_number}: {e}")
+                        logger.error(f"      ❌ Failed to decode/save scene {scene_number}: {e}")
                         results.append(None)
                 else:
                     logger.error(f"      ❌ Scene {i+1} failed: {result.get('error', 'Unknown error')}")
