@@ -296,7 +296,8 @@ def generate_video_background(data):
         # Get voice from user (Kokoro TTS)
         voice_id = get_voice_id(data.get('voice_id'))
         zoom_effect = data.get('zoom_effect', True)
-        enable_captions = data.get('enable_captions', False)
+        # ✅ FIXED: Frontend sends 'auto_captions', not 'enable_captions'
+        enable_captions = data.get('auto_captions', False)
 
         # ✅ NEW: Get color filter and caption options
         color_filter = data.get('color_filter', 'none')
@@ -307,7 +308,7 @@ def generate_video_background(data):
         print(f"🎤 Voice Engine: KOKORO TTS (Remote GPU)")
         print(f"🎤 Voice ID: {voice_id}")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
-        print(f"📝 Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
+        print(f"📝 Auto Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
         if color_filter != 'none':
             print(f"🎨 Color Filter: {color_filter}")
         if enable_captions:
@@ -507,7 +508,7 @@ def generate_video_background(data):
         print(f"   Voice Engine: Kokoro TTS (Remote GPU)")
         print(f"   Voice: {voice_id}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
-        print(f"   Captions: {'ENABLED' if enable_captions else 'DISABLED'}\n")
+        print(f"   Auto Captions: {'ENABLED' if enable_captions else 'DISABLED'}\n")
         
     except Exception as e:
         progress_state['status'] = 'error'
@@ -536,7 +537,7 @@ zoom_effect=True, enable_captions=False, color_filter='none', caption_style='sim
         print(f"🎤 Voice: {voice_id}")
         print(f"🎤 Speed: {voice_speed}x")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
-        print(f"📝 Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
+        print(f"📝 Auto Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
         
         # 📝 Generate script with Gemini (improved prompts!)
         result = enhanced_script_generator.generate_with_template(
