@@ -140,6 +140,9 @@ def get_voice_engine_and_id(requested_engine=None, requested_voice=None):
 # Voice settings consumed by the Edge-only TTSEngine helper
 VOICE_SETTINGS = EDGE_TTS_SETTINGS.copy()
 
+# Google Colab GPU Server URL
+COLAB_SERVER_URL = 'https://contemplable-suzy-unfussing.ngrok-free.dev'
+
 # Pexels API settings
 PEXELS_SETTINGS = {
     "orientation": "landscape",
