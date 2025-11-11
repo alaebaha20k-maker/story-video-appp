@@ -191,8 +191,9 @@ class FFmpegCompiler:
 
             else:
                 # IMAGE: Apply zoom (if enabled), scale to 1920x1080
-                if zoom_effect:
-                    # Zoom effect: gentle zoom in for cinematic feel
+                if zoom_effect and duration <= 60:
+                    # ✅ Zoom effect: Only for videos ≤60s per image
+                    # For longer videos, zoom creates too much complexity
                     filter_str = (
                         f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,"
                         f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
@@ -201,7 +202,10 @@ class FFmpegCompiler:
                         f"fps=24,setpts=PTS-STARTPTS[v{i}]"
                     )
                 else:
-                    # No zoom: simple scale and hold
+                    # No zoom: simple scale and hold (for long videos or when disabled)
+                    # ✅ FIX: For very long videos (>60s per image), skip zoom to prevent FFmpeg crash
+                    if duration > 60 and zoom_effect:
+                        print(f"      ⚠️  Scene {i+1}: Zoom disabled (duration {duration:.1f}s too long, using static image)")
                     filter_str = (
                         f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,"
                         f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
@@ -408,7 +412,14 @@ class FFmpegCompiler:
         print(f"   📁 Output: {output_path}")
         print(f"   🎬 Contains {len(images)} images + {len(videos)} videos")
         print(f"   ⏱️  Duration: {sum(durations):.2f}s ({sum(durations)/60:.2f} minutes)")
-        print(f"   🎥 Zoom Effect: {'ENABLED (images only)' if zoom_effect else 'DISABLED'}")
+
+        # Check if zoom was auto-disabled for long videos
+        avg_duration = sum(durations) / len(durations) if durations else 0
+        if zoom_effect and avg_duration > 60:
+            print(f"   🎥 Zoom Effect: AUTO-DISABLED (video too long: {avg_duration:.1f}s per image)")
+        else:
+            print(f"   🎥 Zoom Effect: {'ENABLED (images only)' if zoom_effect else 'DISABLED'}")
+
         if color_filter and color_filter != 'none':
             print(f"   🎨 Color Filter: {color_filter}")
         if caption_srt_path and Path(caption_srt_path).exists():
