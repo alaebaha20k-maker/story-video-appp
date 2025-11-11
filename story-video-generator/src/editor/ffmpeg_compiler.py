@@ -185,16 +185,20 @@ class FFmpegCompiler:
                             '-y', str(scene_output)
                         ]
                 else:
-                    # IMAGE: Apply zoom if enabled and duration ≤ 60s
-                    if zoom_effect and duration <= 60:
-                        # With zoom
+                    # IMAGE: Apply zoom if enabled
+                    # ✅ TWO-PASS METHOD: No duration limit! Each scene is independent
+                    if zoom_effect:
+                        # With zoom (works for ANY duration in two-pass mode)
+                        frames = int(duration * 24)
+                        if duration > 180:
+                            print(f"(zoom: {frames} frames)", end=' ')
                         cmd = [
                             'ffmpeg',
                             '-loop', '1', '-t', str(duration), '-i', str(media_path),
                             '-vf', (
                                 f"scale=1920:1080:force_original_aspect_ratio=decrease,"
                                 f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,"
-                                f"zoompan=z='min(zoom+0.0015,1.1)':d={int(duration*24)}:"
+                                f"zoompan=z='min(zoom+0.0015,1.1)':d={frames}:"
                                 f"x=iw/2-(iw/zoom/2):y=ih/2-(ih/zoom/2):s=1920x1080,"
                                 f"fps=24"
                             ),
@@ -202,9 +206,7 @@ class FFmpegCompiler:
                             '-y', str(scene_output)
                         ]
                     else:
-                        # Static image (no zoom for long durations)
-                        if duration > 60 and zoom_effect:
-                            print(f"(zoom disabled)", end=' ')
+                        # Static image (zoom disabled by user)
                         cmd = [
                             'ffmpeg',
                             '-loop', '1', '-t', str(duration), '-i', str(media_path),
@@ -335,11 +337,8 @@ class FFmpegCompiler:
             print(f"   🎬 Contains {len(images)} images + {len(videos)} videos")
             print(f"   ⏱️  Duration: {sum(durations):.2f}s ({sum(durations)/60:.2f} minutes)")
 
-            avg_duration = sum(durations) / len(durations) if durations else 0
-            if zoom_effect and avg_duration > 60:
-                print(f"   🎥 Zoom Effect: AUTO-DISABLED (video too long: {avg_duration:.1f}s per image)")
-            else:
-                print(f"   🎥 Zoom Effect: {'ENABLED (images only)' if zoom_effect else 'DISABLED'}")
+            # ✅ TWO-PASS METHOD: Zoom works for ANY duration!
+            print(f"   🎥 Zoom Effect: {'ENABLED (images only)' if zoom_effect else 'DISABLED'}")
 
             if color_filter and color_filter != 'none':
                 print(f"   🎨 Color Filter: {color_filter}")
