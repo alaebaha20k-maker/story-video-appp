@@ -14,6 +14,7 @@ from pydub import AudioSegment
 from src.ai.script_analyzer import script_analyzer
 from src.research.fact_searcher import fact_searcher
 from src.ai.enhanced_script_generator import enhanced_script_generator
+from src.ai.clean_script_generator import clean_script_generator  # ✅ NEW: Clean scripts without IMAGE: prompts
 
 # ✅ NEW: ADVANCED SCRIPT ANALYSIS
 from src.ai.narration_extractor import narration_extractor
@@ -540,31 +541,32 @@ zoom_effect=True, grain_effect=False, enable_captions=False, color_filter='none'
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
         print(f"🎞️  Grain Effect: {'ENABLED' if grain_effect else 'DISABLED'}")
         print(f"📝 Auto Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
-        
-        # 📝 Generate script with Gemini (improved prompts!)
-        result = enhanced_script_generator.generate_with_template(
+
+        # 📝 Step 1: Generate CLEAN script with Gemini (NO image prompts!)
+        print("✍️  Generating clean script (no image prompts - perfect for TTS)...")
+        result = clean_script_generator.generate_clean_script(
             topic=topic,
             story_type=story_type,
             template=template,
             research_data=research_data,
-            duration_minutes=duration,
-            num_scenes=num_scenes
+            duration_minutes=duration
         )
 
         script_text = result['script']
+        print(f"✅ Clean script generated: {len(script_text)} chars, {result['word_count']} words")
 
         progress_state['progress'] = 45
         progress_state['status'] = 'generating_image_prompts'
 
-        # ✅ NEW: Generate DETAILED image prompts using Gemini API
-        print("🤖 Generating high-quality image prompts with Gemini AI...")
-        from src.utils.gemini_prompt_generator import gemini_generator
+        # 📝 Step 2: Generate image prompts SEPARATELY from script
+        print("🎨 Generating image prompts separately from clean script...")
 
         try:
-            gemini_prompts = gemini_generator.generate_image_prompts(
+            gemini_prompts = clean_script_generator.generate_image_prompts(
                 script=script_text,
-                num_images=num_scenes,
-                style='cinematic'  # Match image style
+                topic=topic,
+                story_type=story_type,
+                num_images=num_scenes
             )
 
             # Convert Gemini prompts to scene dictionaries
@@ -873,7 +875,7 @@ def generate_with_template_endpoint():
         voice_speed = float(data.get('voice_speed', 1.0))
         zoom_effect = data.get('zoom_effect', True)  # Default: True for better UX
         grain_effect = data.get('grain_effect', False)  # Default: False (optional effect)
-        enable_captions = data.get('enable_captions', False)  # Default: False
+        enable_captions = data.get('auto_captions', False)  # ✅ FIXED: Frontend sends 'auto_captions'
 
         print(f"\n🎬 Generating with template: {topic}")
         print(f"   Type: {story_type}")
