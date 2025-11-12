@@ -59,6 +59,12 @@ class CleanScriptGenerator:
         🚀 BATCHED GENERATION - Script + Image Prompts in ONE API call!
         Uses only 1 request instead of 2, DOUBLING our capacity!
 
+        ⚡ SMART CHUNKING for long scripts:
+        - Checks SCRIPT_LENGTHS config to determine # of chunks needed
+        - Splits long scripts into multiple API calls
+        - Each chunk generates part of the script
+        - Combines all chunks at the end
+
         Returns:
             Dict with 'script', 'image_prompts', 'word_count', etc.
         """
@@ -69,6 +75,32 @@ class CleanScriptGenerator:
 
         style = STORY_TYPES[story_type]
 
+        # Calculate target characters and determine chunking strategy
+        target_chars = duration_minutes * 150 * 5  # 150 words/min × 5 chars/word
+
+        # Determine number of chunks needed based on SCRIPT_LENGTHS
+        from config.settings import SCRIPT_LENGTHS
+        num_chunks = 1
+        if target_chars > 60000:  # 100k range
+            num_chunks = 3
+        elif target_chars > 50000:  # 70k range
+            num_chunks = 2
+        elif target_chars > 25000:  # 30k+ range
+            num_chunks = 1  # Still 1 chunk but we'll monitor
+
+        if num_chunks > 1:
+            logger.info(f"📊 CHUNKED generation: {target_chars} chars = {num_chunks} chunks")
+            return self._generate_script_chunked(
+                topic=topic,
+                style=style,
+                num_images=num_images,
+                template=template,
+                research_data=research_data,
+                duration_minutes=duration_minutes,
+                num_chunks=num_chunks
+            )
+
+        # Single chunk generation (original batched method)
         logger.info(f"🚀 BATCHED generation (script + {num_images} images in 1 call)")
         logger.info(f"   Topic: {topic}")
         logger.info(f"   Type: {style['name']}")
@@ -575,6 +607,145 @@ Return ONLY the numbered list of {num_images} prompts, nothing else!
         return [f"{topic}, cinematic scene {i+1}, professional photography, high detail"
                 for i in range(num_images)]
 
+    def _generate_script_chunked(
+        self,
+        topic: str,
+        style: Dict,
+        num_images: int,
+        template: Optional[Dict],
+        research_data: Optional[str],
+        duration_minutes: int,
+        num_chunks: int
+    ) -> Dict:
+        """
+        Generate LONG scripts in CHUNKS to respect API limits and quality
+        Each chunk generates part of the story
+        """
+
+        logger.info(f"📝 Generating {duration_minutes}-min script in {num_chunks} chunks...")
+
+        chunks_data = []
+        chunk_duration = duration_minutes / num_chunks
+        chunk_images = max(num_images // num_chunks, 3)  # At least 3 images per chunk
+
+        for chunk_num in range(num_chunks):
+            logger.info(f"\n🔄 Chunk {chunk_num + 1}/{num_chunks} ({chunk_duration:.1f} minutes)...")
+
+            # Build chunk-specific prompt
+            if chunk_num == 0:
+                # First chunk: Opening + setup
+                chunk_prompt = f"""This is PART {chunk_num + 1} of {num_chunks} (BEGINNING).
+
+Start with a POWERFUL HOOK (first 25-30 words).
+This chunk should cover the opening and initial setup of the story.
+Duration: ~{chunk_duration:.0f} minutes ({chunk_duration * 150:.0f} words)
+
+End this chunk at a NATURAL PAUSE or transition point (NOT mid-sentence!)."""
+
+            elif chunk_num == num_chunks - 1:
+                # Last chunk: Climax + resolution
+                chunk_prompt = f"""This is PART {chunk_num + 1} of {num_chunks} (ENDING - CLIMAX & RESOLUTION).
+
+Continue from where Part {chunk_num} left off.
+Build to the CLIMAX and provide a satisfying RESOLUTION.
+Duration: ~{chunk_duration:.0f} minutes ({chunk_duration * 150:.0f} words)
+
+This is the FINAL part - end with a complete, memorable conclusion."""
+
+            else:
+                # Middle chunks: Rising action
+                chunk_prompt = f"""This is PART {chunk_num + 1} of {num_chunks} (MIDDLE - RISING ACTION).
+
+Continue seamlessly from where Part {chunk_num} left off.
+Build tension and develop the story towards the climax.
+Duration: ~{chunk_duration:.0f} minutes ({chunk_duration * 150:.0f} words)
+
+End at a NATURAL PAUSE or transition point (NOT mid-sentence!)."""
+
+            # Generate this chunk
+            prompt = self._build_batched_prompt(
+                topic=topic,
+                style=style,
+                num_images=chunk_images,
+                template=template if chunk_num == 0 else None,  # Only use template for first chunk
+                research_data=research_data if chunk_num == 0 else None,  # Only use research for first chunk
+                duration_minutes=chunk_duration,
+                chunk_instructions=chunk_prompt
+            )
+
+            # Generate with smart key selection
+            max_attempts = len(self.api_keys) * 2
+            chunk_generated = False
+
+            for attempt in range(max_attempts):
+                try:
+                    best_key_idx, reason = rate_limiter.get_best_available_key(self.api_keys)
+                    api_key = self.api_keys[best_key_idx]
+                    logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key {best_key_idx+1}: ...{api_key[-8:]})...")
+
+                    rate_limiter.wait_if_needed(api_key)
+
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel(
+                        model_name=GEMINI_SETTINGS['model'],
+                        generation_config={
+                            "temperature": 0.75,
+                            "top_p": 0.92,
+                            "top_k": 50,
+                            "max_output_tokens": 16384,
+                        }
+                    )
+
+                    response = model.generate_content(prompt)
+                    result_text = response.text
+
+                    parsed = self._parse_batched_response(result_text, chunk_images)
+
+                    if parsed['script'] and len(parsed['script']) > 200:
+                        rate_limiter.reset_failures()
+                        chunks_data.append(parsed)
+                        logger.success(f"✅ Chunk {chunk_num + 1}: {len(parsed['script'])} chars, {len(parsed['image_prompts'])} images")
+                        chunk_generated = True
+                        break
+
+                except Exception as e:
+                    if rate_limiter.is_rate_limit_error(e):
+                        wait_time = rate_limiter.handle_rate_limit_error(e, attempt, api_key)
+                        logger.warning(f"   ⏳ Rate limit - waiting {wait_time:.1f}s...")
+                        time.sleep(wait_time)
+                        continue
+
+                    logger.error(f"   Chunk {chunk_num + 1} attempt {attempt + 1} failed: {e}")
+                    if attempt < max_attempts - 1:
+                        time.sleep(2)
+                        continue
+                    else:
+                        raise
+
+            if not chunk_generated:
+                raise Exception(f"Failed to generate chunk {chunk_num + 1} after all attempts")
+
+        # Combine all chunks
+        logger.info(f"\n🔗 Combining {num_chunks} chunks...")
+
+        full_script = "\n\n".join([chunk['script'] for chunk in chunks_data])
+        all_images = []
+        for chunk in chunks_data:
+            all_images.extend(chunk['image_prompts'])
+
+        logger.success(f"✅ CHUNKED COMPLETE: {len(full_script)} chars total, {len(all_images)} images")
+
+        return {
+            "script": full_script,
+            "image_prompts": all_images[:num_images],  # Trim to requested amount
+            "story_type": style.get('name', 'story'),
+            "word_count": len(full_script.split()),
+            "character_count": len(full_script),
+            "num_images": min(len(all_images), num_images),
+            "used_template": template is not None,
+            "used_research": research_data is not None,
+        }
+
     def _build_batched_prompt(
         self,
         topic: str,
@@ -582,7 +753,8 @@ Return ONLY the numbered list of {num_images} prompts, nothing else!
         num_images: int,
         template: Optional[Dict],
         research_data: Optional[str],
-        duration_minutes: int
+        duration_minutes: int,
+        chunk_instructions: Optional[str] = None
     ) -> str:
         """Build BATCHED prompt that requests both script AND image prompts in ONE call"""
 
@@ -592,9 +764,23 @@ Return ONLY the numbered list of {num_images} prompts, nothing else!
         style_tone = style.get('tone', 'compelling')
         style_pacing = style.get('pacing', 'medium')
 
+        # Add chunk instructions if this is part of a chunked generation
+        chunk_section = ""
+        if chunk_instructions:
+            chunk_section = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ CHUNKED GENERATION - IMPORTANT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{chunk_instructions}
+
+This is NOT a complete story - it's ONE PART of a longer narrative.
+Focus on THIS section while maintaining story flow.
+
+"""
+
         prompt = f"""You are a MASTER content creator. I need you to complete TWO tasks in this ONE request:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{chunk_section}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TASK 1: Generate Script
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
