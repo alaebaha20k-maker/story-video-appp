@@ -640,33 +640,48 @@ Return ONLY the numbered list of {num_images} prompts, nothing else!
             # Build chunk-specific prompt
             if chunk_num == 0:
                 # First chunk: Opening + setup
-                chunk_prompt = f"""This is PART {chunk_num + 1} of {num_chunks} (BEGINNING).
+                chunk_prompt = f"""CONTEXT: You're writing the BEGINNING of a {duration_minutes}-minute story.
+Total story length: {num_chunks} chunks ({duration_minutes} minutes total)
+This chunk: ~{chunk_duration:.0f} minutes (~{chunk_duration * 150:.0f} words)
 
-Start with a POWERFUL HOOK (first 25-30 words).
-This chunk should cover the opening and initial setup of the story.
-Duration: ~{chunk_duration:.0f} minutes ({chunk_duration * 150:.0f} words)
+YOUR TASK:
+- Start with a POWERFUL HOOK (first 25-30 words) that grabs attention
+- Establish the setting, character, and situation
+- Build initial tension and intrigue
+- End at a natural transition point (complete thought, not mid-sentence)
 
-End this chunk at a NATURAL PAUSE or transition point (NOT mid-sentence!)."""
+REMEMBER: Write seamless narrative. NO mention of "Part 1" or "first section"!
+The listener won't know this is chunked - it should flow like one story."""
 
             elif chunk_num == num_chunks - 1:
                 # Last chunk: Climax + resolution
-                chunk_prompt = f"""This is PART {chunk_num + 1} of {num_chunks} (ENDING - CLIMAX & RESOLUTION).
+                chunk_prompt = f"""CONTEXT: You're writing the ENDING of a {duration_minutes}-minute story.
+Total story length: {num_chunks} chunks ({duration_minutes} minutes total)
+This chunk: ~{chunk_duration:.0f} minutes (~{chunk_duration * 150:.0f} words)
 
-Continue from where Part {chunk_num} left off.
-Build to the CLIMAX and provide a satisfying RESOLUTION.
-Duration: ~{chunk_duration:.0f} minutes ({chunk_duration * 150:.0f} words)
+YOUR TASK:
+- Continue SEAMLESSLY from previous section (NO "finally" or "in conclusion")
+- Build to the CLIMAX - the most intense, emotional peak
+- Resolve the story with a satisfying, memorable ending
+- Leave the listener feeling complete and satisfied
 
-This is the FINAL part - end with a complete, memorable conclusion."""
+REMEMBER: Write seamless narrative. NO mention of "final part" or technical markers!
+The listener won't know this is chunked - it should flow naturally."""
 
             else:
                 # Middle chunks: Rising action
-                chunk_prompt = f"""This is PART {chunk_num + 1} of {num_chunks} (MIDDLE - RISING ACTION).
+                chunk_prompt = f"""CONTEXT: You're writing the MIDDLE of a {duration_minutes}-minute story.
+Total story length: {num_chunks} chunks ({duration_minutes} minutes total)
+This chunk: ~{chunk_duration:.0f} minutes (~{chunk_duration * 150:.0f} words)
 
-Continue seamlessly from where Part {chunk_num} left off.
-Build tension and develop the story towards the climax.
-Duration: ~{chunk_duration:.0f} minutes ({chunk_duration * 150:.0f} words)
+YOUR TASK:
+- Continue SEAMLESSLY from previous section (NO "meanwhile" or "next")
+- Build tension and develop the plot
+- Deepen character emotions and stakes
+- End at a natural transition point (complete thought, not mid-sentence)
 
-End at a NATURAL PAUSE or transition point (NOT mid-sentence!)."""
+REMEMBER: Write seamless narrative. NO mention of "middle section" or "continuation"!
+The listener won't know this is chunked - it should flow like one story."""
 
             # Generate this chunk
             prompt = self._build_batched_prompt(
@@ -774,13 +789,23 @@ End at a NATURAL PAUSE or transition point (NOT mid-sentence!)."""
         chunk_section = ""
         if chunk_instructions:
             chunk_section = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ CHUNKED GENERATION - IMPORTANT:
+⚡ CHUNKED GENERATION - CONTEXT ONLY (DO NOT INCLUDE IN SCRIPT):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 IMPORTANT CONTEXT (for AI only - NOT for output):
 
 {chunk_instructions}
 
-This is NOT a complete story - it's ONE PART of a longer narrative.
-Focus on THIS section while maintaining story flow.
+⚠️ CRITICAL: The above is CONTEXT ONLY!
+- DO NOT write "Part 1", "Part 2", or any technical markers in the script
+- DO NOT mention "first chunk", "this section", or "this part"
+- The viewer will NEVER know this is chunked
+- Write as if this is ONE CONTINUOUS story
+- Start naturally, end naturally
+- NO meta-commentary about story structure
+
+The script you generate will be spoken aloud by Text-to-Speech.
+Write ONLY pure narrative that flows naturally!
 
 """
 
@@ -850,20 +875,34 @@ Tone: {template_tone}
 TASK 2: Generate {num_images} Image Prompts
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Create {num_images} UNIQUE, CINEMATIC image prompts based on the script you wrote above.
+Create {num_images} UNIQUE, CINEMATIC image prompts that MATCH the script you wrote above.
+
+🎯 CRITICAL: Images must FOLLOW the script's narrative flow!
+- Image 1 = Opening scene (hook moment)
+- Middle images = Follow story progression
+- Final image = Climax or resolution moment
+- Each image should represent a KEY MOMENT from the script
 
 ⚠️ REQUIREMENTS FOR EACH IMAGE PROMPT:
-1. TOPIC RELEVANCE: MUST include "{topic}" elements
-2. LENGTH: 25-35 words EXACTLY
-3. CINEMATIC: Describe like a movie scene
-4. SPECIFIC: Exact lighting, mood, objects, actions
-5. UNIQUE: All {num_images} images must be DIFFERENT
-6. QUALITY: High detail, professional composition
+1. SCRIPT ACCURACY: Image must match the corresponding part of your script
+2. TOPIC RELEVANCE: MUST include "{topic}" elements
+3. LENGTH: 25-35 words EXACTLY
+4. CINEMATIC: Describe like a movie scene
+5. SPECIFIC: Exact lighting, mood, objects, actions
+6. UNIQUE: All {num_images} images must be DIFFERENT
+7. QUALITY: High detail, professional composition
 
-🎨 SHOT VARIETY - Use different types:
-- Wide establishing shots, Medium close-ups, Dramatic angles
-- Intimate close-ups, Environmental wides, Character focus shots
-- Detail shots, Tension-building shots, Climactic moments
+🎨 SHOT VARIETY - Distribute these across {num_images} images:
+- Opening: Wide establishing shot (sets the scene)
+- Early: Medium shots (introduce character/situation)
+- Middle: Dramatic angles, close-ups (build tension)
+- Climax: Dynamic action shot or intense moment
+- End: Emotional resolution shot
+
+📐 EXAMPLE (for horror story):
+1. "Abandoned Victorian mansion at twilight, broken windows, overgrown ivy, ominous dark clouds, eerie atmosphere, cinematic wide shot"
+2. "Young woman's face illuminated by flickering candlelight in dark hallway, fear in eyes, shadows dancing, medium close-up"
+3. "Ghostly figure standing at end of corridor, translucent form, cold blue lighting, dramatic perspective, horror atmosphere"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT FORMAT (CRITICAL - FOLLOW EXACTLY):
