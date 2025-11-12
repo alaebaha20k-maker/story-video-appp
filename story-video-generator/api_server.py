@@ -15,6 +15,7 @@ from src.ai.script_analyzer import script_analyzer
 from src.research.fact_searcher import fact_searcher
 from src.ai.enhanced_script_generator import enhanced_script_generator
 from src.ai.clean_script_generator import clean_script_generator  # ✅ NEW: Clean scripts without IMAGE: prompts
+from src.ai.advanced_script_generator import advanced_script_generator  # 🚀 ULTIMATE: Smart chunking + separate API keys
 
 # ✅ NEW: ADVANCED SCRIPT ANALYSIS
 from src.ai.narration_extractor import narration_extractor
@@ -542,37 +543,52 @@ zoom_effect=True, grain_effect=False, enable_captions=False, color_filter='none'
         print(f"🎞️  Grain Effect: {'ENABLED' if grain_effect else 'DISABLED'}")
         print(f"📝 Auto Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
 
-        # 🚀 BATCHED GENERATION - Script + Image Prompts in ONE API call!
-        print("🚀 Generating script + image prompts in SINGLE batched request...")
-        print("   This uses only 1 API request instead of 2 = 2x faster!")
+        # 🚀 ADVANCED GENERATION - Smart chunking + separate API keys!
+        print("🚀 Generating script + image prompts with ADVANCED method...")
+        print("   ✅ Smart chunking prevents quota exhaustion")
+        print("   ✅ Separate API keys for scripts vs images")
+        print("   ✅ Perfect for long videos (24+ minutes)")
 
-        result = clean_script_generator.generate_script_and_images_batch(
+        result = advanced_script_generator.generate_perfect_script(
             topic=topic,
             story_type=story_type,
-            num_images=num_scenes,
+            duration_minutes=duration,
+            num_scenes=num_scenes,
             template=template,
-            research_data=research_data,
-            duration_minutes=duration
+            research_data=research_data
         )
 
         script_text = result['script']
         gemini_prompts = result['image_prompts']
 
-        print(f"✅ BATCHED: {len(script_text)} chars + {len(gemini_prompts)} images in 1 call!")
-        print(f"   Words: {result['word_count']}")
+        print(f"✅ ADVANCED: {len(script_text):,} chars + {len(gemini_prompts)} images!")
+        print(f"   Method: {result['generation_method']}")
+        print(f"   Chunks: {result['chunks_used']}")
+        print(f"   Words: {result['word_count']:,}")
         print(f"   Images: {len(gemini_prompts)}")
 
         progress_state['progress'] = 50
         progress_state['status'] = 'generating_images'
 
-        # Convert Gemini prompts to scene dictionaries
+        # Convert advanced image prompts to scene dictionaries
         scenes = []
-        for i, prompt in enumerate(gemini_prompts):
-            scenes.append({
-                'image_description': prompt,  # Detailed Gemini-generated prompt
-                'content': prompt,
-                'scene_number': i + 1
-            })
+        for i, prompt_data in enumerate(gemini_prompts):
+            if isinstance(prompt_data, dict):
+                # New format from advanced generator
+                scenes.append({
+                    'image_description': prompt_data.get('image_prompt', str(prompt_data)),
+                    'content': prompt_data.get('image_prompt', str(prompt_data)),
+                    'scene_number': prompt_data.get('scene_number', i + 1),
+                    'mood': prompt_data.get('mood', 'cinematic'),
+                    'composition': prompt_data.get('composition', 'wide shot')
+                })
+            else:
+                # Fallback for string prompts
+                scenes.append({
+                    'image_description': str(prompt_data),
+                    'content': str(prompt_data),
+                    'scene_number': i + 1
+                })
 
         print(f"   ✅ Prepared {len(scenes)} scenes for image generation")
 

@@ -21,10 +21,32 @@ VIDEO_SETTINGS = {
     "bitrate": "8000k"
 }
 
+# ✅ DEDICATED API KEYS - Separate keys for different tasks
+GEMINI_API_KEYS = {
+    # 🎬 SCRIPT GENERATION - High-quality, chunked generation
+    "script_generation": "AIzaSyAGbzxD1mg2awU04T1ct2JXZOGy-2IJ95c",
+    
+    # 🎨 IMAGE PROMPTS - Optimized for SDXL generation
+    "image_prompts": "AIzaSyAfJVJhCoyH_1iaCYNJwMY43Yz_lz3Fa0w",
+    
+    # 🔄 BACKUP KEYS (if needed)
+    "backup_1": "AIzaSyAGbzxD1mg2awU04T1ct2JXZOGy-2IJ95c",
+    "backup_2": "AIzaSyAfJVJhCoyH_1iaCYNJwMY43Yz_lz3Fa0w"
+}
+
 GEMINI_SETTINGS = {
     "model": "gemini-2.0-flash-exp",  # ✅ Gemini 2.0 Flash (FREE & LATEST!)
     "temperature": 0.7,
-    "max_output_tokens": 8192
+    "max_output_tokens": 8192,
+    
+    # ✅ SMART CHUNKING - Prevents quota exhaustion
+    "enable_smart_chunking": True,
+    "max_chars_per_chunk": 12000,  # Safe chunk size
+    "chunk_overlap": 200,  # Overlap for continuity
+    
+    # ✅ SEPARATE GENERATION - Scripts and images separately
+    "separate_script_and_images": True,
+    "script_only_mode": True,  # Generate script first, images after
 }
 
 # Script length configurations
