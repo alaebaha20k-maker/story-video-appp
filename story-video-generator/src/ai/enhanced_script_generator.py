@@ -113,7 +113,7 @@ class EnhancedScriptGenerator:
         )
         
         # ✅ Generate with retry + automatic API key rotation + rate limiting
-        max_attempts = len(self.api_keys) * 2  # Try each key twice if needed
+        max_attempts = len(self.api_keys) * 2  # Try each key twice (8 attempts with 4 keys)
         for attempt in range(max_attempts):
             try:
                 # ✅ Rotate API key for each attempt
@@ -150,6 +150,9 @@ class EnhancedScriptGenerator:
                 self.character_names = self._extract_characters(script_text)
                 scenes = self._parse_scenes(script_text, num_scenes)
 
+                # ✅ Success - reset failure counter
+                rate_limiter.reset_failures()
+
                 logger.success(f"✅ Generated {len(script_text)} characters")
                 logger.info(f"   Words: {len(script_text.split())}")
                 logger.info(f"   Characters: {', '.join(self.character_names[:3])}")
@@ -169,19 +172,19 @@ class EnhancedScriptGenerator:
             except Exception as e:
                 # ✅ Handle 429 rate limit errors with automatic retry
                 if rate_limiter.is_rate_limit_error(e):
-                    wait_time = rate_limiter.handle_rate_limit_error(e, attempt)
+                    wait_time = rate_limiter.handle_rate_limit_error(e, attempt, api_key)
                     logger.warning(f"   ⏳ Rate limit hit - waiting {wait_time:.1f}s...")
                     time.sleep(wait_time)
 
-                    # Don't count this as a failed attempt, retry with same key
+                    # Retry with next key after cooldown
                     if attempt < max_attempts - 1:
-                        logger.info(f"   🔄 Retrying after rate limit...")
+                        logger.info(f"   🔄 Retrying with next API key after cooldown...")
                         continue
 
                 logger.error(f"   Attempt {attempt + 1} failed: {e}")
                 if attempt < max_attempts - 1:
                     logger.info(f"   🔄 Trying next API key...")
-                    time.sleep(1)
+                    time.sleep(2)
                 else:
                     raise
 

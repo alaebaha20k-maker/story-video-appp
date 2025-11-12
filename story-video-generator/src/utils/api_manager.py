@@ -16,7 +16,8 @@ class APIManager:
     GEMINI_API_KEYS = [
         "AIzaSyC3lCI117uyVbJkFOXI6BffwlUCLSdYIH0",  # Key 1
         "AIzaSyCLAEQSW3P1E499fxvw7i9k1ZELGdZIdrw",  # Key 2
-        "AIzaSyArtYUT_GHyEsHDT1oxNbBocHlGEGWTXfo"   # Key 3
+        "AIzaSyArtYUT_GHyEsHDT1oxNbBocHlGEGWTXfo",  # Key 3
+        "AIzaSyAyI5VYus18_vStkISQ-ioVw3zzaQFE0qo"   # Key 4 (NEW)
     ]
 
     def __init__(self):

@@ -20,15 +20,31 @@ class GeminiRateLimiter:
     def __init__(self):
         # Track last request time per API key
         self.last_request_time = {}
-        # Minimum delay between requests (seconds)
-        self.min_delay = 2.0  # 2 seconds between requests
+        # Track when keys hit rate limits
+        self.rate_limit_hits = {}
+        # Minimum delay between requests (seconds) - INCREASED for free tier
+        self.min_delay = 5.0  # 5 seconds between requests (was 2s)
         # Maximum retry attempts for 429 errors
-        self.max_retries = 5
+        self.max_retries = 8  # Increased from 5
+        # Track consecutive failures across all keys
+        self.consecutive_failures = 0
 
     def wait_if_needed(self, api_key: str):
         """Wait if we're making requests too quickly"""
         key_short = api_key[-8:]
 
+        # Check if this key recently hit rate limit
+        if key_short in self.rate_limit_hits:
+            time_since_limit = time.time() - self.rate_limit_hits[key_short]
+            # If key hit limit in last 60s, wait extra time
+            if time_since_limit < 60:
+                extra_wait = 60 - time_since_limit
+                print(f"   ⏰ Key recently hit limit - waiting extra {extra_wait:.1f}s...")
+                time.sleep(extra_wait)
+                # Clear the rate limit hit after waiting
+                del self.rate_limit_hits[key_short]
+
+        # Normal rate limiting
         if key_short in self.last_request_time:
             elapsed = time.time() - self.last_request_time[key_short]
             if elapsed < self.min_delay:
@@ -63,9 +79,19 @@ class GeminiRateLimiter:
             'resource exhausted' in error_str
         )
 
-    def handle_rate_limit_error(self, error: Exception, attempt: int) -> float:
+    def handle_rate_limit_error(self, error: Exception, attempt: int, api_key: str = None) -> float:
         """Handle rate limit error and return wait time"""
         error_str = str(error)
+
+        # Track consecutive failures
+        self.consecutive_failures += 1
+
+        # If we're failing a lot, implement longer cooldown
+        if self.consecutive_failures >= 3:
+            base_wait = 60  # Start with 60s for multiple failures
+            print(f"   🔥 Multiple rate limits hit ({self.consecutive_failures} times) - longer cooldown needed")
+        else:
+            base_wait = 0
 
         # Extract suggested delay from error
         retry_delay = self.extract_retry_delay(error_str)
@@ -74,10 +100,22 @@ class GeminiRateLimiter:
         if retry_delay == 15.0:  # Default value
             retry_delay = min(2 ** attempt, 60)  # Max 60 seconds
 
+        # Add base wait for consecutive failures
+        retry_delay = max(retry_delay, base_wait)
+
+        # Track when this key hit rate limit
+        if api_key:
+            key_short = api_key[-8:]
+            self.rate_limit_hits[key_short] = time.time()
+
         print(f"   ⚠️  Rate limit hit! Waiting {retry_delay:.1f}s before retry...")
         print(f"   💡 This is normal for free tier - automatic retry in progress...")
 
         return retry_delay
+
+    def reset_failures(self):
+        """Reset consecutive failure count after success"""
+        self.consecutive_failures = 0
 
 
 # Global instance
