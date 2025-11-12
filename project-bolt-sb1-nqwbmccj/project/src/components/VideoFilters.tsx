@@ -1,4 +1,4 @@
-import { Palette, Zap } from 'lucide-react';
+import { Palette, Zap, Film } from 'lucide-react';
 import { useVideoStore } from '../store/useVideoStore';
 
 const FILTERS = [
@@ -15,7 +15,7 @@ const FILTERS = [
 ];
 
 export const VideoFilters = () => {
-  const { colorFilter, setColorFilter, zoomEffect, setZoomEffect } = useVideoStore();
+  const { colorFilter, setColorFilter, zoomEffect, setZoomEffect, grainEffect, setGrainEffect } = useVideoStore();
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
@@ -43,6 +43,27 @@ export const VideoFilters = () => {
             </div>
             <p className="text-sm text-gray-600 mt-1">
               Smooth zoom on all images/videos (5% zoom in) - Creates dynamic motion
+            </p>
+          </div>
+        </label>
+      </div>
+
+      {/* Grain Effect Toggle */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4">
+        <label className="flex items-center space-x-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={grainEffect}
+            onChange={(e) => setGrainEffect(e.target.checked)}
+            className="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
+          />
+          <div className="flex-1">
+            <div className="flex items-center space-x-2">
+              <Film className="w-5 h-5 text-indigo-600" />
+              <span className="font-semibold text-gray-900">Grain Effect</span>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Cinematic film grain texture (20% opacity) - Adds vintage look
             </p>
           </div>
         </label>

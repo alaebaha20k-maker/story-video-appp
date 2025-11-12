@@ -32,7 +32,8 @@ interface VideoStore {
   // Filters and Effects
   colorFilter: string;
   zoomEffect: boolean;
-  
+  grainEffect: boolean;  // NEW: Grain/noise overlay effect (20% opacity)
+
   // Captions
   autoCaptions: boolean;  // NEW: Auto captions from script
   captionEnabled: boolean;
@@ -66,6 +67,7 @@ interface VideoStore {
 
   setColorFilter: (filter: string) => void;
   setZoomEffect: (enabled: boolean) => void;
+  setGrainEffect: (enabled: boolean) => void;  // NEW: Grain effect toggle
   setAutoCaptions: (enabled: boolean) => void;  // NEW
   setCaptionEnabled: (enabled: boolean) => void;
   setCaptionText: (text: string) => void;
@@ -103,7 +105,8 @@ export const useVideoStore = create<VideoStore>((set) => ({
   // Filters and Effects
   colorFilter: 'none',
   zoomEffect: false,
-  
+  grainEffect: false,  // NEW: Grain effect (default: off)
+
   // Captions
   autoCaptions: false,  // NEW: Auto captions from script
   captionEnabled: false,
@@ -137,6 +140,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
 
   setColorFilter: (colorFilter) => set({ colorFilter }),
   setZoomEffect: (zoomEffect) => set({ zoomEffect }),
+  setGrainEffect: (grainEffect) => set({ grainEffect }),  // NEW: Grain effect toggle
   setAutoCaptions: (autoCaptions) => set({ autoCaptions }),  // NEW
   setCaptionEnabled: (captionEnabled) => set({ captionEnabled }),
   setCaptionText: (captionText) => set({ captionText }),

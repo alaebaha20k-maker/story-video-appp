@@ -141,6 +141,7 @@ export const GeneratorPage = () => {
           voice_engine: store.voiceEngine,
           voice_speed: store.voiceSpeed,
           zoom_effect: store.zoomEffect,
+          grain_effect: store.grainEffect,  // ✅ NEW: Grain/noise overlay effect
           color_filter: store.colorFilter,
           visual_effects: false,
           auto_captions: store.autoCaptions,
