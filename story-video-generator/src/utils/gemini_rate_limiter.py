@@ -10,6 +10,7 @@ Implements:
 
 import time
 import re
+import threading
 from typing import Callable, Any, Optional
 from functools import wraps
 
@@ -18,73 +19,82 @@ class GeminiRateLimiter:
     """Rate limiter for Gemini API calls"""
 
     def __init__(self):
+        # 🔒 GLOBAL LOCK - Only ONE Gemini request at a time across ALL threads!
+        self.global_lock = threading.Lock()
         # Track last request time per API key
         self.last_request_time = {}
         # Track when keys hit rate limits
         self.rate_limit_hits = {}
         # Track request count per key in last 60s (for sliding window)
         self.request_history = {}  # {key: [timestamp1, timestamp2, ...]}
-        # Minimum delay between requests (seconds) - INCREASED for free tier
-        self.min_delay = 5.0  # 5 seconds between requests (was 2s)
+        # ⚡ AGGRESSIVE RATE LIMITING - Prevent 429 errors!
+        # Free tier: 15 req/60s = 4s minimum. Use 7s to be VERY SAFE.
+        self.min_delay = 7.0  # 7 seconds between requests (was 5s)
         # Maximum retry attempts for 429 errors
         self.max_retries = 8  # Increased from 5
         # Track consecutive failures across all keys
         self.consecutive_failures = 0
+        # Sliding window trigger threshold (out of 15 max)
+        self.sliding_window_trigger = 10  # Start waiting at 10 requests (was 14)
 
     def wait_if_needed(self, api_key: str):
         """Wait if we're making requests too quickly"""
-        key_short = api_key[-8:]
-        current_time = time.time()
+        # 🔒 CRITICAL: Acquire global lock to prevent parallel requests across threads
+        with self.global_lock:
+            key_short = api_key[-8:]
+            current_time = time.time()
 
-        # Clean old requests from history (older than 70s to be safe)
-        if key_short in self.request_history:
-            self.request_history[key_short] = [
-                t for t in self.request_history[key_short]
-                if current_time - t < 70
-            ]
+            # Clean old requests from history (older than 90s to be safe)
+            if key_short in self.request_history:
+                self.request_history[key_short] = [
+                    t for t in self.request_history[key_short]
+                    if current_time - t < 90
+                ]
 
-        # Check if this key recently hit rate limit
-        if key_short in self.rate_limit_hits:
-            time_since_limit = current_time - self.rate_limit_hits[key_short]
-            # If key hit limit in last 70s, wait extra time
-            if time_since_limit < 70:
-                extra_wait = 70 - time_since_limit
-                print(f"   ⏰ Key recently hit limit - waiting extra {extra_wait:.1f}s...")
-                time.sleep(extra_wait)
-                # Clear the rate limit hit after waiting
-                del self.rate_limit_hits[key_short]
-                # Clear request history for this key
-                if key_short in self.request_history:
-                    self.request_history[key_short] = []
+            # Check if this key recently hit rate limit
+            if key_short in self.rate_limit_hits:
+                time_since_limit = current_time - self.rate_limit_hits[key_short]
+                # If key hit limit in last 90s, wait extra time (AGGRESSIVE COOLDOWN)
+                if time_since_limit < 90:
+                    extra_wait = 90 - time_since_limit
+                    print(f"   ⏰ RATE LIMIT COOLDOWN: Key hit limit {time_since_limit:.0f}s ago - waiting {extra_wait:.1f}s more...")
+                    time.sleep(extra_wait)
+                    # Clear the rate limit hit after waiting
+                    del self.rate_limit_hits[key_short]
+                    # Clear request history for this key
+                    if key_short in self.request_history:
+                        self.request_history[key_short] = []
 
-        # Check sliding window: if key made 14+ requests in last 60s, wait
-        if key_short in self.request_history:
-            recent_requests = [t for t in self.request_history[key_short] if current_time - t < 60]
-            if len(recent_requests) >= 14:  # Leave room for 1 more (15 total)
-                oldest_request = min(recent_requests)
-                wait_time = 61 - (current_time - oldest_request)  # Wait for oldest to age out
-                if wait_time > 0:
-                    print(f"   🚦 Key has {len(recent_requests)} requests in last 60s - waiting {wait_time:.1f}s...")
+            # Check sliding window: if key made too many requests in last 60s, wait
+            if key_short in self.request_history:
+                recent_requests = [t for t in self.request_history[key_short] if current_time - t < 60]
+                if len(recent_requests) >= self.sliding_window_trigger:  # Aggressive threshold (10 of 15)
+                    oldest_request = min(recent_requests)
+                    wait_time = 65 - (current_time - oldest_request)  # Wait for oldest to age out (65s buffer)
+                    if wait_time > 0:
+                        print(f"   🚦 SLIDING WINDOW: {len(recent_requests)}/15 requests in last 60s - waiting {wait_time:.1f}s...")
+                        time.sleep(wait_time)
+                        # Clean up after waiting
+                        self.request_history[key_short] = [
+                            t for t in self.request_history[key_short]
+                            if current_time + wait_time - t < 60
+                        ]
+
+            # Normal rate limiting (min delay between requests)
+            if key_short in self.last_request_time:
+                elapsed = current_time - self.last_request_time[key_short]
+                if elapsed < self.min_delay:
+                    wait_time = self.min_delay - elapsed
+                    print(f"   ⏱️  MINIMUM DELAY: waiting {wait_time:.1f}s (7s minimum between requests)...")
                     time.sleep(wait_time)
-                    # Clean up after waiting
-                    self.request_history[key_short] = [
-                        t for t in self.request_history[key_short]
-                        if current_time + wait_time - t < 60
-                    ]
 
-        # Normal rate limiting (min delay between requests)
-        if key_short in self.last_request_time:
-            elapsed = current_time - self.last_request_time[key_short]
-            if elapsed < self.min_delay:
-                wait_time = self.min_delay - elapsed
-                print(f"   ⏱️  Rate limiting: waiting {wait_time:.1f}s before next request...")
-                time.sleep(wait_time)
+            # Record this request
+            self.last_request_time[key_short] = time.time()
+            if key_short not in self.request_history:
+                self.request_history[key_short] = []
+            self.request_history[key_short].append(time.time())
 
-        # Record this request
-        self.last_request_time[key_short] = time.time()
-        if key_short not in self.request_history:
-            self.request_history[key_short] = []
-        self.request_history[key_short].append(time.time())
+            print(f"   ✅ Rate limiter: Request approved for key ...{key_short}")
 
     def extract_retry_delay(self, error_message: str) -> float:
         """Extract retry delay from error message"""
@@ -166,7 +176,7 @@ class GeminiRateLimiter:
             # Penalty if key recently hit rate limit (very bad!)
             if key_short in self.rate_limit_hits:
                 time_since = current_time - self.rate_limit_hits[key_short]
-                if time_since < 70:
+                if time_since < 90:  # 90s cooldown
                     score -= 1000  # Heavy penalty - don't use this key!
                     continue
 
@@ -174,10 +184,10 @@ class GeminiRateLimiter:
             if key_short in self.request_history:
                 recent = [t for t in self.request_history[key_short] if current_time - t < 60]
                 requests_in_window = len(recent)
-                score -= requests_in_window * 10  # More requests = worse score
+                score -= requests_in_window * 15  # More requests = worse score (increased penalty)
 
-                if requests_in_window >= 14:
-                    score -= 500  # Very bad - almost at limit!
+                if requests_in_window >= self.sliding_window_trigger:  # Use same threshold (10)
+                    score -= 800  # Very bad - approaching limit!
 
             # Penalty based on recency
             if key_short in self.last_request_time:
