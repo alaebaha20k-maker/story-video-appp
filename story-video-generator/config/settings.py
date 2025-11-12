@@ -22,7 +22,7 @@ VIDEO_SETTINGS = {
 }
 
 GEMINI_SETTINGS = {
-    "model": "gemini-2.5-pro",  # ← MOST POWERFUL!
+    "model": "gemini-2.0-flash-exp",  # ✅ Gemini 2.0 Flash (FREE & LATEST!)
     "temperature": 0.7,
     "max_output_tokens": 8192
 }

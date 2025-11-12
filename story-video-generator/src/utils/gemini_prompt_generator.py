@@ -29,7 +29,7 @@ class GeminiPromptGenerator:
     def __init__(self):
         """Initialize Gemini prompt generator"""
         self.current_key_index = 0
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"  # ✅ Gemini 2.0 Flash (FREE)
 
     def _get_next_api_key(self) -> str:
         """Get next API key in rotation"""
