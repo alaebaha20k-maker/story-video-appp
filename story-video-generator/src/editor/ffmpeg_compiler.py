@@ -226,11 +226,12 @@ class FFmpegCompiler:
             filter_parts = []
             final_label = '0:v'  # Start with concatenated video
 
-            # ✅ NEW: Apply grain/noise effect (20% opacity, full video)
-            # This adds cinematic film grain texture to entire video
-            filter_parts.append(f"[{final_label}]noise=alls=15:allf=t+u,eq=brightness=0:contrast=1[vgrain]")
-            final_label = 'vgrain'
-            print(f"      🎞️  Grain effect: Applied (20% strength, cinematic texture)")
+            # ✅ Apply grain/noise effect if enabled (20% opacity, full video)
+            if grain_effect:
+                # This adds cinematic film grain texture to entire video
+                filter_parts.append(f"[{final_label}]noise=alls=15:allf=t+u,eq=brightness=0:contrast=1[vgrain]")
+                final_label = 'vgrain'
+                print(f"      🎞️  Grain effect: Applied (20% strength, cinematic texture)")
 
             # Apply color filter if specified
             if color_filter and color_filter != 'none' and color_filter in self.COLOR_FILTERS:
@@ -340,6 +341,7 @@ class FFmpegCompiler:
         output_path: Path,
         durations: List[float],
         zoom_effect: bool = True,
+        grain_effect: bool = False,  # ✅ NEW: Grain/noise overlay effect (20% opacity)
         caption_srt_path: Optional[str] = None,
         color_filter: str = 'none',  # ✅ NEW: Color filter option
         caption_style: str = 'simple',  # ✅ NEW: Caption style
@@ -473,17 +475,25 @@ class FFmpegCompiler:
         concat_filter = f"{concat_inputs}concat=n={len(processed_clips)}:v=1:a=0[vout]"
         filter_parts.append(concat_filter)
 
+        # Apply grain effect if enabled (20% opacity, full video)
+        if grain_effect:
+            filter_parts.append(f"[vout]noise=alls=15:allf=t+u,eq=brightness=0:contrast=1[vgrain]")
+            working_label = 'vgrain'
+            print(f"   🎞️  Grain effect: Applied (20% strength, cinematic texture)")
+        else:
+            working_label = 'vout'
+
         # Apply color filter if specified
         if color_filter and color_filter != 'none' and color_filter in self.COLOR_FILTERS:
             color_filter_str = self.COLOR_FILTERS[color_filter]
             if color_filter_str:
-                filter_parts.append(f"[vout]{color_filter_str}[vcolor]")
+                filter_parts.append(f"[{working_label}]{color_filter_str}[vcolor]")
                 final_label = 'vcolor'
                 print(f"   🎨 Color filter: {color_filter}")
             else:
-                final_label = 'vout'
+                final_label = working_label
         else:
-            final_label = 'vout'
+            final_label = working_label
 
         # Apply captions if provided
         if caption_srt_path and Path(caption_srt_path).exists():

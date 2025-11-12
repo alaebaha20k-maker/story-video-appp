@@ -494,6 +494,7 @@ def generate_video_background(data):
             Path(f"output/videos/{output_filename}"),
             durations,
             zoom_effect=zoom_effect,
+            grain_effect=grain_effect,  # ✅ NEW: Grain/noise overlay effect
             caption_srt_path=str(caption_srt_path) if caption_srt_path else None,
             color_filter=color_filter,  # ✅ NEW: Color filter
             caption_style=caption_style,  # ✅ NEW: Caption style
@@ -519,7 +520,7 @@ def generate_video_background(data):
 
 
 def generate_with_template_background(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, voice_speed=1.0,
-zoom_effect=True, enable_captions=False, color_filter='none', caption_style='simple', caption_position='bottom'):
+zoom_effect=True, grain_effect=False, enable_captions=False, color_filter='none', caption_style='simple', caption_position='bottom'):
     """✅ Background generation with template + research + voice selection + zoom effect + captions + color filters"""
     global progress_state
 
@@ -537,6 +538,7 @@ zoom_effect=True, enable_captions=False, color_filter='none', caption_style='sim
         print(f"🎤 Voice: {voice_id}")
         print(f"🎤 Speed: {voice_speed}x")
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"🎞️  Grain Effect: {'ENABLED' if grain_effect else 'DISABLED'}")
         print(f"📝 Auto Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
         
         # 📝 Generate script with Gemini (improved prompts!)
@@ -668,6 +670,7 @@ zoom_effect=True, enable_captions=False, color_filter='none', caption_style='sim
             Path(f"output/videos/{output_filename}"),
             durations,
             zoom_effect=zoom_effect,
+            grain_effect=grain_effect,  # ✅ NEW: Grain/noise overlay effect
             caption_srt_path=str(caption_srt_path) if caption_srt_path else None,
             color_filter=color_filter,  # ✅ NEW: Color filter
             caption_style=caption_style,  # ✅ NEW: Caption style
@@ -685,6 +688,7 @@ zoom_effect=True, enable_captions=False, color_filter='none', caption_style='sim
         print(f"   Voice: {voice_id}")
         print(f"   Speed: {voice_speed}x")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"   Grain Effect: {'ENABLED' if grain_effect else 'DISABLED'}")
         print(f"   Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
@@ -868,6 +872,7 @@ def generate_with_template_endpoint():
         voice_id = data.get('voice_id')
         voice_speed = float(data.get('voice_speed', 1.0))
         zoom_effect = data.get('zoom_effect', True)  # Default: True for better UX
+        grain_effect = data.get('grain_effect', False)  # Default: False (optional effect)
         enable_captions = data.get('enable_captions', False)  # Default: False
 
         print(f"\n🎬 Generating with template: {topic}")
@@ -879,6 +884,7 @@ def generate_with_template_endpoint():
         print(f"   Voice ID: {voice_id}")
         print(f"   Voice Speed: {voice_speed}x")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"   Grain Effect: {'ENABLED' if grain_effect else 'DISABLED'}")
         print(f"   Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
 
         progress_state = {
@@ -892,7 +898,7 @@ def generate_with_template_endpoint():
         
         thread = threading.Thread(
             target=generate_with_template_background,
-            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, voice_speed, zoom_effect, enable_captions)
+            args=(topic, story_type, template, research_data, duration, num_scenes, voice_engine, voice_id, voice_speed, zoom_effect, grain_effect, enable_captions)
         )
         thread.start()
 
@@ -903,6 +909,7 @@ def generate_with_template_endpoint():
             'used_research': research_data is not None,
             'voice_engine': voice_engine,
             'zoom_effect': zoom_effect,
+            'grain_effect': grain_effect,
             'enable_captions': enable_captions
         }), 200
     
@@ -1158,6 +1165,7 @@ def generate_mixed_media_background(
             Path(f"output/videos/{output_filename}"),
             durations,
             zoom_effect=zoom_effect,
+            grain_effect=grain_effect,  # ✅ NEW: Grain/noise overlay effect
             caption_srt_path=str(caption_srt_path) if caption_srt_path else None,
             color_filter=color_filter,  # ✅ NEW: Color filter
             caption_style=caption_style,  # ✅ NEW: Caption style
