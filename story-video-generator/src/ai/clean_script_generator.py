@@ -11,11 +11,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import google.generativeai as genai
 from typing import Dict, List, Optional
 import re
+import time
 
 from config.settings import GEMINI_SETTINGS
 from config.story_types import STORY_TYPES
 from src.utils.api_manager import api_manager
 from src.utils.logger import logger
+from src.utils.gemini_rate_limiter import rate_limiter  # ✅ NEW: Rate limiter
 
 
 class CleanScriptGenerator:
@@ -77,13 +79,16 @@ class CleanScriptGenerator:
             duration_minutes=duration_minutes
         )
 
-        # ✅ Generate with retry + automatic API key rotation
-        max_attempts = len(self.api_keys)  # Try all available keys
+        # ✅ Generate with retry + automatic API key rotation + rate limiting
+        max_attempts = len(self.api_keys) * 2  # Try each key twice if needed
         for attempt in range(max_attempts):
             try:
                 # ✅ Rotate API key for each attempt
                 api_key = self.api_keys[attempt % len(self.api_keys)]
                 logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key: ...{api_key[-8:]})...")
+
+                # ✅ Rate limiting: wait if making requests too quickly
+                rate_limiter.wait_if_needed(api_key)
 
                 # Reconfigure with new key
                 genai.configure(api_key=api_key)
@@ -122,9 +127,24 @@ class CleanScriptGenerator:
                 }
 
             except Exception as e:
+                error_str = str(e)
+
+                # ✅ Handle 429 rate limit errors with automatic retry
+                if rate_limiter.is_rate_limit_error(e):
+                    wait_time = rate_limiter.handle_rate_limit_error(e, attempt)
+                    logger.warning(f"   ⏳ Rate limit hit - waiting {wait_time:.1f}s...")
+                    time.sleep(wait_time)
+
+                    # Don't count this as a failed attempt, retry with same key
+                    if attempt < max_attempts - 1:
+                        logger.info(f"   🔄 Retrying after rate limit...")
+                        continue
+
+                # Other errors
                 logger.error(f"   Attempt {attempt + 1} failed: {e}")
                 if attempt < max_attempts - 1:
                     logger.info(f"   🔄 Trying next API key...")
+                    time.sleep(1)  # Small delay before next key
                 else:
                     raise
 
@@ -365,11 +385,15 @@ Each prompt MUST:
 Return ONLY the numbered list of {num_images} prompts, nothing else!
 """
 
-        # ✅ Try with automatic key rotation
-        for attempt in range(len(self.api_keys)):
+        # ✅ Try with automatic key rotation + rate limiting
+        max_attempts = len(self.api_keys) * 2  # Try each key twice if needed
+        for attempt in range(max_attempts):
             try:
                 api_key = self.api_keys[attempt % len(self.api_keys)]
-                logger.info(f"   Attempt {attempt + 1}/{len(self.api_keys)} (Key: ...{api_key[-8:]})...")
+                logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key: ...{api_key[-8:]})...")
+
+                # ✅ Rate limiting: wait if making requests too quickly
+                rate_limiter.wait_if_needed(api_key)
 
                 # Reconfigure with new key
                 genai.configure(api_key=api_key)
@@ -408,9 +432,21 @@ Return ONLY the numbered list of {num_images} prompts, nothing else!
                 return prompts
 
             except Exception as e:
+                # ✅ Handle 429 rate limit errors with automatic retry
+                if rate_limiter.is_rate_limit_error(e):
+                    wait_time = rate_limiter.handle_rate_limit_error(e, attempt)
+                    logger.warning(f"   ⏳ Rate limit hit - waiting {wait_time:.1f}s...")
+                    time.sleep(wait_time)
+
+                    # Don't count this as a failed attempt, retry with same key
+                    if attempt < max_attempts - 1:
+                        logger.info(f"   🔄 Retrying after rate limit...")
+                        continue
+
                 logger.error(f"   ❌ Attempt {attempt + 1} failed: {e}")
-                if attempt < len(self.api_keys) - 1:
+                if attempt < max_attempts - 1:
                     logger.info(f"   🔄 Trying next API key...")
+                    time.sleep(1)
                     continue
 
         # All keys failed - fallback
