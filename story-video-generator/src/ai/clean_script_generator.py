@@ -84,12 +84,16 @@ class CleanScriptGenerator:
             duration_minutes=duration_minutes
         )
 
-        # ✅ Generate with retry + automatic API key rotation + rate limiting
+        # ✅ Generate with retry + SMART API key selection + rate limiting
         max_attempts = len(self.api_keys) * 2
         for attempt in range(max_attempts):
             try:
-                api_key = self.api_keys[attempt % len(self.api_keys)]
-                logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key: ...{api_key[-8:]})...")
+                # 🎯 SMART KEY SELECTION: Pick key with most capacity available
+                best_key_idx, reason = rate_limiter.get_best_available_key(self.api_keys)
+                api_key = self.api_keys[best_key_idx]
+                logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key {best_key_idx+1}: ...{api_key[-8:]})...")
+                if attempt == 0:  # Show reasoning on first attempt
+                    logger.info(f"   📊 Key selection: {reason}")
 
                 # ✅ Rate limiting
                 rate_limiter.wait_if_needed(api_key)
@@ -183,13 +187,14 @@ class CleanScriptGenerator:
             duration_minutes=duration_minutes
         )
 
-        # ✅ Generate with retry + automatic API key rotation + rate limiting
+        # ✅ Generate with retry + SMART API key selection + rate limiting
         max_attempts = len(self.api_keys) * 2  # Try each key twice (now 8 attempts with 4 keys)
         for attempt in range(max_attempts):
             try:
-                # ✅ Rotate API key for each attempt
-                api_key = self.api_keys[attempt % len(self.api_keys)]
-                logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key: ...{api_key[-8:]})...")
+                # 🎯 SMART KEY SELECTION: Pick key with most capacity available
+                best_key_idx, reason = rate_limiter.get_best_available_key(self.api_keys)
+                api_key = self.api_keys[best_key_idx]
+                logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key {best_key_idx+1}: ...{api_key[-8:]})...")
 
                 # ✅ Rate limiting: wait if making requests too quickly
                 rate_limiter.wait_if_needed(api_key)
@@ -496,13 +501,14 @@ Each prompt MUST:
 Return ONLY the numbered list of {num_images} prompts, nothing else!
 """
 
-        # ✅ Try with automatic key rotation + rate limiting
+        # ✅ Try with SMART key selection + rate limiting
         max_attempts = len(self.api_keys) * 2  # Try each key twice (8 attempts with 4 keys)
         for attempt in range(max_attempts):
             try:
-                # ✅ OPTIMIZATION: Start with offset key to avoid collision with script generation
-                api_key = self.api_keys[(attempt + start_key_offset) % len(self.api_keys)]
-                logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key: ...{api_key[-8:]})...")
+                # 🎯 SMART KEY SELECTION: Pick key with most capacity available
+                best_key_idx, reason = rate_limiter.get_best_available_key(self.api_keys)
+                api_key = self.api_keys[best_key_idx]
+                logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key {best_key_idx+1}: ...{api_key[-8:]})...")
 
                 # ✅ Rate limiting: wait if making requests too quickly
                 rate_limiter.wait_if_needed(api_key)

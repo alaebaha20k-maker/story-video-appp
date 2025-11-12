@@ -22,6 +22,8 @@ class GeminiRateLimiter:
         self.last_request_time = {}
         # Track when keys hit rate limits
         self.rate_limit_hits = {}
+        # Track request count per key in last 60s (for sliding window)
+        self.request_history = {}  # {key: [timestamp1, timestamp2, ...]}
         # Minimum delay between requests (seconds) - INCREASED for free tier
         self.min_delay = 5.0  # 5 seconds between requests (was 2s)
         # Maximum retry attempts for 429 errors
@@ -32,27 +34,57 @@ class GeminiRateLimiter:
     def wait_if_needed(self, api_key: str):
         """Wait if we're making requests too quickly"""
         key_short = api_key[-8:]
+        current_time = time.time()
+
+        # Clean old requests from history (older than 70s to be safe)
+        if key_short in self.request_history:
+            self.request_history[key_short] = [
+                t for t in self.request_history[key_short]
+                if current_time - t < 70
+            ]
 
         # Check if this key recently hit rate limit
         if key_short in self.rate_limit_hits:
-            time_since_limit = time.time() - self.rate_limit_hits[key_short]
-            # If key hit limit in last 60s, wait extra time
-            if time_since_limit < 60:
-                extra_wait = 60 - time_since_limit
+            time_since_limit = current_time - self.rate_limit_hits[key_short]
+            # If key hit limit in last 70s, wait extra time
+            if time_since_limit < 70:
+                extra_wait = 70 - time_since_limit
                 print(f"   ⏰ Key recently hit limit - waiting extra {extra_wait:.1f}s...")
                 time.sleep(extra_wait)
                 # Clear the rate limit hit after waiting
                 del self.rate_limit_hits[key_short]
+                # Clear request history for this key
+                if key_short in self.request_history:
+                    self.request_history[key_short] = []
 
-        # Normal rate limiting
+        # Check sliding window: if key made 14+ requests in last 60s, wait
+        if key_short in self.request_history:
+            recent_requests = [t for t in self.request_history[key_short] if current_time - t < 60]
+            if len(recent_requests) >= 14:  # Leave room for 1 more (15 total)
+                oldest_request = min(recent_requests)
+                wait_time = 61 - (current_time - oldest_request)  # Wait for oldest to age out
+                if wait_time > 0:
+                    print(f"   🚦 Key has {len(recent_requests)} requests in last 60s - waiting {wait_time:.1f}s...")
+                    time.sleep(wait_time)
+                    # Clean up after waiting
+                    self.request_history[key_short] = [
+                        t for t in self.request_history[key_short]
+                        if current_time + wait_time - t < 60
+                    ]
+
+        # Normal rate limiting (min delay between requests)
         if key_short in self.last_request_time:
-            elapsed = time.time() - self.last_request_time[key_short]
+            elapsed = current_time - self.last_request_time[key_short]
             if elapsed < self.min_delay:
                 wait_time = self.min_delay - elapsed
                 print(f"   ⏱️  Rate limiting: waiting {wait_time:.1f}s before next request...")
                 time.sleep(wait_time)
 
+        # Record this request
         self.last_request_time[key_short] = time.time()
+        if key_short not in self.request_history:
+            self.request_history[key_short] = []
+        self.request_history[key_short].append(time.time())
 
     def extract_retry_delay(self, error_message: str) -> float:
         """Extract retry delay from error message"""
@@ -116,6 +148,48 @@ class GeminiRateLimiter:
     def reset_failures(self):
         """Reset consecutive failure count after success"""
         self.consecutive_failures = 0
+
+    def get_best_available_key(self, api_keys: list) -> tuple:
+        """
+        Select the best API key to use based on recent usage
+        Returns: (best_key_index, reason)
+        """
+        current_time = time.time()
+        best_key = 0
+        best_score = -9999
+        best_reason = ""
+
+        for i, api_key in enumerate(api_keys):
+            key_short = api_key[-8:]
+            score = 100  # Start with perfect score
+
+            # Penalty if key recently hit rate limit (very bad!)
+            if key_short in self.rate_limit_hits:
+                time_since = current_time - self.rate_limit_hits[key_short]
+                if time_since < 70:
+                    score -= 1000  # Heavy penalty - don't use this key!
+                    continue
+
+            # Penalty based on requests in last 60s
+            if key_short in self.request_history:
+                recent = [t for t in self.request_history[key_short] if current_time - t < 60]
+                requests_in_window = len(recent)
+                score -= requests_in_window * 10  # More requests = worse score
+
+                if requests_in_window >= 14:
+                    score -= 500  # Very bad - almost at limit!
+
+            # Penalty based on recency
+            if key_short in self.last_request_time:
+                seconds_since_last = current_time - self.last_request_time[key_short]
+                score += seconds_since_last  # More time = better score
+
+            if score > best_score:
+                best_score = score
+                best_key = i
+                best_reason = f"Score: {score:.0f}, Recent requests: {len(recent) if key_short in self.request_history and 'recent' in locals() else 0}/15"
+
+        return (best_key, best_reason)
 
 
 # Global instance
