@@ -542,63 +542,39 @@ zoom_effect=True, grain_effect=False, enable_captions=False, color_filter='none'
         print(f"🎞️  Grain Effect: {'ENABLED' if grain_effect else 'DISABLED'}")
         print(f"📝 Auto Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
 
-        # 📝 Step 1: Generate CLEAN script with Gemini (NO image prompts!)
-        print("✍️  Generating clean script (no image prompts - perfect for TTS)...")
-        result = clean_script_generator.generate_clean_script(
+        # 🚀 BATCHED GENERATION - Script + Image Prompts in ONE API call!
+        print("🚀 Generating script + image prompts in SINGLE batched request...")
+        print("   This uses only 1 API request instead of 2 = 2x faster!")
+
+        result = clean_script_generator.generate_script_and_images_batch(
             topic=topic,
             story_type=story_type,
+            num_images=num_scenes,
             template=template,
             research_data=research_data,
             duration_minutes=duration
         )
 
         script_text = result['script']
-        print(f"✅ Clean script generated: {len(script_text)} chars, {result['word_count']} words")
+        gemini_prompts = result['image_prompts']
 
-        progress_state['progress'] = 45
-        progress_state['status'] = 'generating_image_prompts'
+        print(f"✅ BATCHED: {len(script_text)} chars + {len(gemini_prompts)} images in 1 call!")
+        print(f"   Words: {result['word_count']}")
+        print(f"   Images: {len(gemini_prompts)}")
 
-        # 📝 Step 2: Generate image prompts SEPARATELY from script
-        print("🎨 Generating image prompts separately from clean script...")
+        progress_state['progress'] = 50
+        progress_state['status'] = 'generating_images'
 
-        try:
-            gemini_prompts = clean_script_generator.generate_image_prompts(
-                script=script_text,
-                topic=topic,
-                story_type=story_type,
-                num_images=num_scenes
-            )
+        # Convert Gemini prompts to scene dictionaries
+        scenes = []
+        for i, prompt in enumerate(gemini_prompts):
+            scenes.append({
+                'image_description': prompt,  # Detailed Gemini-generated prompt
+                'content': prompt,
+                'scene_number': i + 1
+            })
 
-            # Convert Gemini prompts to scene dictionaries
-            scenes = []
-            for i, prompt in enumerate(gemini_prompts):
-                scenes.append({
-                    'image_description': prompt,  # Detailed Gemini-generated prompt
-                    'content': prompt,
-                    'scene_number': i + 1
-                })
-
-            print(f"   ✅ Created {len(scenes)} AI-generated image prompts")
-
-        except Exception as e:
-            print(f"   ⚠️  Gemini error: {e}")
-            print(f"   🔄 Falling back to scene extraction...")
-
-            # Fallback: Use scenes from result if available
-            if 'scenes' in result and result['scenes']:
-                scenes = result['scenes'][:num_scenes]
-                print(f"   Using {len(scenes)} scenes from script generator")
-            else:
-                # Last resort: Extract from script
-                story_parts = script_text.split('.')[:num_scenes]
-                scenes = []
-                for i, part in enumerate(story_parts):
-                    if part.strip():
-                        scenes.append({
-                            'image_description': f"{part.strip()[:100]}, cinematic style",
-                            'content': part.strip()[:100],
-                            'scene_number': i + 1
-                        })
+        print(f"   ✅ Prepared {len(scenes)} scenes for image generation")
 
         progress_state['progress'] = 50
         progress_state['status'] = 'generating_images'
