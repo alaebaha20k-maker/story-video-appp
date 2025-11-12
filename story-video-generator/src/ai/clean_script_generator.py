@@ -78,15 +78,18 @@ class CleanScriptGenerator:
         # Calculate target characters and determine chunking strategy
         target_chars = duration_minutes * 150 * 5  # 150 words/min × 5 chars/word
 
-        # Determine number of chunks needed based on SCRIPT_LENGTHS
+        # Determine number of chunks needed (based on Gemini output limits + quality)
+        # Gemini free tier works best with smaller outputs
         from config.settings import SCRIPT_LENGTHS
         num_chunks = 1
-        if target_chars > 60000:  # 100k range
+        if target_chars > 60000:  # 80+ min videos
+            num_chunks = 4
+        elif target_chars > 40000:  # 50+ min videos
             num_chunks = 3
-        elif target_chars > 50000:  # 70k range
+        elif target_chars > 20000:  # 25+ min videos
             num_chunks = 2
-        elif target_chars > 25000:  # 30k+ range
-            num_chunks = 1  # Still 1 chunk but we'll monitor
+        else:  # 10-20 min videos
+            num_chunks = 1
 
         if num_chunks > 1:
             logger.info(f"📊 CHUNKED generation: {target_chars} chars = {num_chunks} chunks")
