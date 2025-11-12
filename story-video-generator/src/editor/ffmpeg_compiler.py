@@ -224,13 +224,19 @@ class FFmpegCompiler:
 
             # Build filter chain for pass 2
             filter_parts = []
-            final_label = 'vout'
+            final_label = '0:v'  # Start with concatenated video
+
+            # ✅ NEW: Apply grain/noise effect (20% opacity, full video)
+            # This adds cinematic film grain texture to entire video
+            filter_parts.append(f"[{final_label}]noise=alls=15:allf=t+u,eq=brightness=0:contrast=1[vgrain]")
+            final_label = 'vgrain'
+            print(f"      🎞️  Grain effect: Applied (20% strength, cinematic texture)")
 
             # Apply color filter if specified
             if color_filter and color_filter != 'none' and color_filter in self.COLOR_FILTERS:
                 color_filter_str = self.COLOR_FILTERS[color_filter]
                 if color_filter_str:
-                    filter_parts.append(f"[0:v]{color_filter_str}[vcolor]")
+                    filter_parts.append(f"[{final_label}]{color_filter_str}[vcolor]")
                     final_label = 'vcolor'
                     print(f"      🎨 Color filter: {color_filter}")
 
