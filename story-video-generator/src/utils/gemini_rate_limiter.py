@@ -30,8 +30,8 @@ class GeminiRateLimiter:
         # ⚡ AGGRESSIVE RATE LIMITING - Prevent 429 errors!
         # Free tier: 15 req/60s = 4s minimum. Use 7s to be VERY SAFE.
         self.min_delay = 7.0  # 7 seconds between requests (was 5s)
-        # Maximum retry attempts for 429 errors
-        self.max_retries = 8  # Increased from 5
+        # Maximum retry attempts for 429 errors (REDUCED per best practices)
+        self.max_retries = 2  # Only 1 retry after initial attempt (was 8)
         # Track consecutive failures across all keys
         self.consecutive_failures = 0
         # Sliding window trigger threshold (out of 15 max)
@@ -125,33 +125,23 @@ class GeminiRateLimiter:
         """Handle rate limit error and return wait time"""
         error_str = str(error)
 
-        # Track consecutive failures
-        self.consecutive_failures += 1
-
-        # If we're failing a lot, implement longer cooldown
-        if self.consecutive_failures >= 3:
-            base_wait = 60  # Start with 60s for multiple failures
-            print(f"   🔥 Multiple rate limits hit ({self.consecutive_failures} times) - longer cooldown needed")
-        else:
-            base_wait = 0
-
-        # Extract suggested delay from error
-        retry_delay = self.extract_retry_delay(error_str)
-
-        # Use exponential backoff if no delay suggested
-        if retry_delay == 15.0:  # Default value
-            retry_delay = min(2 ** attempt, 60)  # Max 60 seconds
-
-        # Add base wait for consecutive failures
-        retry_delay = max(retry_delay, base_wait)
-
         # Track when this key hit rate limit
         if api_key:
             key_short = api_key[-8:]
             self.rate_limit_hits[key_short] = time.time()
 
-        print(f"   ⚠️  Rate limit hit! Waiting {retry_delay:.1f}s before retry...")
-        print(f"   💡 This is normal for free tier - automatic retry in progress...")
+        # Extract suggested delay from error (Gemini provides this)
+        retry_delay = self.extract_retry_delay(error_str)
+
+        # If no delay suggested, use 90s (one full sliding window)
+        if retry_delay == 15.0:  # Default value means no delay found
+            retry_delay = 90.0  # Wait for full sliding window to clear
+            print(f"   ⚠️  Rate limit hit! No retry delay provided - waiting {retry_delay:.0f}s (full sliding window)...")
+        else:
+            # Use server's suggested delay
+            print(f"   ⚠️  Rate limit hit! Using server's suggested delay: {retry_delay:.1f}s...")
+
+        print(f"   💡 Attempt {attempt + 1}/{self.max_retries} - This may indicate your API key was used recently")
 
         return retry_delay
 
