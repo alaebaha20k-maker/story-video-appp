@@ -551,41 +551,56 @@ zoom_effect=True, enable_captions=False, color_filter='none', caption_style='sim
 
         script_text = result['script']
 
-        progress_state['progress'] = 50
-        progress_state['status'] = 'generating_images'
+        progress_state['progress'] = 45
+        progress_state['status'] = 'generating_image_prompts'
 
-        print("🎨 Generating images...")
-        
-        # ✅ FIX: Use scenes from result if available (MUCH BETTER VARIETY!)
-        if 'scenes' in result and result['scenes']:
-            # Use the structured scenes from script generator - BEST QUALITY!
-            scenes = result['scenes'][:num_scenes]
-            print(f"   Using {len(scenes)} varied scenes from script generator")
-        else:
-            # Fallback: Extract image prompts from script
-            image_prompts = re.findall(r'IMAGE:\s*(.+?)(?:\n|$)', script_text, re.IGNORECASE)
-            
-            if not image_prompts or len(image_prompts) < num_scenes:
-                # Create VARIED prompts based on story progression
-                print(f"   ⚠️  Creating varied prompts (no scenes in result)")
-                story_parts = script_text.split('.')[:num_scenes]
-                image_prompts = []
-                for i, part in enumerate(story_parts):
-                    if part.strip():
-                        # Use actual story content for variety!
-                        image_prompts.append(f"{part.strip()[:100]}")
-                    else:
-                        image_prompts.append(f"{topic}, scene {i+1}, {story_type} atmosphere")
-            
-            # Convert string prompts to scene dictionaries
+        # ✅ NEW: Generate DETAILED image prompts using Gemini API
+        print("🤖 Generating high-quality image prompts with Gemini AI...")
+        from src.utils.gemini_prompt_generator import gemini_generator
+
+        try:
+            gemini_prompts = gemini_generator.generate_image_prompts(
+                script=script_text,
+                num_images=num_scenes,
+                style='cinematic'  # Match image style
+            )
+
+            # Convert Gemini prompts to scene dictionaries
             scenes = []
-            for i, prompt in enumerate(image_prompts[:num_scenes]):
+            for i, prompt in enumerate(gemini_prompts):
                 scenes.append({
-                    'image_description': prompt,
+                    'image_description': prompt,  # Detailed Gemini-generated prompt
                     'content': prompt,
                     'scene_number': i + 1
                 })
-        
+
+            print(f"   ✅ Created {len(scenes)} AI-generated image prompts")
+
+        except Exception as e:
+            print(f"   ⚠️  Gemini error: {e}")
+            print(f"   🔄 Falling back to scene extraction...")
+
+            # Fallback: Use scenes from result if available
+            if 'scenes' in result and result['scenes']:
+                scenes = result['scenes'][:num_scenes]
+                print(f"   Using {len(scenes)} scenes from script generator")
+            else:
+                # Last resort: Extract from script
+                story_parts = script_text.split('.')[:num_scenes]
+                scenes = []
+                for i, part in enumerate(story_parts):
+                    if part.strip():
+                        scenes.append({
+                            'image_description': f"{part.strip()[:100]}, cinematic style",
+                            'content': part.strip()[:100],
+                            'scene_number': i + 1
+                        })
+
+        progress_state['progress'] = 50
+        progress_state['status'] = 'generating_images'
+
+        print("🎨 Generating images with AI prompts...")
+
         # Generate images
         image_gen = create_image_generator('cinematic_film', story_type)
         characters = {char: f"{char}, character" for char in result.get('characters', [])[:3]}
