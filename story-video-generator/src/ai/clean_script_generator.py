@@ -317,11 +317,15 @@ NO preamble, NO commentary - JUST the spoken narrative!
         script: str,
         topic: str,
         story_type: str,
-        num_images: int = 10
+        num_images: int = 10,
+        start_key_offset: int = 2  # ✅ Start with different key to avoid collision with script gen
     ) -> List[str]:
         """
         Generate image prompts SEPARATELY from script
         Takes clean script and creates N visual prompts for SDXL
+
+        Args:
+            start_key_offset: Which key to start with (default 2 to avoid collision with script gen)
         """
 
         logger.info(f"🎨 Generating {num_images} image prompts from script")
@@ -392,7 +396,8 @@ Return ONLY the numbered list of {num_images} prompts, nothing else!
         max_attempts = len(self.api_keys) * 2  # Try each key twice (8 attempts with 4 keys)
         for attempt in range(max_attempts):
             try:
-                api_key = self.api_keys[attempt % len(self.api_keys)]
+                # ✅ OPTIMIZATION: Start with offset key to avoid collision with script generation
+                api_key = self.api_keys[(attempt + start_key_offset) % len(self.api_keys)]
                 logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key: ...{api_key[-8:]})...")
 
                 # ✅ Rate limiting: wait if making requests too quickly
