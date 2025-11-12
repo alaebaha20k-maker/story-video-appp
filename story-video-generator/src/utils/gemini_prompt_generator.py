@@ -19,11 +19,9 @@ from typing import List, Dict, Optional
 class GeminiPromptGenerator:
     """Generate detailed image prompts using Google Gemini API"""
 
-    # ✅ Multiple API keys with automatic rotation
+    # 🔍 SINGLE API KEY - For dashboard monitoring
     API_KEYS = [
-        "AIzaSyC3lCI117uyVbJkFOXI6BffwlUCLSdYIH0",
-        "AIzaSyCLAEQSW3P1E499fxvw7i9k1ZELGdZIdrw",
-        "AIzaSyArtYUT_GHyEsHDT1oxNbBocHlGEGWTXfo"
+        "AIzaSyAyI5VYus18_vStkISQ-ioVw3zzaQFE0qo"   # Single key for clear monitoring
     ]
 
     def __init__(self):

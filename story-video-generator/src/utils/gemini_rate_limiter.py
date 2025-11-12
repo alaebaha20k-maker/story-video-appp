@@ -258,7 +258,7 @@ if __name__ == "__main__":
 
     # Test rate limiting
     print("1. Testing rate limiting (2s delay):")
-    api_key = "AIzaSyC3lCI117uyVbJkFOXI6BffwlUCLSdYIH0"
+    api_key = "AIzaSyAyI5VYus18_vStkISQ-ioVw3zzaQFE0qo"  # Single key for monitoring
 
     for i in range(3):
         print(f"\n   Request {i+1}:")
