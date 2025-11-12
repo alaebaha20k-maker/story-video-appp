@@ -20,11 +20,13 @@ class ImagePromptExtractor:
     """Generates detailed image prompts for AI image generation"""
 
     def __init__(self):
-        api_key = api_manager.get_key('gemini')
-        if not api_key:
-            raise ValueError("Gemini API key required!")
+        # ✅ Get all Gemini API keys for rotation
+        self.api_keys = api_manager.get_all_gemini_keys()
+        if not self.api_keys:
+            raise ValueError("Gemini API keys required!")
 
-        genai.configure(api_key=api_key)
+        # Configure with first key initially
+        genai.configure(api_key=self.api_keys[0])
         self.model = genai.GenerativeModel(
             model_name=GEMINI_SETTINGS['model'],
             generation_config={
@@ -34,6 +36,7 @@ class ImagePromptExtractor:
                 "max_output_tokens": 8192,
             }
         )
+        print(f"   API Keys: {len(self.api_keys)} keys with automatic rotation")
 
     def generate_prompts(
         self,

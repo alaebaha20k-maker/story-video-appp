@@ -22,11 +22,13 @@ class CleanScriptGenerator:
     """Generate HIGH-QUALITY scripts WITHOUT image prompts for perfect TTS"""
 
     def __init__(self):
-        api_key = api_manager.get_key('gemini')
-        if not api_key:
-            raise ValueError("Gemini API key required!")
+        # ✅ Get all Gemini API keys for rotation
+        self.api_keys = api_manager.get_all_gemini_keys()
+        if not self.api_keys:
+            raise ValueError("Gemini API keys required!")
 
-        genai.configure(api_key=api_key)
+        # Configure with first key initially
+        genai.configure(api_key=self.api_keys[0])
         self.model = genai.GenerativeModel(
             model_name=GEMINI_SETTINGS['model'],
             generation_config={
@@ -38,6 +40,7 @@ class CleanScriptGenerator:
         )
 
         print(f"🏆 Clean Script Generator (Gemini) initialized")
+        print(f"   API Keys: {len(self.api_keys)} keys with automatic rotation")
         print(f"   Focus: HIGH-QUALITY scripts for voice narration")
         print(f"   NO image prompts in script (generated separately)")
 
@@ -74,13 +77,27 @@ class CleanScriptGenerator:
             duration_minutes=duration_minutes
         )
 
-        # Generate with retry
-        max_attempts = 3
+        # ✅ Generate with retry + automatic API key rotation
+        max_attempts = len(self.api_keys)  # Try all available keys
         for attempt in range(max_attempts):
             try:
-                logger.info(f"   Attempt {attempt + 1}/{max_attempts}...")
+                # ✅ Rotate API key for each attempt
+                api_key = self.api_keys[attempt % len(self.api_keys)]
+                logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key: ...{api_key[-8:]})...")
 
-                response = self.model.generate_content(prompt)
+                # Reconfigure with new key
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(
+                    model_name=GEMINI_SETTINGS['model'],
+                    generation_config={
+                        "temperature": 0.75,
+                        "top_p": 0.92,
+                        "top_k": 50,
+                        "max_output_tokens": 16384,
+                    }
+                )
+
+                response = model.generate_content(prompt)
                 script_text = response.text
 
                 # Clean output
@@ -88,11 +105,12 @@ class CleanScriptGenerator:
 
                 # Validate
                 if len(script_text) < 500:
-                    logger.warning("   Script too short, retrying...")
+                    logger.warning("   Script too short, retrying with next key...")
                     continue
 
                 logger.success(f"✅ Generated {len(script_text)} characters")
                 logger.info(f"   Words: {len(script_text.split())}")
+                logger.info(f"   Used API Key: ...{api_key[-8:]}")
 
                 return {
                     "script": script_text,
@@ -105,10 +123,12 @@ class CleanScriptGenerator:
 
             except Exception as e:
                 logger.error(f"   Attempt {attempt + 1} failed: {e}")
-                if attempt == max_attempts - 1:
+                if attempt < max_attempts - 1:
+                    logger.info(f"   🔄 Trying next API key...")
+                else:
                     raise
 
-        raise Exception("Failed to generate script after all attempts")
+        raise Exception("Failed to generate script after all attempts with all API keys")
 
     def _build_clean_script_prompt(
         self,
@@ -345,35 +365,58 @@ Each prompt MUST:
 Return ONLY the numbered list of {num_images} prompts, nothing else!
 """
 
-        try:
-            response = self.model.generate_content(prompt)
-            prompts_text = response.text
+        # ✅ Try with automatic key rotation
+        for attempt in range(len(self.api_keys)):
+            try:
+                api_key = self.api_keys[attempt % len(self.api_keys)]
+                logger.info(f"   Attempt {attempt + 1}/{len(self.api_keys)} (Key: ...{api_key[-8:]})...")
 
-            # Extract numbered prompts
-            lines = prompts_text.strip().split('\n')
-            prompts = []
+                # Reconfigure with new key
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(
+                    model_name=GEMINI_SETTINGS['model'],
+                    generation_config={
+                        "temperature": 0.75,
+                        "top_p": 0.92,
+                        "top_k": 50,
+                        "max_output_tokens": 8192,
+                    }
+                )
 
-            for line in lines:
-                # Remove numbering and clean
-                clean_line = re.sub(r'^\d+\.\s*', '', line).strip()
-                if clean_line and len(clean_line) > 20:
-                    prompts.append(clean_line)
+                response = model.generate_content(prompt)
+                prompts_text = response.text
 
-            # Ensure we have exactly num_images
-            if len(prompts) < num_images:
-                logger.warning(f"   ⚠️ Only generated {len(prompts)}/{num_images} prompts")
+                # Extract numbered prompts
+                lines = prompts_text.strip().split('\n')
+                prompts = []
 
-            prompts = prompts[:num_images]  # Take only what we need
+                for line in lines:
+                    # Remove numbering and clean
+                    clean_line = re.sub(r'^\d+\.\s*', '', line).strip()
+                    if clean_line and len(clean_line) > 20:
+                        prompts.append(clean_line)
 
-            logger.success(f"✅ Generated {len(prompts)} image prompts")
+                # Ensure we have exactly num_images
+                if len(prompts) < num_images:
+                    logger.warning(f"   ⚠️ Only generated {len(prompts)}/{num_images} prompts")
 
-            return prompts
+                prompts = prompts[:num_images]  # Take only what we need
 
-        except Exception as e:
-            logger.error(f"   ❌ Failed to generate image prompts: {e}")
-            # Fallback: Generate basic prompts
-            return [f"{topic}, cinematic scene {i+1}, professional photography, high detail"
-                    for i in range(num_images)]
+                logger.success(f"✅ Generated {len(prompts)} image prompts")
+                logger.info(f"   Used API Key: ...{api_key[-8:]}")
+
+                return prompts
+
+            except Exception as e:
+                logger.error(f"   ❌ Attempt {attempt + 1} failed: {e}")
+                if attempt < len(self.api_keys) - 1:
+                    logger.info(f"   🔄 Trying next API key...")
+                    continue
+
+        # All keys failed - fallback
+        logger.warning(f"   ⚠️ All API keys failed. Using fallback method...")
+        return [f"{topic}, cinematic scene {i+1}, professional photography, high detail"
+                for i in range(num_images)]
 
 
 # Create singleton instance

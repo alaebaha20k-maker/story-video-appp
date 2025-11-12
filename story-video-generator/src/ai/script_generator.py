@@ -47,18 +47,22 @@ class ProScriptGenerator:
             print("⚠️  ProScriptGenerator: google-generativeai not available")
             self.model = None
             self.character_names = []
+            self.api_keys = []
             return
-        
-        api_key = api_manager.get_key('gemini')
-        if not api_key:
-            print("⚠️  ProScriptGenerator: Gemini API key not found")
+
+        # ✅ Get all Gemini API keys for rotation
+        self.api_keys = api_manager.get_all_gemini_keys()
+        if not self.api_keys:
+            print("⚠️  ProScriptGenerator: Gemini API keys not found")
             self.model = None
             self.character_names = []
             return
-        
-        genai.configure(api_key=api_key)
+
+        # Configure with first key initially
+        genai.configure(api_key=self.api_keys[0])
         self.model = genai.GenerativeModel(GEMINI_SETTINGS['model'])
         self.character_names = []
+        print(f"   API Keys: {len(self.api_keys)} keys with automatic rotation")
     
     def generate_story(
         self,

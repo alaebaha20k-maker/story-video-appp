@@ -45,11 +45,13 @@ class EnhancedScriptGenerator:
     ]
     
     def __init__(self):
-        api_key = api_manager.get_key('gemini')
-        if not api_key:
-            raise ValueError("Gemini API key required!")
-        
-        genai.configure(api_key=api_key)
+        # ✅ Get all Gemini API keys for rotation
+        self.api_keys = api_manager.get_all_gemini_keys()
+        if not self.api_keys:
+            raise ValueError("Gemini API keys required!")
+
+        # Configure with first key initially
+        genai.configure(api_key=self.api_keys[0])
         self.model = genai.GenerativeModel(
             model_name=GEMINI_SETTINGS['model'],
             generation_config={
@@ -60,8 +62,9 @@ class EnhancedScriptGenerator:
             }
         )
         self.character_names = []
-        
+
         print(f"🏆 Enhanced Script Generator (Gemini) initialized")
+        print(f"   API Keys: {len(self.api_keys)} keys with automatic rotation")
         print(f"   Using: Gemini AI with ULTIMATE prompts!")
         print(f"   Hook generation: INTELLIGENT (learns from examples!)")
     
@@ -107,31 +110,46 @@ class EnhancedScriptGenerator:
             num_scenes=num_scenes
         )
         
-        # Generate with retry
-        max_attempts = 3
+        # ✅ Generate with retry + automatic API key rotation
+        max_attempts = len(self.api_keys)  # Try all available keys
         for attempt in range(max_attempts):
             try:
-                logger.info(f"   Attempt {attempt + 1}/{max_attempts}...")
-                
-                response = self.model.generate_content(prompt)
+                # ✅ Rotate API key for each attempt
+                api_key = self.api_keys[attempt % len(self.api_keys)]
+                logger.info(f"   Attempt {attempt + 1}/{max_attempts} (Key: ...{api_key[-8:]})...")
+
+                # Reconfigure with new key
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(
+                    model_name=GEMINI_SETTINGS['model'],
+                    generation_config={
+                        "temperature": 0.75,
+                        "top_p": 0.92,
+                        "top_k": 50,
+                        "max_output_tokens": 16384,
+                    }
+                )
+
+                response = model.generate_content(prompt)
                 script_text = response.text
-                
+
                 # Clean output
                 script_text = self._clean_script(script_text)
-                
+
                 # Validate
                 if len(script_text) < 500:
-                    logger.warning("   Script too short, retrying...")
+                    logger.warning("   Script too short, retrying with next key...")
                     continue
-                
+
                 # Extract metadata
                 self.character_names = self._extract_characters(script_text)
                 scenes = self._parse_scenes(script_text, num_scenes)
-                
+
                 logger.success(f"✅ Generated {len(script_text)} characters")
                 logger.info(f"   Words: {len(script_text.split())}")
                 logger.info(f"   Characters: {', '.join(self.character_names[:3])}")
-                
+                logger.info(f"   Used API Key: ...{api_key[-8:]}")
+
                 return {
                     "script": script_text,
                     "characters": self.character_names,
@@ -142,13 +160,15 @@ class EnhancedScriptGenerator:
                     "used_template": template is not None,
                     "used_research": research_data is not None,
                 }
-                
+
             except Exception as e:
                 logger.error(f"   Attempt {attempt + 1} failed: {e}")
-                if attempt == max_attempts - 1:
+                if attempt < max_attempts - 1:
+                    logger.info(f"   🔄 Trying next API key...")
+                else:
                     raise
-        
-        raise Exception("Failed to generate script after all attempts")
+
+        raise Exception("Failed to generate script after all attempts with all API keys")
     
     def _build_template_prompt(
         self,
