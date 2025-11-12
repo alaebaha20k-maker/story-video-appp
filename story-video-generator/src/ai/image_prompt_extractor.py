@@ -7,38 +7,18 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-import google.generativeai as genai
 from typing import List, Dict
 import re
-import time
 
-from config.settings import GEMINI_SETTINGS
-from src.utils.api_manager import api_manager
 from src.utils.logger import logger
-from src.utils.gemini_rate_limiter import rate_limiter  # ✅ Import rate limiter
 
 
 class ImagePromptExtractor:
-    """Generates detailed image prompts for AI image generation"""
+    """Extracts image prompts directly from script text (no API calls)"""
 
     def __init__(self):
-        # ✅ Get all Gemini API keys for rotation
-        self.api_keys = api_manager.get_all_gemini_keys()
-        if not self.api_keys:
-            raise ValueError("Gemini API keys required!")
-
-        # Configure with first key initially
-        genai.configure(api_key=self.api_keys[0])
-        self.model = genai.GenerativeModel(
-            model_name=GEMINI_SETTINGS['model'],
-            generation_config={
-                "temperature": 0.7,  # Creative but controlled
-                "top_p": 0.95,
-                "top_k": 40,
-                "max_output_tokens": 8192,
-            }
-        )
-        print(f"   API Keys: {len(self.api_keys)} keys with automatic rotation")
+        logger.info("🎨 Image Prompt Extractor initialized (script extraction mode)")
+        print(f"   📝 Mode: Direct extraction from script (no API calls)")
 
     def generate_prompts(
         self,
@@ -48,223 +28,68 @@ class ImagePromptExtractor:
         story_type: str = "scary_horror"
     ) -> List[Dict]:
         """
-        Generate detailed image prompts from script
+        Extract image prompts directly from script (no API calls)
 
         Args:
             script_text: Full narrative script
-            num_scenes: Number of image prompts to generate
+            num_scenes: Number of image prompts to extract
             image_style: Visual style (cinematic_film, anime_style, etc.)
             story_type: Story type for mood/atmosphere
 
         Returns:
             List of dicts with scene_number and detailed image_prompt
         """
-        logger.info(f"🎨 Generating {num_scenes} detailed image prompts ({image_style})...")
+        logger.info(f"🎨 Extracting {num_scenes} image prompts from script...")
 
-        # Map image styles to descriptive terms
-        style_descriptions = {
-            "cinematic_film": "cinematic movie still, professional film photography, dramatic lighting",
-            "documentary_real": "photojournalism, documentary photography, authentic real-life scene",
-            "anime_style": "anime art style, Japanese animation, vibrant colors, expressive",
-            "horror_creepy": "horror cinematography, dark and ominous, terrifying atmosphere",
-            "comic_book": "comic book art, graphic novel style, bold lines, dynamic composition",
-            "oil_painting": "classical oil painting, fine art, rich textures, masterpiece quality",
-            "historical_photo": "vintage photograph, historical documentation, aged and authentic",
-            "sci_fi_future": "futuristic sci-fi, cyberpunk aesthetic, advanced technology, neon lights",
-            "fantasy_epic": "epic fantasy art, magical and mythical, grand and majestic",
-            "sketch_drawing": "pencil sketch, hand-drawn illustration, artistic linework",
-            "watercolor": "watercolor painting, soft washes, artistic and delicate",
-            "3d_render": "3D rendered CGI, photorealistic rendering, detailed modeling",
-            "retro_vintage": "retro vintage style, 70s/80s aesthetic, nostalgic feel",
-            "dark_noir": "film noir, black and white, high contrast, detective movie aesthetic"
+        # Style descriptions for enhancing extracted prompts
+        style_map = {
+            "cinematic_film": "cinematic, professional film photography, dramatic lighting",
+            "documentary_real": "photojournalism, documentary, authentic",
+            "anime_style": "anime art, Japanese animation, vibrant",
+            "horror_creepy": "horror, dark and ominous, terrifying",
+            "comic_book": "comic book art, graphic novel, bold",
+            "oil_painting": "oil painting, fine art, rich textures",
+            "historical_photo": "vintage photograph, historical",
+            "sci_fi_future": "futuristic sci-fi, cyberpunk, neon",
+            "fantasy_epic": "epic fantasy, magical, majestic",
+            "sketch_drawing": "pencil sketch, hand-drawn",
+            "watercolor": "watercolor painting, soft",
+            "3d_render": "3D CGI, photorealistic rendering",
+            "retro_vintage": "retro vintage, 70s/80s",
+            "dark_noir": "film noir, high contrast"
         }
 
-        style_desc = style_descriptions.get(image_style, "professional photography, high quality")
+        style_suffix = style_map.get(image_style, "professional, high quality")
 
-        # Map story types to atmosphere
-        atmosphere_map = {
-            "scary_horror": "dark and terrifying, ominous shadows, eerie atmosphere, unsettling mood",
-            "emotional_heartwarming": "warm and touching, soft lighting, emotional depth, hopeful atmosphere",
-            "true_crime": "gritty and realistic, documentary style, authentic locations, serious tone",
-            "mystery_thriller": "suspenseful and tense, mysterious shadows, dramatic angles, noir atmosphere",
-            "historical_documentary": "authentic historical setting, period-accurate details, documentary realism",
-            "supernatural_paranormal": "otherworldly and mystical, supernatural elements, eerie and mysterious",
-            "adventure_survival": "wild and untamed, natural environments, action-oriented, epic scale",
-            "sci_fi_future": "futuristic and technological, advanced civilization, sci-fi elements",
-            "fantasy_magical": "magical and enchanted, fantasy elements, wonderous and mythical",
-            "comedy_funny": "lighthearted and playful, bright colors, comedic timing, expressive",
-            "romantic_love": "romantic and intimate, soft lighting, emotional connection, beautiful",
-            "war_military": "intense combat, military equipment, battlefield chaos, heroic and gritty",
-            "motivational_inspiring": "triumphant and uplifting, inspiring visuals, hope and determination",
-            "anime_style": "anime aesthetic, vibrant and expressive, Japanese animation style"
-        }
+        # Extract prompts from script - split into sentences
+        sentences = re.split(r'[.!?]+', script_text)
+        sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
 
-        atmosphere = atmosphere_map.get(story_type, "dramatic atmosphere, professional quality")
-
-        prompt = f"""You are a professional visual director for AI image generation. Analyze this script and create {num_scenes} detailed image prompts.
-
-SCRIPT:
-{script_text}
-
-VISUAL REQUIREMENTS:
-- Style: {style_desc}
-- Atmosphere: {atmosphere}
-- Number of scenes: {num_scenes}
-
-TASK:
-Create {num_scenes} image prompts that capture the KEY VISUAL MOMENTS of this story. Each prompt must be DETAILED and AI-ready (for Flux, Midjourney, Pollinations).
-
-EACH IMAGE PROMPT MUST INCLUDE:
-1. **Camera Angle**: (wide shot, close-up, medium shot, aerial view, POV, etc.)
-2. **Subject/Scene**: (what we see - characters, locations, objects)
-3. **Setting/Environment**: (where it takes place)
-4. **Lighting**: (dramatic, soft, dark, golden hour, etc.)
-5. **Mood/Atmosphere**: (based on story type)
-6. **Color Palette**: (warm tones, cool blues, desaturated, vibrant, etc.)
-7. **Art Style**: (already specified: {style_desc})
-8. **Composition Details**: (specific visual elements that make it compelling)
-
-OUTPUT FORMAT (REQUIRED):
-[IMAGE 1]
-<detailed 40-60 word image prompt>
-
-[IMAGE 2]
-<detailed 40-60 word image prompt>
-
-[Continue for all {num_scenes} images]
-
-EXAMPLE GOOD PROMPT:
-"Wide-angle establishing shot of a gothic Victorian mansion on a cliff at dusk, dramatic purple and orange sunset, overgrown ivy covering weathered stone walls, broken windows, ominous storm clouds gathering, {style_desc}, {atmosphere}, desaturated colors with warm highlights, cinematic composition"
-
-EXAMPLE BAD PROMPT:
-"A scary house"
-
-Generate {num_scenes} professional image prompts now:
-"""
-
-        # ⚡ USE RATE LIMITER with retry logic (same as script generator)
-        max_attempts = len(self.api_keys) * rate_limiter.max_retries
-
-        for attempt in range(max_attempts):
-            try:
-                # 🔑 Smart key selection
-                best_key_idx, reason = rate_limiter.get_best_available_key(self.api_keys)
-                api_key = self.api_keys[best_key_idx]
-                key_short = api_key[-8:]
-
-                print(f"ℹ️     Attempt {attempt + 1}/{max_attempts} (Key: ...{key_short})...")
-
-                # 🚦 RATE LIMITER - Prevents parallel requests and enforces delays
-                rate_limiter.wait_if_needed(api_key)
-
-                # Configure with selected key
-                genai.configure(api_key=api_key)
-
-                # Generate image prompts
-                response = self.model.generate_content(prompt)
-                generated_text = response.text
-
-                # Parse prompts
-                prompts = self._parse_image_prompts(generated_text, num_scenes)
-
-                logger.info(f"✅ Generated {len(prompts)} detailed image prompts")
-
-                # ✅ Reset failure counter on success
-                rate_limiter.reset_failures()
-
-                return prompts
-
-            except Exception as e:
-                error_str = str(e)
-
-                # Check if it's a rate limit error
-                if rate_limiter.is_rate_limit_error(e):
-                    if attempt < max_attempts - 1:
-                        # Handle rate limit with server's suggested delay
-                        retry_delay = rate_limiter.handle_rate_limit_error(e, attempt, api_key)
-                        print(f"⚠️     ⏳ Rate limit hit - waiting {retry_delay:.1f}s...")
-                        time.sleep(retry_delay)
-                        print(f"ℹ️     🔄 Retrying with next API key after cooldown...")
-                        continue
-                    else:
-                        logger.error(f"❌ All API keys exhausted with rate limits")
-                        # Fallback after all retries exhausted
-                        return self._fallback_prompts(script_text, num_scenes, image_style, story_type)
-                else:
-                    # Non-rate-limit error
-                    logger.error(f"❌ Image prompt generation failed: {e}")
-                    if attempt < max_attempts - 1:
-                        print(f"⚠️     Retrying...")
-                        time.sleep(2)
-                        continue
-                    else:
-                        # Fallback: create generic prompts
-                        return self._fallback_prompts(script_text, num_scenes, image_style, story_type)
-
-        # If we get here, all attempts failed
-        logger.error("❌ All attempts failed - using fallback prompts")
-        return self._fallback_prompts(script_text, num_scenes, image_style, story_type)
-
-    def _parse_image_prompts(self, text: str, num_scenes: int) -> List[Dict]:
-        """Parse generated image prompts into structured data"""
-        prompts = []
-
-        # Try to find [IMAGE X] markers
-        prompt_pattern = r'\[IMAGE\s+(\d+)\]\s*(.+?)(?=\[IMAGE\s+\d+\]|$)'
-        matches = re.findall(prompt_pattern, text, re.DOTALL | re.IGNORECASE)
-
-        if matches and len(matches) >= num_scenes * 0.7:  # Got at least 70% of prompts
-            for img_num, prompt_text in matches:
-                prompts.append({
-                    'scene_number': int(img_num),
-                    'image_prompt': prompt_text.strip(),
-                    'char_count': len(prompt_text.strip())
-                })
+        # Select evenly spaced sentences
+        if len(sentences) >= num_scenes:
+            step = len(sentences) // num_scenes
+            selected_sentences = [sentences[i * step] for i in range(num_scenes)]
         else:
-            # Fallback: split by paragraphs or lines
-            lines = [line.strip() for line in text.split('\n') if line.strip() and len(line.strip()) > 20]
+            # Repeat if not enough sentences
+            selected_sentences = (sentences * ((num_scenes // len(sentences)) + 1))[:num_scenes]
 
-            for i in range(min(num_scenes, len(lines))):
-                if lines[i]:
-                    prompts.append({
-                        'scene_number': i + 1,
-                        'image_prompt': lines[i],
-                        'char_count': len(lines[i])
-                    })
-
-        # Ensure we have enough prompts
-        while len(prompts) < num_scenes:
-            prompts.append({
-                'scene_number': len(prompts) + 1,
-                'image_prompt': f"Scene {len(prompts) + 1} from the story, professional photography, cinematic composition",
-                'char_count': 50
-            })
-
-        return prompts[:num_scenes]  # Ensure we don't exceed requested scenes
-
-    def _fallback_prompts(
-        self,
-        script_text: str,
-        num_scenes: int,
-        image_style: str,
-        story_type: str
-    ) -> List[Dict]:
-        """Generate simple fallback prompts if AI generation fails"""
-        logger.warning("⚠️ Using fallback image prompts")
-
-        # Extract first words from script to get context
-        words = script_text.split()[:100]
-        context = ' '.join(words)
-
+        # Create image prompts from selected sentences
         prompts = []
-        for i in range(num_scenes):
-            prompt_text = f"{image_style} style, scene {i+1} from {story_type} story, {context[:100]}..."
+        for i, sentence in enumerate(selected_sentences):
+            # Take first 60 words from sentence
+            words = sentence.split()[:60]
+            base_prompt = ' '.join(words)
+
+            # Enhance with style
+            enhanced_prompt = f"{base_prompt}, {style_suffix}, detailed"
+
             prompts.append({
                 'scene_number': i + 1,
-                'image_prompt': prompt_text,
-                'char_count': len(prompt_text)
+                'image_prompt': enhanced_prompt,
+                'char_count': len(enhanced_prompt)
             })
 
+        logger.info(f"✅ Extracted {len(prompts)} image prompts from script")
         return prompts
 
 
