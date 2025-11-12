@@ -12,12 +12,9 @@ load_dotenv()
 class APIManager:
     """Manages API keys and provides fallback strategies with automatic rotation"""
 
-    # ✅ MULTIPLE GEMINI API KEYS - Automatic Rotation!
+    # 🔍 SINGLE GEMINI API KEY - For dashboard monitoring
     GEMINI_API_KEYS = [
-        "AIzaSyC3lCI117uyVbJkFOXI6BffwlUCLSdYIH0",  # Key 1
-        "AIzaSyCLAEQSW3P1E499fxvw7i9k1ZELGdZIdrw",  # Key 2
-        "AIzaSyArtYUT_GHyEsHDT1oxNbBocHlGEGWTXfo",  # Key 3
-        "AIzaSyAyI5VYus18_vStkISQ-ioVw3zzaQFE0qo"   # Key 4 (NEW)
+        "AIzaSyAyI5VYus18_vStkISQ-ioVw3zzaQFE0qo"   # Single key for clear monitoring
     ]
 
     def __init__(self):
