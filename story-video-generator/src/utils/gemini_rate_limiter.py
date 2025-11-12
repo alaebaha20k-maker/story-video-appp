@@ -11,22 +11,30 @@ Implements:
 import time
 import re
 import threading
+import json
+import os
+from pathlib import Path
 from typing import Callable, Any, Optional
 from functools import wraps
 
 
 class GeminiRateLimiter:
-    """Rate limiter for Gemini API calls"""
+    """Rate limiter for Gemini API calls with persistent tracking"""
 
     def __init__(self):
         # 🔒 GLOBAL LOCK - Only ONE Gemini request at a time across ALL threads!
         self.global_lock = threading.Lock()
+
+        # 💾 PERSISTENT STORAGE - Save request history to file
+        self.history_file = Path(__file__).parent.parent.parent / "gemini_rate_history.json"
+
         # Track last request time per API key
         self.last_request_time = {}
         # Track when keys hit rate limits
         self.rate_limit_hits = {}
         # Track request count per key in last 60s (for sliding window)
         self.request_history = {}  # {key: [timestamp1, timestamp2, ...]}
+
         # ⚡ AGGRESSIVE RATE LIMITING - Prevent 429 errors!
         # Free tier: 15 req/60s = 4s minimum. Use 7s to be VERY SAFE.
         self.min_delay = 7.0  # 7 seconds between requests (was 5s)
@@ -36,6 +44,12 @@ class GeminiRateLimiter:
         self.consecutive_failures = 0
         # Sliding window trigger threshold (out of 15 max)
         self.sliding_window_trigger = 10  # Start waiting at 10 requests (was 14)
+
+        # 🔄 Load persistent history on startup
+        self._load_history()
+
+        print(f"📊 Rate Limiter initialized with persistent tracking")
+        self._print_current_status()
 
     def wait_if_needed(self, api_key: str):
         """Wait if we're making requests too quickly"""
@@ -96,6 +110,75 @@ class GeminiRateLimiter:
 
             print(f"   ✅ Rate limiter: Request approved for key ...{key_short}")
 
+            # 💾 Save history to disk after each request
+            self._save_history()
+
+    def _load_history(self):
+        """Load request history from persistent storage"""
+        try:
+            if self.history_file.exists():
+                with open(self.history_file, 'r') as f:
+                    data = json.load(f)
+
+                    self.request_history = data.get('request_history', {})
+                    self.last_request_time = data.get('last_request_time', {})
+                    self.rate_limit_hits = data.get('rate_limit_hits', {})
+
+                    # Clean up old entries (older than 90s)
+                    current_time = time.time()
+                    for key in list(self.request_history.keys()):
+                        self.request_history[key] = [
+                            t for t in self.request_history[key]
+                            if current_time - t < 90
+                        ]
+
+                    # Clean old rate limit hits
+                    for key in list(self.rate_limit_hits.keys()):
+                        if current_time - self.rate_limit_hits[key] > 90:
+                            del self.rate_limit_hits[key]
+
+                    print(f"   📂 Loaded request history from disk")
+            else:
+                print(f"   📂 No previous history found - starting fresh")
+        except Exception as e:
+            print(f"   ⚠️ Could not load history: {e}")
+            # Continue with empty history
+            self.request_history = {}
+            self.last_request_time = {}
+            self.rate_limit_hits = {}
+
+    def _save_history(self):
+        """Save request history to persistent storage"""
+        try:
+            data = {
+                'request_history': self.request_history,
+                'last_request_time': self.last_request_time,
+                'rate_limit_hits': self.rate_limit_hits,
+                'last_updated': time.time()
+            }
+
+            with open(self.history_file, 'w') as f:
+                json.dump(data, f)
+        except Exception as e:
+            # Don't fail if we can't save - just log it
+            print(f"   ⚠️ Could not save history: {e}")
+
+    def _print_current_status(self):
+        """Print current API usage status"""
+        current_time = time.time()
+
+        for key_short, timestamps in self.request_history.items():
+            recent = [t for t in timestamps if current_time - t < 60]
+            if recent:
+                print(f"   📊 Key ...{key_short}: {len(recent)}/15 requests in last 60s")
+
+                # Show when window will clear
+                if recent:
+                    oldest = min(recent)
+                    time_until_clear = 60 - (current_time - oldest)
+                    if time_until_clear > 0:
+                        print(f"      ⏰ Window clears in {time_until_clear:.0f}s")
+
     def extract_retry_delay(self, error_message: str) -> float:
         """Extract retry delay from error message"""
         # Try to find "retry in X.XXs" pattern
@@ -129,6 +212,8 @@ class GeminiRateLimiter:
         if api_key:
             key_short = api_key[-8:]
             self.rate_limit_hits[key_short] = time.time()
+            # 💾 Save immediately when rate limit is hit
+            self._save_history()
 
         # Extract suggested delay from error (Gemini provides this)
         retry_delay = self.extract_retry_delay(error_str)
