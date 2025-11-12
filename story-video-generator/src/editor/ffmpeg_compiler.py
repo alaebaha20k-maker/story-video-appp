@@ -241,12 +241,12 @@ class FFmpegCompiler:
 
                 # Caption styling (same as single-pass method)
                 caption_styles = {
-                    'simple': {'FontName': 'Arial', 'FontSize': '24', 'Bold': '1', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '2'},
-                    'bold': {'FontName': 'Arial Black', 'FontSize': '32', 'Bold': '1', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '3'},
-                    'minimal': {'FontName': 'Helvetica', 'FontSize': '20', 'Bold': '0', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '1'},
-                    'cinematic': {'FontName': 'Arial', 'FontSize': '26', 'Bold': '1', 'PrimaryColour': '&H00F0F0F0', 'OutlineColour': '&H00000000', 'BackColour': '&H80000000', 'Outline': '2', 'Shadow': '1'},
-                    'horror': {'FontName': 'Arial', 'FontSize': '28', 'Bold': '1', 'PrimaryColour': '&H000000FF', 'OutlineColour': '&H00000000', 'Outline': '3', 'Shadow': '2'},
-                    'elegant': {'FontName': 'Georgia', 'FontSize': '24', 'Bold': '0', 'Italic': '1', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '1'}
+                    'simple': {'FontName': 'Arial', 'FontSize': '32', 'Bold': '1', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '3'},
+                    'bold': {'FontName': 'Arial Black', 'FontSize': '40', 'Bold': '1', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '4'},
+                    'minimal': {'FontName': 'Helvetica', 'FontSize': '28', 'Bold': '0', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '2'},
+                    'cinematic': {'FontName': 'Arial', 'FontSize': '34', 'Bold': '1', 'PrimaryColour': '&H00F0F0F0', 'OutlineColour': '&H00000000', 'BackColour': '&H80000000', 'Outline': '3', 'Shadow': '1'},
+                    'horror': {'FontName': 'Arial', 'FontSize': '36', 'Bold': '1', 'PrimaryColour': '&H000000FF', 'OutlineColour': '&H00000000', 'Outline': '4', 'Shadow': '2'},
+                    'elegant': {'FontName': 'Georgia', 'FontSize': '32', 'Bold': '0', 'Italic': '1', 'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000', 'Outline': '2'}
                 }
 
                 position_alignments = {'top': '8', 'center': '5', 'bottom': '2'}
@@ -256,10 +256,11 @@ class FFmpegCompiler:
                 style_parts = [f"{k}={v}" for k, v in style.items()]
                 style_parts.append(f"Alignment={alignment}")
 
+                # ✅ FIXED: Larger margins for TikTok/social media visibility
                 if caption_position == 'top':
-                    style_parts.append("MarginV=60")
+                    style_parts.append("MarginV=120")  # Much higher from top
                 elif caption_position == 'bottom':
-                    style_parts.append("MarginV=60")
+                    style_parts.append("MarginV=150")  # Much higher from bottom
                 else:
                     style_parts.append("MarginV=0")
 
@@ -483,59 +484,59 @@ class FFmpegCompiler:
             print(f"   📝 Adding captions from: {caption_srt_path}")
             escaped_srt_path = str(caption_srt_path).replace('\\', '/').replace(':', r'\:')
 
-            # Caption styling based on style parameter
+            # ✅ Caption styling - Larger fonts and margins for TikTok/social media
             caption_styles = {
                 'simple': {
                     'FontName': 'Arial',
-                    'FontSize': '24',
-                    'Bold': '1',
-                    'PrimaryColour': '&H00FFFFFF',
-                    'OutlineColour': '&H00000000',
-                    'Outline': '2'
-                },
-                'bold': {
-                    'FontName': 'Arial Black',
                     'FontSize': '32',
                     'Bold': '1',
                     'PrimaryColour': '&H00FFFFFF',
                     'OutlineColour': '&H00000000',
                     'Outline': '3'
                 },
+                'bold': {
+                    'FontName': 'Arial Black',
+                    'FontSize': '40',
+                    'Bold': '1',
+                    'PrimaryColour': '&H00FFFFFF',
+                    'OutlineColour': '&H00000000',
+                    'Outline': '4'
+                },
                 'minimal': {
                     'FontName': 'Helvetica',
-                    'FontSize': '20',
+                    'FontSize': '28',
                     'Bold': '0',
                     'PrimaryColour': '&H00FFFFFF',
                     'OutlineColour': '&H00000000',
-                    'Outline': '1'
+                    'Outline': '2'
                 },
                 'cinematic': {
                     'FontName': 'Arial',
-                    'FontSize': '26',
+                    'FontSize': '34',
                     'Bold': '1',
                     'PrimaryColour': '&H00F0F0F0',
                     'OutlineColour': '&H00000000',
                     'BackColour': '&H80000000',
-                    'Outline': '2',
+                    'Outline': '3',
                     'Shadow': '1'
                 },
                 'horror': {
                     'FontName': 'Arial',
-                    'FontSize': '28',
+                    'FontSize': '36',
                     'Bold': '1',
                     'PrimaryColour': '&H000000FF',  # Red text
                     'OutlineColour': '&H00000000',
-                    'Outline': '3',
+                    'Outline': '4',
                     'Shadow': '2'
                 },
                 'elegant': {
                     'FontName': 'Georgia',
-                    'FontSize': '24',
+                    'FontSize': '32',
                     'Bold': '0',
                     'Italic': '1',
                     'PrimaryColour': '&H00FFFFFF',
                     'OutlineColour': '&H00000000',
-                    'Outline': '1'
+                    'Outline': '2'
                 }
             }
 
@@ -553,11 +554,11 @@ class FFmpegCompiler:
             style_parts = [f"{k}={v}" for k, v in style.items()]
             style_parts.append(f"Alignment={alignment}")
 
-            # Set margin based on position
+            # ✅ FIXED: Larger margins for TikTok/social media visibility
             if caption_position == 'top':
-                style_parts.append("MarginV=60")
+                style_parts.append("MarginV=120")  # Much higher from top
             elif caption_position == 'bottom':
-                style_parts.append("MarginV=60")
+                style_parts.append("MarginV=150")  # Much higher from bottom
             else:  # center
                 style_parts.append("MarginV=0")
 
