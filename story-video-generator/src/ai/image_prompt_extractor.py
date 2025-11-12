@@ -10,10 +10,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import google.generativeai as genai
 from typing import List, Dict
 import re
+import time
 
 from config.settings import GEMINI_SETTINGS
 from src.utils.api_manager import api_manager
 from src.utils.logger import logger
+from src.utils.gemini_rate_limiter import rate_limiter  # ✅ Import rate limiter
 
 
 class ImagePromptExtractor:
@@ -140,22 +142,68 @@ EXAMPLE BAD PROMPT:
 Generate {num_scenes} professional image prompts now:
 """
 
-        try:
-            # Generate image prompts
-            response = self.model.generate_content(prompt)
-            generated_text = response.text
+        # ⚡ USE RATE LIMITER with retry logic (same as script generator)
+        max_attempts = len(self.api_keys) * rate_limiter.max_retries
 
-            # Parse prompts
-            prompts = self._parse_image_prompts(generated_text, num_scenes)
+        for attempt in range(max_attempts):
+            try:
+                # 🔑 Smart key selection
+                best_key_idx, reason = rate_limiter.get_best_available_key(self.api_keys)
+                api_key = self.api_keys[best_key_idx]
+                key_short = api_key[-8:]
 
-            logger.info(f"✅ Generated {len(prompts)} detailed image prompts")
+                print(f"ℹ️     Attempt {attempt + 1}/{max_attempts} (Key: ...{key_short})...")
 
-            return prompts
+                # 🚦 RATE LIMITER - Prevents parallel requests and enforces delays
+                rate_limiter.wait_if_needed(api_key)
 
-        except Exception as e:
-            logger.error(f"L Image prompt generation failed: {e}")
-            # Fallback: create generic prompts
-            return self._fallback_prompts(script_text, num_scenes, image_style, story_type)
+                # Configure with selected key
+                genai.configure(api_key=api_key)
+
+                # Generate image prompts
+                response = self.model.generate_content(prompt)
+                generated_text = response.text
+
+                # Parse prompts
+                prompts = self._parse_image_prompts(generated_text, num_scenes)
+
+                logger.info(f"✅ Generated {len(prompts)} detailed image prompts")
+
+                # ✅ Reset failure counter on success
+                rate_limiter.reset_failures()
+
+                return prompts
+
+            except Exception as e:
+                error_str = str(e)
+
+                # Check if it's a rate limit error
+                if rate_limiter.is_rate_limit_error(e):
+                    if attempt < max_attempts - 1:
+                        # Handle rate limit with server's suggested delay
+                        retry_delay = rate_limiter.handle_rate_limit_error(e, attempt, api_key)
+                        print(f"⚠️     ⏳ Rate limit hit - waiting {retry_delay:.1f}s...")
+                        time.sleep(retry_delay)
+                        print(f"ℹ️     🔄 Retrying with next API key after cooldown...")
+                        continue
+                    else:
+                        logger.error(f"❌ All API keys exhausted with rate limits")
+                        # Fallback after all retries exhausted
+                        return self._fallback_prompts(script_text, num_scenes, image_style, story_type)
+                else:
+                    # Non-rate-limit error
+                    logger.error(f"❌ Image prompt generation failed: {e}")
+                    if attempt < max_attempts - 1:
+                        print(f"⚠️     Retrying...")
+                        time.sleep(2)
+                        continue
+                    else:
+                        # Fallback: create generic prompts
+                        return self._fallback_prompts(script_text, num_scenes, image_style, story_type)
+
+        # If we get here, all attempts failed
+        logger.error("❌ All attempts failed - using fallback prompts")
+        return self._fallback_prompts(script_text, num_scenes, image_style, story_type)
 
     def _parse_image_prompts(self, text: str, num_scenes: int) -> List[Dict]:
         """Parse generated image prompts into structured data"""
