@@ -14,8 +14,6 @@ from pydub import AudioSegment
 from src.ai.script_analyzer import script_analyzer
 from src.research.fact_searcher import fact_searcher
 from src.ai.enhanced_script_generator import enhanced_script_generator
-from src.ai.clean_script_generator import clean_script_generator  # ✅ NEW: Clean scripts without IMAGE: prompts
-from src.ai.advanced_script_generator import advanced_script_generator  # 🚀 ULTIMATE: Smart chunking + separate API keys
 
 # ✅ NEW: ADVANCED SCRIPT ANALYSIS
 from src.ai.narration_extractor import narration_extractor
@@ -543,59 +541,52 @@ zoom_effect=True, grain_effect=False, enable_captions=False, color_filter='none'
         print(f"🎞️  Grain Effect: {'ENABLED' if grain_effect else 'DISABLED'}")
         print(f"📝 Auto Captions: {'ENABLED' if enable_captions else 'DISABLED'}")
 
-        # 🚀 ADVANCED GENERATION - Smart chunking + separate API keys!
-        print("🚀 Generating script + image prompts with ADVANCED method...")
-        print("   ✅ Smart chunking prevents quota exhaustion")
-        print("   ✅ Separate API keys for scripts vs images")
-        print("   ✅ Perfect for long videos (24+ minutes)")
-
-        result = advanced_script_generator.generate_perfect_script(
+        # 📝 Generate script with Gemini (improved prompts!)
+        result = enhanced_script_generator.generate_with_template(
             topic=topic,
             story_type=story_type,
-            duration_minutes=duration,
-            num_scenes=num_scenes,
             template=template,
-            research_data=research_data
+            research_data=research_data,
+            duration_minutes=duration,
+            num_scenes=num_scenes
         )
 
         script_text = result['script']
-        gemini_prompts = result['image_prompts']
-
-        print(f"✅ ADVANCED: {len(script_text):,} chars + {len(gemini_prompts)} images!")
-        print(f"   Method: {result['generation_method']}")
-        print(f"   Chunks: {result['chunks_used']}")
-        print(f"   Words: {result['word_count']:,}")
-        print(f"   Images: {len(gemini_prompts)}")
 
         progress_state['progress'] = 50
         progress_state['status'] = 'generating_images'
 
-        # Convert advanced image prompts to scene dictionaries
-        scenes = []
-        for i, prompt_data in enumerate(gemini_prompts):
-            if isinstance(prompt_data, dict):
-                # New format from advanced generator
+        print("🎨 Generating images...")
+
+        # ✅ FIX: Use scenes from result if available (MUCH BETTER VARIETY!)
+        if 'scenes' in result and result['scenes']:
+            # Use the structured scenes from script generator - BEST QUALITY!
+            scenes = result['scenes'][:num_scenes]
+            print(f"   Using {len(scenes)} varied scenes from script generator")
+        else:
+            # Fallback: Extract image prompts from script
+            image_prompts = re.findall(r'IMAGE:\s*(.+?)(?:\n|$)', script_text, re.IGNORECASE)
+
+            if not image_prompts or len(image_prompts) < num_scenes:
+                # Create VARIED prompts based on story progression
+                print(f"   ⚠️  Creating varied prompts (no scenes in result)")
+                story_parts = script_text.split('.')[:num_scenes]
+                image_prompts = []
+                for i, part in enumerate(story_parts):
+                    if part.strip():
+                        # Use actual story content for variety!
+                        image_prompts.append(f"{part.strip()[:100]}")
+                    else:
+                        image_prompts.append(f"{topic}, scene {i+1}, {story_type} atmosphere")
+
+            # Convert string prompts to scene dictionaries
+            scenes = []
+            for i, prompt in enumerate(image_prompts[:num_scenes]):
                 scenes.append({
-                    'image_description': prompt_data.get('image_prompt', str(prompt_data)),
-                    'content': prompt_data.get('image_prompt', str(prompt_data)),
-                    'scene_number': prompt_data.get('scene_number', i + 1),
-                    'mood': prompt_data.get('mood', 'cinematic'),
-                    'composition': prompt_data.get('composition', 'wide shot')
-                })
-            else:
-                # Fallback for string prompts
-                scenes.append({
-                    'image_description': str(prompt_data),
-                    'content': str(prompt_data),
+                    'image_description': prompt,
+                    'content': prompt,
                     'scene_number': i + 1
                 })
-
-        print(f"   ✅ Prepared {len(scenes)} scenes for image generation")
-
-        progress_state['progress'] = 50
-        progress_state['status'] = 'generating_images'
-
-        print("🎨 Generating images with AI prompts...")
 
         # Generate images
         image_gen = create_image_generator('cinematic_film', story_type)
