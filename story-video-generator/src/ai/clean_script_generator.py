@@ -713,7 +713,7 @@ The listener won't know this is chunked - it should flow like one story."""
                             "temperature": 0.75,
                             "top_p": 0.92,
                             "top_k": 50,
-                            "max_output_tokens": 16384,
+                            "max_output_tokens": 8192,  # Within gemini-2.0-flash-exp limit
                         }
                     )
 
