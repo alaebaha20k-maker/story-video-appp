@@ -61,8 +61,8 @@ class EnhancedScriptGenerator:
         )
         self.character_names = []
         
-        print(f"🏆 Enhanced Script Generator (Gemini 1.5 Flash Latest - FREE) initialized")
-        print(f"   Model: gemini-1.5-flash-latest (STABLE FREE TIER)")
+        print(f"🏆 Enhanced Script Generator (Gemini 1.5 Flash - FREE) initialized")
+        print(f"   Model: gemini-1.5-flash (v1beta compatible)")
         print(f"   Hook generation: INTELLIGENT (learns from examples!)")
         print(f"   Free tier: 15 RPM, 1M TPM, 1500 RPD, 8K max tokens")
     

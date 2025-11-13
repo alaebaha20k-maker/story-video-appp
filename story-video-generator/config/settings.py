@@ -22,7 +22,7 @@ VIDEO_SETTINGS = {
 }
 
 GEMINI_SETTINGS = {
-    "model": "gemini-1.5-flash-latest",  # ← FREE MODEL! (Gemini 1.5 Flash - Stable)
+    "model": "gemini-1.5-flash",  # ← FREE MODEL! (Works with v1beta API)
     "temperature": 0.7,
     "max_output_tokens": 8192  # Free tier: 15 RPM, 1M TPM, 1500 RPD
 }
