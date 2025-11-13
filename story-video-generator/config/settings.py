@@ -22,9 +22,9 @@ VIDEO_SETTINGS = {
 }
 
 GEMINI_SETTINGS = {
-    "model": "gemini-2.0-flash-exp",  # ← FREE MODEL! (Gemini 2.0 Flash Experimental)
+    "model": "gemini-1.5-flash",  # ← FREE MODEL! (Gemini 1.5 Flash - Stable)
     "temperature": 0.7,
-    "max_output_tokens": 8192  # Free tier supports up to 8192 tokens
+    "max_output_tokens": 8192  # Free tier: 15 RPM, 1M TPM, 1500 RPD
 }
 
 # Script length configurations
