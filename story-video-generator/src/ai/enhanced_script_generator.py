@@ -274,27 +274,37 @@ class EnhancedScriptGenerator:
 CRITICAL FOR THIS CHUNK:
 🎯 Generate EXACTLY {chars_per_chunk:,} characters
 📖 Focus: {get_chunk_section_goal(1, total_chunks)}
-✅ Establish ALL character names clearly at the start
-✅ Set up the story world and initial situation
-✅ Build momentum towards the next section
-❌ DO NOT conclude the story (more chunks coming!)
+✅ Establish ALL character names clearly at start
+✅ Set up story world and initial situation
+✅ Build momentum towards next section
+❌ DO NOT conclude story (more chunks coming!)
 ❌ DO NOT write "To be continued" or similar
 ✅ End mid-action or mid-scene naturally
 
-REMEMBER:
-- Establish character names NOW (never change them later!)
-- No labels or section markers
-- Pure narrative flow
-- Natural stopping point (not ending!)
+SENSORY IMMERSION (EVERY PARAGRAPH!):
+- SIGHT: Visual details, colors, movements
+- SOUND: Dialogue, ambient noise, specific sounds
+- SMELL: Environment scents, character reactions
+- TASTE: When relevant (metallic fear, food, blood)
+- TOUCH: Textures, temperature, physical sensations
 
-Generate NOW:"""
+CRITICAL RULES:
+❌ NO labels ("Part", "Chapter", "Scene")
+❌ NEVER change character names once established
+✅ Show emotions PHYSICALLY (jaw clenching, trembling)
+✅ Varied vocabulary - NEVER repeat phrases
+✅ Short punchy + long flowing sentences
+✅ Natural dialogue with contractions
+✅ Build tension CONSTANTLY
+
+Generate NOW (no title, no labels, pure story):"""
 
         else:
             # Continuation chunk: Use previous context
             previous_context = extract_last_sentences(previous_chunk, 8)
             is_final = (chunk_num == total_chunks)
 
-            prompt = f"""You are continuing a {style_name} story. This is chunk {chunk_num} of {total_chunks}.
+            prompt = f"""Continue SEAMLESSLY from previous chunk. Chunk {chunk_num} of {total_chunks}.
 
 TOPIC: {topic}
 TONE: {style_tone}
@@ -309,23 +319,23 @@ PREVIOUS CHUNK ENDED WITH:
 🔒 CRITICAL CONTINUATION RULES:
 
 SEAMLESS FLOW:
-✅ Continue EXACTLY where previous chunk ended
-✅ NO recaps or reintroductions
-✅ NO "Meanwhile..." or "Earlier..." or "As we saw..."
+✅ Continue EXACTLY where previous ended
+✅ NO recaps, NO reintroductions
+✅ NO "Meanwhile...", "Earlier...", "As we saw..."
 ✅ Continue mid-sentence if previous ended in action
-✅ Jump right into the narrative
+✅ Jump right into narrative
 
 CHARACTER CONSISTENCY (ABSOLUTELY CRITICAL!):
 ❌ NEVER change character names from previous chunks
 ❌ NEVER change character personalities or traits
 ✅ Use EXACT same character names established earlier
-✅ Maintain all character relationships and dynamics
+✅ Maintain all character relationships
 ✅ Continue character development naturally
 
 STYLE CONSISTENCY:
-✅ Match the writing style from previous chunk
+✅ Match exact writing style from previous chunk
 ✅ Same narrative voice and tone
-✅ Same level of sensory detail
+✅ Same sensory detail level
 ✅ Same pacing rhythm
 
 {f'''
@@ -361,15 +371,24 @@ IMPORTANT:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 '''}
 
-WRITING QUALITY:
+WRITING QUALITY (CRITICAL!):
 ✅ Present tense, first person throughout
-✅ All 5 senses in descriptions
-✅ Show don't tell emotions
-✅ Vivid, specific details
-✅ Natural dialogue with contractions
-✅ Varied sentence rhythm
+✅ ALL 5 SENSES in EVERY paragraph (sight, sound, smell, taste, touch)
+✅ Show emotions PHYSICALLY (trembling, sweating, jaw clenching)
+✅ Vivid, SPECIFIC details (not generic)
+✅ Natural dialogue with contractions ("I'm", "don't", "can't")
+✅ Varied sentence rhythm (short punchy + long flowing)
+✅ NEVER repeat phrases or vocabulary
+✅ Build tension constantly
 
-WRITE EXACTLY {chars_per_chunk:,} CHARACTERS with maximum quality!
+SENSORY IMMERSION:
+- SIGHT: Visual details, colors, movements
+- SOUND: Dialogue, ambient noise, specific sounds
+- SMELL: Environment scents, reactions
+- TASTE: When relevant (fear, blood, food)
+- TOUCH: Textures, temperature, sensations
+
+WRITE EXACTLY {chars_per_chunk:,} CHARACTERS with MAXIMUM quality!
 
 Continue NOW (no preamble, no labels, just story):"""
 
@@ -399,9 +418,7 @@ Continue NOW (no preamble, no labels, just story):"""
         style_pacing = style.get('pacing', 'medium')
         
         # Base prompt with ULTIMATE quality requirements!
-        prompt = f"""You are a MASTER storyteller creating a {style_name} for professional YouTube videos.
-
-🎯 CRITICAL REQUIREMENTS:
+        prompt = f"""You are a MASTER YouTube scriptwriter creating {style_name} content.
 
 TOPIC: {topic}
 DURATION: {duration_minutes} minutes
@@ -413,31 +430,31 @@ PACING: {style_pacing}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔒 ABSOLUTE RULES - NEVER BREAK THESE:
+🔒 CRITICAL RULES - NEVER BREAK THESE:
 
-CHARACTER CONSISTENCY:
-❌ NO character name changes (establish names at start, keep them FOREVER)
-❌ NO personality shifts mid-story
-❌ NO unexplained trait changes
-✅ Establish clear character names early in the story
-✅ NEVER change a character's name once established
-✅ Maintain consistent character traits throughout
-✅ Natural character development only (no sudden changes)
+❌ NO labels ("Part", "Chapter", "Scene") - pure narrative only
+❌ NO character name changes (establish names early, keep them FOREVER)
+❌ NO personality shifts
+✅ Start directly with vivid action or hook
+✅ EXTREME sensory details (all 5 senses: sight, sound, smell, taste, touch)
+✅ Show emotions PHYSICALLY (jaw clenching, trembling hands, cold sweat, etc.)
+✅ Varied vocabulary - NEVER repeat phrases
+✅ Short sentences (5-10 words) = tension and action
+✅ Longer sentences (15-25 words) = atmosphere and description
+✅ Natural dialogue with contractions ("I'm", "you're", "can't")
+✅ Character thoughts in italics when needed
+✅ Build tension CONSTANTLY
 
-FORMAT RULES:
-❌ NO labels ("Part 1", "Chapter", "Scene", "Introduction", etc.)
-❌ NO section headers or breaks
-❌ NO metadata or structural markers
-✅ Pure narrative flow only
-✅ Start directly with story action or hook
-✅ Seamless storytelling from beginning to end
-✅ No artificial divisions or separations
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-NARRATIVE CONSISTENCY:
-✅ Same writing style throughout (don't shift tone suddenly)
-✅ Same story world rules (no contradictions)
-✅ Logical cause and effect
-✅ Events build naturally on what came before
+SENSORY IMMERSION (CRITICAL!):
+- SIGHT: Visual details, colors, movements, expressions
+- SOUND: Dialogue, ambient noise, specific sounds
+- SMELL: Scents in the environment, character reactions
+- TASTE: When relevant, metallic fear, food, blood
+- TOUCH: Textures, temperature, physical sensations
+
+EVERY paragraph must engage multiple senses!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
