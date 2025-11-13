@@ -19,7 +19,7 @@ def get_optimal_chunk_config(target_length: int) -> dict:
     """
     Calculate optimal chunk configuration for target script length.
 
-    Uses FEWER, BIGGER chunks to maximize quality and minimize API calls.
+    Optimized for Gemini 2.0 Flash with 8K token limit (~6,000 chars per request).
 
     Args:
         target_length: Target script length in characters
@@ -34,39 +34,40 @@ def get_optimal_chunk_config(target_length: int) -> dict:
     Examples:
         >>> config = get_optimal_chunk_config(60000)
         >>> config['chunks']
-        3
+        10
         >>> config['chars_per_chunk']
-        20000
+        6000
     """
+    # With 8K token limit, keep chunks around 6K chars (safe for free tier)
     if target_length <= 10000:
         config = {
             'chunks': 2,
-            'chars_per_chunk': 6000,
+            'chars_per_chunk': 5000,
             'buffer': 2000
         }
     elif target_length <= 30000:
         config = {
-            'chunks': 2,
-            'chars_per_chunk': 15000,
+            'chunks': 5,
+            'chars_per_chunk': 6000,
             'buffer': 5000
         }
     elif target_length <= 60000:
         config = {
-            'chunks': 3,
-            'chars_per_chunk': 20000,
+            'chunks': 10,
+            'chars_per_chunk': 6000,
             'buffer': 10000
         }
     elif target_length <= 70000:
         config = {
-            'chunks': 3,
-            'chars_per_chunk': 25000,
-            'buffer': 15000
+            'chunks': 12,
+            'chars_per_chunk': 6000,
+            'buffer': 12000
         }
     else:  # 100K+
         config = {
-            'chunks': 3,
-            'chars_per_chunk': 35000,
-            'buffer': 20000
+            'chunks': 17,
+            'chars_per_chunk': 6000,
+            'buffer': 15000
         }
 
     config['total_expected'] = target_length + config['buffer']

@@ -35,9 +35,9 @@ GEMINI_API_KEYS = {
 }
 
 GEMINI_SETTINGS = {
-    "model": "gemini-2.5-flash",  # ✅ Gemini 2.5 Flash (FREE & POWERFUL!)
+    "model": "gemini-2.0-flash-exp",  # ✅ Gemini 2.0 Flash (FREE tier available!)
     "temperature": 0.7,
-    "max_output_tokens": 65536,  # ✅ 65K tokens - massive output capacity!
+    "max_output_tokens": 8192,  # ✅ Within free tier limits
     
     # ✅ SMART CHUNKING - Prevents quota exhaustion
     "enable_smart_chunking": True,

@@ -94,19 +94,19 @@ class EnhancedScriptGenerator:
         self.model = genai.GenerativeModel(
             model_name=GEMINI_SETTINGS['model'],
             generation_config={
-                "temperature": 0.95,  # ✅ High creativity for engaging content
-                "top_p": 0.95,  # ✅ Balanced diversity
-                "top_k": 64,  # ✅ Better vocabulary variety
-                "max_output_tokens": 65536,  # ✅ 65K tokens - MASSIVE output!
+                "temperature": 0.75,  # ✅ Balanced creativity
+                "top_p": 0.92,  # ✅ Tighter control for coherence
+                "top_k": 50,  # ✅ Better vocabulary variety
+                "max_output_tokens": 8192,  # ✅ Within free tier limits
             }
         )
         self.character_names = []
 
-        print(f"🏆 Enhanced Script Generator (Gemini 2.5 Flash) initialized")
-        print(f"   Model: gemini-2.5-flash with 65K token capacity")
+        print(f"🏆 Enhanced Script Generator (Gemini 2.0 Flash) initialized")
+        print(f"   Model: gemini-2.0-flash-exp (FREE tier)")
         print(f"   API Keys: {len(self.api_keys)} keys with automatic rotation")
-        print(f"   Strategy: FEWER, BIGGER chunks for optimal quality")
-        print(f"   Features: Smart chunking, character consistency, seamless flow")
+        print(f"   Max tokens: 8,192 per request")
+        print(f"   Features: Character consistency, no-labels, seamless flow")
     
     def generate_with_template(
         self,
@@ -166,10 +166,10 @@ class EnhancedScriptGenerator:
                 model = genai.GenerativeModel(
                     model_name=GEMINI_SETTINGS['model'],
                     generation_config={
-                        "temperature": 0.95,
-                        "top_p": 0.95,
-                        "top_k": 64,
-                        "max_output_tokens": 65536,  # ✅ 65K tokens
+                        "temperature": 0.75,
+                        "top_p": 0.92,
+                        "top_k": 50,
+                        "max_output_tokens": 8192,  # ✅ Free tier limit
                     }
                 )
 
