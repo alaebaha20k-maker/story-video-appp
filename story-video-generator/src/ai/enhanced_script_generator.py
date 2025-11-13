@@ -17,7 +17,44 @@ from config.story_types import STORY_TYPES
 from src.utils.api_manager import api_manager
 from src.utils.logger import logger
 from src.research.fact_searcher import fact_searcher
-from src.utils.gemini_rate_limiter import rate_limiter  # ✅ NEW: Rate limiter
+from src.utils.gemini_rate_limiter import rate_limiter  # ✅ Rate limiter
+from src.utils.chunk_config import (  # ✅ NEW: Optimal chunking system
+    get_optimal_chunk_config,
+    estimate_target_length,
+    get_chunk_section_goal,
+    should_add_ending_requirements
+)
+
+
+def extract_last_sentences(text: str, num_sentences: int = 8) -> str:
+    """
+    Extract last N sentences from text for seamless continuation.
+
+    This keeps prompts lean by only passing essential context from previous chunk.
+    Gemini doesn't need the entire previous chunk - just enough context to continue smoothly.
+
+    Args:
+        text: The text to extract from
+        num_sentences: Number of sentences to extract (default: 8)
+
+    Returns:
+        String containing the last N sentences
+    """
+    # Split on sentence boundaries
+    sentences = re.split(r'[.!?]+', text)
+
+    # Filter out very short sentences and clean them
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
+
+    if len(sentences) <= num_sentences:
+        # Text is short enough, return as is
+        return text
+
+    # Get last N sentences
+    last_sentences = sentences[-num_sentences:]
+
+    # Rejoin with periods
+    return '. '.join(last_sentences) + '.'
 
 
 class EnhancedScriptGenerator:
@@ -57,18 +94,19 @@ class EnhancedScriptGenerator:
         self.model = genai.GenerativeModel(
             model_name=GEMINI_SETTINGS['model'],
             generation_config={
-                "temperature": 0.75,  # ✅ Balanced creativity
-                "top_p": 0.92,  # ✅ Tighter control for coherence
-                "top_k": 50,  # ✅ Better vocabulary variety
-                "max_output_tokens": 16384,  # ✅ Support 60-min scripts!
+                "temperature": 0.95,  # ✅ High creativity for engaging content
+                "top_p": 0.95,  # ✅ Balanced diversity
+                "top_k": 64,  # ✅ Better vocabulary variety
+                "max_output_tokens": 65536,  # ✅ 65K tokens - MASSIVE output!
             }
         )
         self.character_names = []
 
-        print(f"🏆 Enhanced Script Generator (Gemini) initialized")
+        print(f"🏆 Enhanced Script Generator (Gemini 2.5 Flash) initialized")
+        print(f"   Model: gemini-2.5-flash with 65K token capacity")
         print(f"   API Keys: {len(self.api_keys)} keys with automatic rotation")
-        print(f"   Using: Gemini AI with ULTIMATE prompts!")
-        print(f"   Hook generation: INTELLIGENT (learns from examples!)")
+        print(f"   Strategy: FEWER, BIGGER chunks for optimal quality")
+        print(f"   Features: Smart chunking, character consistency, seamless flow")
     
     def generate_with_template(
         self,
@@ -128,10 +166,10 @@ class EnhancedScriptGenerator:
                 model = genai.GenerativeModel(
                     model_name=GEMINI_SETTINGS['model'],
                     generation_config={
-                        "temperature": 0.75,
-                        "top_p": 0.92,
-                        "top_k": 50,
-                        "max_output_tokens": 16384,
+                        "temperature": 0.95,
+                        "top_p": 0.95,
+                        "top_k": 64,
+                        "max_output_tokens": 65536,  # ✅ 65K tokens
                     }
                 )
 
@@ -189,7 +227,154 @@ class EnhancedScriptGenerator:
                     raise
 
         raise Exception("Failed to generate script after all attempts with all API keys")
-    
+
+    def _generate_chunk(
+        self,
+        chunk_num: int,
+        total_chunks: int,
+        topic: str,
+        style: Dict,
+        template: Optional[Dict],
+        research_data: Optional[str],
+        chars_per_chunk: int,
+        num_scenes: int,
+        previous_chunk: Optional[str] = None
+    ) -> str:
+        """
+        Generate a single chunk using optimized prompting strategy.
+
+        This method implements the proven strategy from successful Gemini 2.5 Flash implementations:
+        - First chunk: Full prompt with all instructions
+        - Continuation chunks: Only last 8 sentences + continuation instructions
+        - Final chunk: Explicit ending requirements
+        """
+        style_name = style.get('name', 'story')
+        style_desc = style.get('description', 'engaging narrative')
+        style_tone = style.get('tone', 'compelling')
+
+        if chunk_num == 1:
+            # First chunk: Use full template prompt but with chunk-specific length
+            prompt = self._build_template_prompt(
+                topic=topic,
+                style=style,
+                template=template,
+                research_data=research_data,
+                duration_minutes=chars_per_chunk // 150,  # Rough estimate
+                num_scenes=num_scenes // total_chunks  # Scenes for this chunk
+            )
+
+            # Modify the prompt to specify this is part of a larger story
+            if total_chunks > 1:
+                prompt += f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ MULTI-CHUNK STORY: This is chunk 1 of {total_chunks}
+
+CRITICAL FOR THIS CHUNK:
+🎯 Generate EXACTLY {chars_per_chunk:,} characters
+📖 Focus: {get_chunk_section_goal(1, total_chunks)}
+✅ Establish ALL character names clearly at the start
+✅ Set up the story world and initial situation
+✅ Build momentum towards the next section
+❌ DO NOT conclude the story (more chunks coming!)
+❌ DO NOT write "To be continued" or similar
+✅ End mid-action or mid-scene naturally
+
+REMEMBER:
+- Establish character names NOW (never change them later!)
+- No labels or section markers
+- Pure narrative flow
+- Natural stopping point (not ending!)
+
+Generate NOW:"""
+
+        else:
+            # Continuation chunk: Use previous context
+            previous_context = extract_last_sentences(previous_chunk, 8)
+            is_final = (chunk_num == total_chunks)
+
+            prompt = f"""You are continuing a {style_name} story. This is chunk {chunk_num} of {total_chunks}.
+
+TOPIC: {topic}
+TONE: {style_tone}
+
+PREVIOUS CHUNK ENDED WITH:
+"{previous_context}"
+
+🎯 TARGET: EXACTLY {chars_per_chunk:,} characters for this chunk
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔒 CRITICAL CONTINUATION RULES:
+
+SEAMLESS FLOW:
+✅ Continue EXACTLY where previous chunk ended
+✅ NO recaps or reintroductions
+✅ NO "Meanwhile..." or "Earlier..." or "As we saw..."
+✅ Continue mid-sentence if previous ended in action
+✅ Jump right into the narrative
+
+CHARACTER CONSISTENCY (ABSOLUTELY CRITICAL!):
+❌ NEVER change character names from previous chunks
+❌ NEVER change character personalities or traits
+✅ Use EXACT same character names established earlier
+✅ Maintain all character relationships and dynamics
+✅ Continue character development naturally
+
+STYLE CONSISTENCY:
+✅ Match the writing style from previous chunk
+✅ Same narrative voice and tone
+✅ Same level of sensory detail
+✅ Same pacing rhythm
+
+{f'''
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔥 FINAL CHUNK - COMPLETE THE STORY!
+
+ENDING REQUIREMENTS:
+✅ Resolve ALL story threads and conflicts
+✅ Epic climax with detailed execution
+✅ Clear aftermath and consequences shown
+✅ Character reflection on the journey
+✅ Satisfying emotional payoff
+✅ Strong, memorable final line
+✅ Sense of completion and closure
+
+Build to powerful ending that resonates!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+''' if is_final else f'''
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+THIS CHUNK FOCUS:
+📖 {get_chunk_section_goal(chunk_num, total_chunks)}
+
+IMPORTANT:
+❌ DO NOT end the story (more chunks coming!)
+❌ DO NOT write "To be continued"
+✅ Build tension and momentum
+✅ End naturally mid-scene or mid-action
+✅ Keep readers wanting more
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+'''}
+
+WRITING QUALITY:
+✅ Present tense, first person throughout
+✅ All 5 senses in descriptions
+✅ Show don't tell emotions
+✅ Vivid, specific details
+✅ Natural dialogue with contractions
+✅ Varied sentence rhythm
+
+WRITE EXACTLY {chars_per_chunk:,} CHARACTERS with maximum quality!
+
+Continue NOW (no preamble, no labels, just story):"""
+
+        return prompt
+
     def _build_template_prompt(
         self,
         topic: str,
@@ -225,6 +410,34 @@ SCENES: {num_scenes} distinct visual scenes
 TYPE: {style_desc}
 TONE: {style_tone}
 PACING: {style_pacing}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔒 ABSOLUTE RULES - NEVER BREAK THESE:
+
+CHARACTER CONSISTENCY:
+❌ NO character name changes (establish names at start, keep them FOREVER)
+❌ NO personality shifts mid-story
+❌ NO unexplained trait changes
+✅ Establish clear character names early in the story
+✅ NEVER change a character's name once established
+✅ Maintain consistent character traits throughout
+✅ Natural character development only (no sudden changes)
+
+FORMAT RULES:
+❌ NO labels ("Part 1", "Chapter", "Scene", "Introduction", etc.)
+❌ NO section headers or breaks
+❌ NO metadata or structural markers
+✅ Pure narrative flow only
+✅ Start directly with story action or hook
+✅ Seamless storytelling from beginning to end
+✅ No artificial divisions or separations
+
+NARRATIVE CONSISTENCY:
+✅ Same writing style throughout (don't shift tone suddenly)
+✅ Same story world rules (no contradictions)
+✅ Logical cause and effect
+✅ Events build naturally on what came before
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
