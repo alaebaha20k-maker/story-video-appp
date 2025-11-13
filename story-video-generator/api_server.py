@@ -14,6 +14,7 @@ from pydub import AudioSegment
 from src.ai.script_analyzer import script_analyzer
 from src.research.fact_searcher import fact_searcher
 from src.ai.enhanced_script_generator import enhanced_script_generator
+from src.ai.chunked_script_generator import chunked_script_generator  # ✅ NEW: HTML-style chunked generation
 
 # ✅ NEW: ADVANCED SCRIPT ANALYSIS
 # from src.ai.narration_extractor import narration_extractor  # ❌ DISABLED: Saves Gemini API calls
@@ -902,6 +903,79 @@ def clear_cache_endpoint():
 
 
 # ═══════════════════════════════════════════════════════════════
+# CHUNKED SCRIPT GENERATION (HTML REPLICA)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/generate-script', methods=['POST', 'OPTIONS'])
+def generate_script_chunked():
+    """✅ Generate script using chunked Gemini API (replicates HTML logic)"""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        data = request.json
+
+        # Validate required fields
+        required_fields = ['apiKey', 'targetLength', 'videoTitle', 'niche', 'type', 'styleExample', 'storyPlot']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({'error': f'{field} is required'}), 400
+
+        # Extract data
+        api_key = data['apiKey']
+        target_length = int(data['targetLength'])
+        video_title = data['videoTitle']
+        niche = data['niche']
+        type_ = data['type']
+        style_example = data['styleExample']
+        story_plot = data['storyPlot']
+        extra_instructions = data.get('extraInstructions', '')
+
+        print(f"\n{'='*60}")
+        print(f"🎬 CHUNKED SCRIPT GENERATION")
+        print(f"{'='*60}")
+        print(f"📝 Title: {video_title}")
+        print(f"🎭 Type: {type_}")
+        print(f"📍 Niche: {niche}")
+        print(f"📏 Target: {target_length:,} characters")
+        print(f"🔑 API Key: ...{api_key[-8:]}")
+        print(f"{'='*60}\n")
+
+        # Generate script using chunked generator
+        result = chunked_script_generator.generate_script(
+            api_key=api_key,
+            target_length=target_length,
+            video_title=video_title,
+            niche=niche,
+            type_=type_,
+            style_example=style_example,
+            story_plot=story_plot,
+            extra_instructions=extra_instructions
+        )
+
+        print(f"\n{'='*60}")
+        print(f"✅ SCRIPT GENERATION COMPLETE!")
+        print(f"{'='*60}")
+        print(f"📊 Characters: {result['stats']['totalCharacters']:,}")
+        print(f"📝 Words: {result['stats']['totalWords']:,}")
+        print(f"⏱️ Time: {result['stats']['generationTime']}s")
+        print(f"📦 Chunks: {result['stats']['chunksGenerated']}")
+        print(f"{'='*60}\n")
+
+        return jsonify({
+            'success': True,
+            'script': result['script'],
+            'stats': result['stats']
+        }), 200
+
+    except Exception as e:
+        print(f"\n❌ Script generation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════
 # MEDIA SOURCE MIXING (AI + Stock + Manual)
 # ═══════════════════════════════════════════════════════════════
 
@@ -1195,6 +1269,7 @@ if __name__ == '__main__':
     print("   GET  /api/voices - List all voices")
     print("   POST /api/generate-video - Generate video (quick)")
     print("   POST /api/generate-with-template - Generate with template")
+    print("   POST /api/generate-script - Generate script (chunked, HTML replica)")
     print("   POST /api/analyze-script - Extract template")
     print("   POST /api/search-facts - Get research facts")
     print("   GET  /api/cache-stats - Cache statistics")
