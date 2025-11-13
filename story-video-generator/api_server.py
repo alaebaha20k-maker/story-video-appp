@@ -16,8 +16,8 @@ from src.research.fact_searcher import fact_searcher
 from src.ai.enhanced_script_generator import enhanced_script_generator
 
 # ✅ NEW: ADVANCED SCRIPT ANALYSIS
-from src.ai.narration_extractor import narration_extractor
-from src.ai.image_prompt_extractor import image_prompt_extractor
+# from src.ai.narration_extractor import narration_extractor  # ❌ DISABLED: Saves Gemini API calls
+from src.ai.image_prompt_extractor import image_prompt_extractor  # ✅ No API calls, just text extraction
 
 # ✅ EXISTING IMPORTS
 # from src.ai.image_generator import create_image_generator  # Old Pollinations
@@ -335,41 +335,21 @@ def generate_video_background(data):
         
         print(f"   ✅ Script: {len(result['script'])} characters")
 
-        # ✨ Check if Advanced Analysis is enabled
-        use_advanced_analysis = data.get('use_advanced_analysis', False)
+        # ✨ Advanced Analysis - DISABLED to save Gemini API calls
+        # ❌ DISABLED: narration_extractor uses extra Gemini API calls
+        # Now ONLY script generation uses Gemini API!
+        use_advanced_analysis = False  # Force disabled to save API calls
 
-        if use_advanced_analysis:
-            print("✨ Advanced Analysis ENABLED")
-
-            # Extract clean narration
-            progress_state['status'] = 'Analyzing script for narration...'
-            progress_state['progress'] = 15
-            print("📊 Step 2a/5: Extracting clean narration...")
-
-            narration_scenes = narration_extractor.extract_narration(
-                result['script'],
-                num_scenes=data.get('num_scenes', 10)
-            )
-            print(f"   ✅ Narration: {len(narration_scenes)} clean scenes extracted")
-
-            # Generate detailed image prompts
-            progress_state['status'] = 'Creating detailed image prompts...'
-            progress_state['progress'] = 20
-            print("🎨 Step 2b/5: Generating detailed image prompts...")
-
-            image_prompt_scenes = image_prompt_extractor.generate_prompts(
-                result['script'],
-                num_scenes=data.get('num_scenes', 10),
-                image_style=data.get('image_style', 'cinematic_film'),
-                story_type=data.get('story_type', 'scary_horror')
-            )
-            print(f"   ✅ Image Prompts: {len(image_prompt_scenes)} detailed prompts generated")
-
-            # Replace the scenes in result with analyzed ones
-            result['narration_scenes'] = narration_scenes
-            result['image_prompt_scenes'] = image_prompt_scenes
-        else:
-            print("✨ Advanced Analysis DISABLED (using standard mode)")
+        # ✅ Use image_prompt_extractor for better prompts (no API calls!)
+        print("🎨 Extracting image prompts from script (no API calls)...")
+        image_prompt_scenes = image_prompt_extractor.generate_prompts(
+            result['script'],
+            num_scenes=data.get('num_scenes', 10),
+            image_style=data.get('image_style', 'cinematic_film'),
+            story_type=data.get('story_type', 'scary_horror')
+        )
+        result['image_prompt_scenes'] = image_prompt_scenes
+        print(f"   ✅ {len(image_prompt_scenes)} image prompts extracted (no API calls!)")
 
         # Images
         # ✅ FIX #9: Add progress updates during image generation
@@ -385,8 +365,8 @@ def generate_video_background(data):
         )
         characters = {char: f"{char}, character" for char in result.get('characters', [])[:3]}
 
-        # Use detailed prompts if advanced analysis was enabled
-        if use_advanced_analysis and 'image_prompt_scenes' in result:
+        # ✅ Use extracted image prompts (no API calls!)
+        if 'image_prompt_scenes' in result:
             # Create scenes with image_description field from extracted prompts
             scenes_with_prompts = []
             for prompt_scene in result['image_prompt_scenes']:
@@ -401,7 +381,7 @@ def generate_video_background(data):
             images = image_gen.generate_batch(scenes_with_prompts, characters)
             progress_state['status'] = f'Images generated ({len([i for i in images if i])}/{num_images})'
         else:
-            # Standard mode - use original scenes
+            # Fallback - use original scenes
             progress_state['status'] = f'Generating images (0/{num_images})...'
             images = image_gen.generate_batch(result['scenes'], characters)
             progress_state['status'] = f'Images generated ({len([i for i in images if i])}/{num_images})'
@@ -417,20 +397,14 @@ def generate_video_background(data):
         # Voice Generation - Kokoro TTS
         progress_state['status'] = 'Generating voice with Kokoro TTS...'
         progress_state['progress'] = 60
-        print(f"🎤 Step 4/5: Generating voice with Kokoro TTS (GPU!)..." if use_advanced_analysis else "🎤 Step 3/4: Generating voice with Kokoro TTS (GPU!)...")
+        print(f"🎤 Step 3/4: Generating voice with Kokoro TTS (GPU!)...")
 
         audio_path = Path("output/temp/narration.wav")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # ✨ Use clean narration if advanced analysis was enabled
-        if use_advanced_analysis and 'narration_scenes' in result:
-            # Combine all narration scenes into one text
-            narration_text = '\n\n'.join([scene['narration'] for scene in result['narration_scenes']])
-            print(f"   Using CLEAN narration ({len(narration_text)} chars)")
-        else:
-            # Standard mode - use full script
-            narration_text = result['script']
-            print(f"   Using FULL script ({len(narration_text)} chars)")
+        # ✅ Always use full script (no narration extraction, saves API calls!)
+        narration_text = result['script']
+        print(f"   Using FULL script ({len(narration_text)} chars)")
 
         # ✅ KOKORO TTS - GPU-POWERED!
         voice_speed = data.get('voice_speed', 1.0)
