@@ -56,14 +56,15 @@ class EnhancedScriptGenerator:
                 "temperature": 0.75,  # ✅ Balanced creativity
                 "top_p": 0.92,  # ✅ Tighter control for coherence
                 "top_k": 50,  # ✅ Better vocabulary variety
-                "max_output_tokens": 16384,  # ✅ Support 60-min scripts!
+                "max_output_tokens": 8192,  # ✅ FREE TIER: 8K tokens max
             }
         )
         self.character_names = []
         
-        print(f"🏆 Enhanced Script Generator (Gemini) initialized")
-        print(f"   Using: Gemini AI with ULTIMATE prompts!")
+        print(f"🏆 Enhanced Script Generator (Gemini 2.0 Flash - FREE) initialized")
+        print(f"   Using: Gemini 2.0 Flash Experimental (FREE TIER)")
         print(f"   Hook generation: INTELLIGENT (learns from examples!)")
+        print(f"   Max tokens: 8192 (FREE tier compatible)")
     
     def generate_with_template(
         self,
