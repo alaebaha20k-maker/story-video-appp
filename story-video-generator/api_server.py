@@ -197,7 +197,8 @@ def generate_video_background(data):
         )
 
         print(f"   ✅ Media: {len(media_items)} items generated/collected")
-        for i, item in enumerate(media_items[:5]):  # Show first 5
+        # ✅ FIXED: Show ALL media items (no 5-item limit)
+        for i, item in enumerate(media_items):
             print(f"      {i+1}. {item.media_type} ({item.source}): {item.filepath.name}")
 
         # STEP 4: Voice Generation (Kokoro TTS - Colab GPU)
