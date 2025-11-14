@@ -530,6 +530,63 @@ def analyze_template():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/analyze-script', methods=['POST', 'OPTIONS'])
+def analyze_script():
+    """✅ FIXED: Analyze pasted script for frontend library (matches ExampleScriptUpload.tsx)"""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        data = request.json
+
+        if not data.get('scriptContent'):
+            return jsonify({'error': 'Script content required'}), 400
+
+        script_content = data.get('scriptContent', '')
+        script_type = data.get('scriptType', 'documentary')
+
+        print(f"\n📖 Analyzing pasted script...")
+        print(f"   Length: {len(script_content)} characters")
+        print(f"   Type: {script_type}")
+
+        # Analyze using template analyzer
+        analysis = template_analyzer.analyze_template(
+            template_text=script_content,
+            story_type=script_type
+        )
+
+        print(f"✅ Script analyzed!")
+        print(f"   Hook style: {analysis.get('hook_style', 'N/A')}")
+
+        # Extract hook example (first 2-3 sentences)
+        sentences = script_content.split('.')[:3]
+        hook_example = '.'.join(sentences).strip() + '.' if sentences else 'No hook found'
+
+        # Map analysis to frontend format
+        response_data = {
+            'success': True,
+            'hook_example': hook_example[:200],  # First 200 chars as hook
+            'hook_style': analysis.get('hook_style', 'researched'),
+            'setup_length': 100,  # Estimated word counts
+            'rise_length': 150,
+            'climax_length': 80,
+            'end_length': 50,
+            'tone': analysis.get('tone', 'professional').split(',') if isinstance(analysis.get('tone'), str) else ['professional'],
+            'key_patterns': analysis.get('key_patterns', ['descriptive', 'narrative']),
+            'sentence_variation': analysis.get('sentence_style', 'medium')
+        }
+
+        print(f"   ✅ Returning analysis to frontend")
+
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        print(f"❌ Script analysis failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/generate-video', methods=['POST', 'OPTIONS'])
 def generate_video():
     if request.method == 'OPTIONS':
@@ -670,6 +727,7 @@ if __name__ == '__main__':
     print("   GET  /health - Server status")
     print("   GET  /api/voices - List all voices")
     print("   POST /api/analyze-template - Analyze template structure")
+    print("   POST /api/analyze-script - Analyze pasted script (frontend library)")
     print("   POST /api/generate-video - Generate video")
     print("   POST /api/generate-with-template - Generate with template")
     print("="*60)
