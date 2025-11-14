@@ -1,27 +1,32 @@
-import { Mic2, Zap } from 'lucide-react';
+import { Mic2, Cpu } from 'lucide-react';
 import { useVideoStore } from '../store/useVideoStore';
 
-// ✅ EDGE-TTS VOICES - FREE & UNLIMITED!
-const EDGE_VOICES = [
-  // FEMALE VOICES (4)
-  { id: 'aria', name: 'Aria', gender: 'Female', style: 'Natural & Warm', icon: '👩', bestFor: 'General narration, storytelling' },
-  { id: 'jenny', name: 'Jenny', gender: 'Female', style: 'Cheerful & Clear', icon: '👩', bestFor: 'Education, tutorials' },
-  { id: 'sara', name: 'Sara', gender: 'Female', style: 'Young & Energetic', icon: '👩', bestFor: 'Adventure, action' },
-  { id: 'nancy', name: 'Nancy', gender: 'Female', style: 'Professional', icon: '👩', bestFor: 'Business, formal content' },
-  
-  // MALE VOICES (4)
-  { id: 'guy', name: 'Guy', gender: 'Male', style: 'Natural & Clear', icon: '👨', bestFor: 'Documentaries, narration' },
+// ✅ KOKORO TTS VOICES - GPU-ACCELERATED ON GOOGLE COLAB!
+const KOKORO_VOICES = [
+  // FEMALE VOICES
+  { id: 'aria', name: 'Aria (Bella)', gender: 'Female', style: 'Natural & Warm', icon: '👩', bestFor: 'Stories, lifestyle, general narration' },
+  { id: 'sarah_pro', name: 'Sarah', gender: 'Female', style: 'Professional', icon: '👩', bestFor: 'Business, professional content' },
+  { id: 'nicole', name: 'Nicole', gender: 'Female', style: 'Cheerful & Clear', icon: '👩', bestFor: 'Education, tutorials' },
+  { id: 'jenny', name: 'Jenny', gender: 'Female', style: 'Young & Energetic', icon: '👩', bestFor: 'Adventure, action' },
+  { id: 'sara', name: 'Sara', gender: 'Female', style: 'Natural', icon: '👩', bestFor: 'Narration, storytelling' },
+  { id: 'emma', name: 'Emma', gender: 'Female', style: 'British Accent', icon: '👩', bestFor: 'Documentaries, British content' },
+
+  // MALE VOICES
+  { id: 'guy', name: 'Guy (Adam)', gender: 'Male', style: 'Natural & Clear', icon: '👨', bestFor: 'Documentaries, narration' },
+  { id: 'adam_narration', name: 'Adam', gender: 'Male', style: 'Professional Narration', icon: '👨', bestFor: 'Professional narration' },
+  { id: 'michael', name: 'Michael', gender: 'Male', style: 'Warm & Friendly', icon: '👨', bestFor: 'Casual content, vlogs' },
+  { id: 'brian', name: 'Brian', gender: 'Male', style: 'Casual', icon: '👨', bestFor: 'Casual narration' },
   { id: 'andrew', name: 'Andrew', gender: 'Male', style: 'Professional', icon: '👨', bestFor: 'Business, formal content' },
-  { id: 'christopher', name: 'Christopher', gender: 'Male', style: 'Casual & Friendly', icon: '👨', bestFor: 'Vlogs, tutorials' },
-  { id: 'roger', name: 'Roger', gender: 'Male', style: 'Authoritative', icon: '👨', bestFor: 'News, documentaries' },
+  { id: 'christopher', name: 'Christopher', gender: 'Male', style: 'Friendly', icon: '👨', bestFor: 'Vlogs, tutorials' },
+  { id: 'george', name: 'George', gender: 'Male', style: 'British Accent', icon: '👨', bestFor: 'British content, documentaries' },
 ];
 
 export const VoiceSelector = () => {
   const { voiceId, setVoiceId } = useVideoStore();
 
   // Group by gender
-  const femaleVoices = EDGE_VOICES.filter(v => v.gender === 'Female');
-  const maleVoices = EDGE_VOICES.filter(v => v.gender === 'Male');
+  const femaleVoices = KOKORO_VOICES.filter(v => v.gender === 'Female');
+  const maleVoices = KOKORO_VOICES.filter(v => v.gender === 'Male');
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
@@ -30,18 +35,18 @@ export const VoiceSelector = () => {
           <Mic2 className="w-6 h-6 text-purple-600" />
           <span>Voice Selection</span>
         </h2>
-        <p className="text-gray-600">Choose your narrator's voice (Edge-TTS - FREE & Unlimited!)</p>
+        <p className="text-gray-600">Choose your narrator's voice (Kokoro TTS - GPU-Accelerated!)</p>
       </div>
 
-      {/* Edge-TTS Info */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border-2 border-blue-200">
+      {/* Kokoro TTS Info */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200">
         <div className="flex items-center space-x-2 mb-2">
-          <Zap className="w-5 h-5 text-blue-600" />
-          <span className="font-bold text-gray-900">EDGE-TTS (Microsoft) - FREE & UNLIMITED!</span>
-          <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded">$0 FOREVER</span>
+          <Cpu className="w-5 h-5 text-purple-600" />
+          <span className="font-bold text-gray-900">KOKORO TTS (Google Colab GPU)</span>
+          <span className="px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded">GPU ACCELERATED</span>
         </div>
         <p className="text-sm text-gray-600">
-          Professional Microsoft voices - NO API key - Unlimited usage - Reliable & Fast!
+          Professional AI voices powered by GPU - Natural speech - High quality - FREE!
         </p>
       </div>
 
@@ -69,8 +74,9 @@ export const VoiceSelector = () => {
               <div className="text-xs text-gray-600 mt-2">
                 <strong>Best for:</strong> {voice.bestFor}
               </div>
-              <div className="text-xs text-blue-600 font-semibold mt-1">
-                💰 FREE Forever
+              <div className="text-xs text-purple-600 font-semibold mt-1 flex items-center space-x-1">
+                <Cpu className="w-3 h-3" />
+                <span>GPU Accelerated</span>
               </div>
             </button>
           ))}
@@ -101,8 +107,9 @@ export const VoiceSelector = () => {
               <div className="text-xs text-gray-600 mt-2">
                 <strong>Best for:</strong> {voice.bestFor}
               </div>
-              <div className="text-xs text-blue-600 font-semibold mt-1">
-                💰 FREE Forever
+              <div className="text-xs text-purple-600 font-semibold mt-1 flex items-center space-x-1">
+                <Cpu className="w-3 h-3" />
+                <span>GPU Accelerated</span>
               </div>
             </button>
           ))}
@@ -110,16 +117,17 @@ export const VoiceSelector = () => {
       </div>
 
       {/* Current Selection */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-4 text-white">
+      <div className="bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg p-4 text-white">
         <p className="text-sm font-medium mb-1">Currently Selected:</p>
         <p className="text-lg font-bold">
-          {EDGE_VOICES.find((v) => v.id === voiceId)?.name || 'Guy'}
+          {KOKORO_VOICES.find((v) => v.id === voiceId)?.name || 'Guy (Adam)'}
         </p>
         <p className="text-sm opacity-90">
-          {EDGE_VOICES.find((v) => v.id === voiceId)?.style || 'Natural & Clear'}
+          {KOKORO_VOICES.find((v) => v.id === voiceId)?.style || 'Natural & Clear'}
         </p>
-        <p className="text-xs mt-2 opacity-80">
-          💰 FREE & Unlimited - Microsoft Edge-TTS!
+        <p className="text-xs mt-2 opacity-80 flex items-center space-x-1">
+          <Cpu className="w-4 h-4" />
+          <span>Powered by Kokoro TTS on Google Colab GPU!</span>
         </p>
       </div>
     </div>

@@ -1,21 +1,17 @@
-import { Palette, Zap } from 'lucide-react';
+import { Palette, Zap, Sparkles } from 'lucide-react';
 import { useVideoStore } from '../store/useVideoStore';
 
+// GPU-accelerated color filters (applied on Google Colab server)
 const FILTERS = [
   { id: 'none', name: 'None', description: 'Original colors' },
-  { id: 'cinematic', name: 'Cinematic', description: 'Professional cinema look' },
-  { id: 'warm', name: 'Warm', description: 'Cozy warm tones' },
-  { id: 'cool', name: 'Cool', description: 'Blue professional look' },
-  { id: 'vibrant', name: 'Vibrant', description: 'Pop and energy' },
-  { id: 'vintage', name: 'Vintage', description: 'Nostalgic retro feel' },
-  { id: 'noir', name: 'Noir', description: 'Black and white drama' },
-  { id: 'dramatic', name: 'Dramatic', description: 'High contrast mood' },
-  { id: 'horror', name: 'Horror', description: 'Dark and eerie' },
-  { id: 'anime', name: 'Anime', description: 'Vibrant anime style' },
+  { id: 'warm', name: 'Warm', description: 'Cozy warm tones with golden hues' },
+  { id: 'cool', name: 'Cool', description: 'Blue professional cinematic look' },
+  { id: 'vintage', name: 'Vintage', description: 'Nostalgic retro vignette feel' },
+  { id: 'cinematic', name: 'Cinematic', description: 'Professional Hollywood-grade color' },
 ];
 
 export const VideoFilters = () => {
-  const { colorFilter, setColorFilter, zoomEffect, setZoomEffect } = useVideoStore();
+  const { colorFilter, setColorFilter, zoomEffect, setZoomEffect, grainEffect, setGrainEffect } = useVideoStore();
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
@@ -24,7 +20,7 @@ export const VideoFilters = () => {
           <Palette className="w-6 h-6 text-indigo-600" />
           <span>Video Filters & Effects</span>
         </h2>
-        <p className="text-gray-600">Add professional color grading and visual effects (no slowdown)</p>
+        <p className="text-gray-600">GPU-accelerated effects on Google Colab (FFmpeg hardware acceleration)</p>
       </div>
 
       {/* Zoom Effect Toggle */}
@@ -43,6 +39,27 @@ export const VideoFilters = () => {
             </div>
             <p className="text-sm text-gray-600 mt-1">
               Smooth zoom on all images/videos (5% zoom in) - Creates dynamic motion
+            </p>
+          </div>
+        </label>
+      </div>
+
+      {/* Grain Effect Toggle */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4">
+        <label className="flex items-center space-x-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={grainEffect}
+            onChange={(e) => setGrainEffect(e.target.checked)}
+            className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+          />
+          <div className="flex-1">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              <span className="font-semibold text-gray-900">Film Grain Effect</span>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Add cinematic film grain/noise overlay for professional aesthetic
             </p>
           </div>
         </label>
@@ -70,7 +87,7 @@ export const VideoFilters = () => {
       </div>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-        <strong>⚡ Fast Processing:</strong> Filters use FFmpeg hardware acceleration - no performance impact!
+        <strong>⚡ GPU-Accelerated:</strong> All effects processed on Google Colab GPU server with FFmpeg hardware acceleration!
       </div>
     </div>
   );

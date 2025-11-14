@@ -28,6 +28,17 @@ interface GenerateVideoRequest {
   pacing: string;
   characters?: any[];
   stock_keywords?: string[];
+  // GPU-accelerated effects (Colab server)
+  color_filter?: string;
+  zoom_effect?: boolean;
+  grain_effect?: boolean;
+  auto_captions?: boolean;
+  caption?: {
+    text: string;
+    style: string;
+    position: string;
+    animation: string;
+  };
 }
 
 // ✅ GENERATE VIDEO

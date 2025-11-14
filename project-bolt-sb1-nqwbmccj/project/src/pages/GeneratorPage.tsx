@@ -186,9 +186,10 @@ export const GeneratorPage = () => {
         num_scenes: store.numScenes,
         characters: store.characters.filter(c => c.name && c.description),
         stock_keywords: store.stockKeywords,
-        // Filters and Effects
+        // Filters and Effects (GPU-accelerated on Colab)
         color_filter: store.colorFilter,
         zoom_effect: store.zoomEffect,
+        grain_effect: store.grainEffect,
         // Auto Captions
         auto_captions: store.autoCaptions,
         // Manual Captions (single text)

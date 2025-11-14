@@ -25,9 +25,10 @@ interface VideoStore {
   stockKeywords: string[];
   selectedStockMedia: StockMediaItem[];
 
-  // Filters and Effects
+  // Filters and Effects (GPU-accelerated on Colab)
   colorFilter: string;
   zoomEffect: boolean;
+  grainEffect: boolean;
   
   // Captions
   autoCaptions: boolean;  // NEW: Auto captions from script
@@ -59,6 +60,7 @@ interface VideoStore {
   
   setColorFilter: (filter: string) => void;
   setZoomEffect: (enabled: boolean) => void;
+  setGrainEffect: (enabled: boolean) => void;
   setAutoCaptions: (enabled: boolean) => void;  // NEW
   setCaptionEnabled: (enabled: boolean) => void;
   setCaptionText: (text: string) => void;
@@ -78,7 +80,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   storyType: 'scary_horror',
   imageStyle: 'cinematic',
   imageMode: 'ai_only',
-  voiceId: 'guy',  // Default Edge-TTS voice (male)
+  voiceId: 'guy',  // Default Kokoro voice (male, natural)
   voiceSpeed: 1.0,
   duration: 5,
   hookIntensity: 'medium',
@@ -89,9 +91,10 @@ export const useVideoStore = create<VideoStore>((set) => ({
   stockKeywords: [],
   selectedStockMedia: [],
   
-  // Filters and Effects
+  // Filters and Effects (GPU-accelerated on Colab)
   colorFilter: 'none',
   zoomEffect: false,
+  grainEffect: false,
   
   // Captions
   autoCaptions: false,  // NEW: Auto captions from script
@@ -123,6 +126,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   
   setColorFilter: (colorFilter) => set({ colorFilter }),
   setZoomEffect: (zoomEffect) => set({ zoomEffect }),
+  setGrainEffect: (grainEffect) => set({ grainEffect }),
   setAutoCaptions: (autoCaptions) => set({ autoCaptions }),  // NEW
   setCaptionEnabled: (captionEnabled) => set({ captionEnabled }),
   setCaptionText: (captionText) => set({ captionText }),
