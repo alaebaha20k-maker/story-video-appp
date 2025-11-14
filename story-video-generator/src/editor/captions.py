@@ -339,6 +339,65 @@ def generate_auto_captions(script: str, audio_duration: float) -> List[Dict]:
     )
 
 
+def generate_tiktok_captions(script: str, audio_duration: float) -> List[Dict]:
+    """
+    ⚡ TIKTOK-STYLE WORD-BY-WORD CAPTIONS
+
+    Generate captions where each word appears one at a time,
+    synchronized with audio timing (like TikTok narration videos).
+
+    Args:
+        script: Full script text
+        audio_duration: Total audio duration in seconds
+
+    Returns:
+        List of caption dictionaries with word-by-word timing
+    """
+    import re
+
+    # Clean script and split into words
+    script = script.strip()
+    words = script.split()
+
+    if not words:
+        return []
+
+    # Calculate timing for each word
+    # Aim for ~0.35 seconds per word (natural speaking speed)
+    time_per_word = audio_duration / len(words)
+
+    # If words are too fast (<0.2s) or too slow (>0.6s), adjust
+    if time_per_word < 0.2:
+        time_per_word = 0.2  # Minimum readable duration
+    elif time_per_word > 0.6:
+        time_per_word = 0.6  # Maximum before it feels slow
+
+    captions = []
+    current_time = 0
+
+    for word in words:
+        # Clean word (remove extra punctuation that breaks FFmpeg)
+        clean_word = word.strip()
+
+        if clean_word:
+            caption = {
+                'text': clean_word,
+                'style': 'bold',  # TikTok uses bold text
+                'position': 'center',  # Center of screen (TikTok style)
+                'animation': 'fade_in',  # Quick fade in
+                'start_time': current_time,
+                'duration': time_per_word
+            }
+            captions.append(caption)
+            current_time += time_per_word
+
+    print(f"⚡ Generated {len(captions)} word-by-word captions")
+    print(f"   Speed: {time_per_word:.2f}s per word")
+    print(f"   Total duration: {current_time:.1f}s")
+
+    return captions
+
+
 if __name__ == "__main__":
     print("\n📝 Testing Caption Generator...\n")
     
