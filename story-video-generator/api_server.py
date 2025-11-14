@@ -451,14 +451,16 @@ def list_voices():
     if request.method == 'OPTIONS':
         return '', 204
 
-    # Kokoro voices (from Colab notebook mapping)
+    # Kokoro voices (from Colab notebook mapping) - ALL 12 VOICES
     voices = {
         # Male voices
         'guy': {'engine': 'kokoro', 'name': 'Guy (Adam)', 'gender': 'male', 'style': 'Natural & Clear'},
-        'adam_narration': {'engine': 'kokoro', 'name': 'Adam', 'gender': 'male', 'style': 'Professional Narration'},
+        'adam_narration': {'engine': 'kokoro', 'name': 'Adam (Narrator)', 'gender': 'male', 'style': 'Professional Narration'},
         'michael': {'engine': 'kokoro', 'name': 'Michael', 'gender': 'male', 'style': 'Warm & Friendly'},
         'brian': {'engine': 'kokoro', 'name': 'Brian', 'gender': 'male', 'style': 'Casual'},
         'george': {'engine': 'kokoro', 'name': 'George', 'gender': 'male', 'style': 'British Accent'},
+        'davis_deep': {'engine': 'kokoro', 'name': 'Davis (Deep)', 'gender': 'male', 'style': 'Deep & Dramatic'},
+        'christopher': {'engine': 'kokoro', 'name': 'Christopher', 'gender': 'male', 'style': 'Calm & Thoughtful'},
 
         # Female voices
         'aria': {'engine': 'kokoro', 'name': 'Aria (Bella)', 'gender': 'female', 'style': 'Natural & Warm'},
@@ -466,6 +468,7 @@ def list_voices():
         'nicole': {'engine': 'kokoro', 'name': 'Nicole', 'gender': 'female', 'style': 'Cheerful & Clear'},
         'jenny': {'engine': 'kokoro', 'name': 'Jenny', 'gender': 'female', 'style': 'Young & Energetic'},
         'emma': {'engine': 'kokoro', 'name': 'Emma', 'gender': 'female', 'style': 'British Accent'},
+        'isabella': {'engine': 'kokoro', 'name': 'Isabella', 'gender': 'female', 'style': 'Compassionate & Warm'},
     }
 
     return jsonify({
