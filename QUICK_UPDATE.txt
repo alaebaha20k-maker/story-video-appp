@@ -1,0 +1,91 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                   📥 UPDATE YOUR LOCAL VS CODE                            ║
+╔═══════════════════════════════════════════════════════════════════════════╗
+
+🔄 COPY-PASTE THESE COMMANDS IN YOUR VS CODE TERMINAL:
+
+# 1. Navigate to your project
+cd story-video-appp
+
+# 2. Checkout the branch
+git checkout claude/test-system-merge-ids-01Ds6GDuqMV5St9tKusWhPV9
+
+# 3. Pull latest changes
+git pull origin claude/test-system-merge-ids-01Ds6GDuqMV5St9tKusWhPV9
+
+# 4. Verify update
+git log --oneline -1
+
+═══════════════════════════════════════════════════════════════════════════
+
+📓 GOOGLE COLAB NOTEBOOK - READY TO USE!
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║  NOTEBOOK NAME: colab_gpu_server_complete.ipynb                          ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+🌐 GITHUB LINK (Download Here):
+https://github.com/alaebaha20k-maker/story-video-appp/blob/claude/test-system-merge-ids-01Ds6GDuqMV5St9tKusWhPV9/colab_gpu_server_complete.ipynb
+
+🔗 DIRECT RAW LINK (For wget/curl):
+https://raw.githubusercontent.com/alaebaha20k-maker/story-video-appp/claude/test-system-merge-ids-01Ds6GDuqMV5St9tKusWhPV9/colab_gpu_server_complete.ipynb
+
+═══════════════════════════════════════════════════════════════════════════
+
+🚀 HOW TO USE THE NOTEBOOK:
+
+1. Go to: https://colab.research.google.com
+2. Click: File → Upload notebook
+3. Upload: colab_gpu_server_complete.ipynb
+4. Click: Runtime → Change runtime type → GPU (T4)
+5. Click: Runtime → Run all (or press Ctrl+F9)
+6. Wait ~2-3 minutes for setup
+7. Copy the ngrok URL from the output
+8. Update your backend config with the ngrok URL
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ WHAT YOU GET:
+
+✅ 13 Kokoro TTS Voices (6 female, 7 male)
+   - Female: aria, sarah_pro, nicole, jenny, emma, isabella
+   - Male: guy, adam_narration, michael, brian, george, davis_deep, christopher
+
+✅ SDXL-Turbo Image Generation (1920x1080, 16:9, GPU)
+✅ FFmpeg Video Compilation (GPU-accelerated)
+✅ Mixed Media Support (Images + Videos)
+✅ All Effects (Zoom, Color Filters, Grain, Captions)
+✅ Ngrok Public URL (auto-setup)
+
+═══════════════════════════════════════════════════════════════════════════
+
+📋 FILES UPDATED IN THIS VERSION:
+
+1. colab_gpu_server_complete.ipynb    ← NEW! Complete GPU notebook
+2. api_server.py                       ← Fixed: All 13 voices
+3. src/types/index.ts                  ← Fixed: Voice engine type
+
+═══════════════════════════════════════════════════════════════════════════
+
+🎯 LATEST COMMITS:
+
+b31a5e8 - Fix TypeScript Voice interface (kokoro engine)
+bcc8a4d - Complete system verification + updates  
+507ff7a - TWO-STAGE GEMINI SYSTEM implementation
+
+═══════════════════════════════════════════════════════════════════════════
+
+🆘 IF YOU HAVE ISSUES PULLING:
+
+# Reset to remote version (WARNING: Discards local changes)
+git reset --hard origin/claude/test-system-merge-ids-01Ds6GDuqMV5St9tKusWhPV9
+
+# Or stash your changes first
+git stash
+git pull origin claude/test-system-merge-ids-01Ds6GDuqMV5St9tKusWhPV9
+git stash pop
+
+═══════════════════════════════════════════════════════════════════════════
+
+🎉 EVERYTHING IS READY! ALL OPTIONS VERIFIED & WORKING!
+

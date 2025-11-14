@@ -1,0 +1,61 @@
+═══════════════════════════════════════════════════════════════════════════
+                    📓 GOOGLE COLAB NOTEBOOK
+═══════════════════════════════════════════════════════════════════════════
+
+📥 DOWNLOAD NOTEBOOK FROM GITHUB:
+https://github.com/alaebaha20k-maker/story-video-appp/blob/claude/test-system-merge-ids-01Ds6GDuqMV5St9tKusWhPV9/colab_gpu_server_complete.ipynb
+
+Click "Download raw file" button or use this direct link:
+https://raw.githubusercontent.com/alaebaha20k-maker/story-video-appp/claude/test-system-merge-ids-01Ds6GDuqMV5St9tKusWhPV9/colab_gpu_server_complete.ipynb
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔗 OPEN DIRECTLY IN GOOGLE COLAB (Click this link):
+
+https://colab.research.google.com/github/alaebaha20k-maker/story-video-appp/blob/claude/test-system-merge-ids-01Ds6GDuqMV5St9tKusWhPV9/colab_gpu_server_complete.ipynb
+
+═══════════════════════════════════════════════════════════════════════════
+
+📝 NOTEBOOK FEATURES:
+
+✅ 13 Kokoro TTS Voices
+   • Female (6): aria, sarah_pro, nicole, jenny, emma, isabella
+   • Male (7): guy, adam_narration, michael, brian, george, davis_deep, christopher
+
+✅ SDXL-Turbo Image Generation
+   • Resolution: 1920x1080 (16:9)
+   • GPU-accelerated (4-step generation)
+   • Batch support
+
+✅ FFmpeg Video Compilation
+   • Mixed media (images + videos)
+   • Zoom effects (Ken Burns)
+   • Color filters (warm, cool, vintage, cinematic)
+   • Grain effects
+   • Captions
+
+✅ Ngrok Auto-Setup
+   • Public URL automatically generated
+   • No manual configuration needed
+
+═══════════════════════════════════════════════════════════════════════════
+
+🚀 SETUP STEPS:
+
+1. Click the "Open in Colab" link above
+2. Runtime → Change runtime type → GPU (T4)
+3. Runtime → Run all (Ctrl+F9)
+4. Wait 2-3 minutes for installation
+5. Copy the ngrok URL from output
+6. Update backend config:
+   
+   File: story-video-generator/config/__init__.py
+   Line: COLAB_SERVER_URL = 'https://your-ngrok-url.ngrok-free.app'
+
+7. Start your backend: python api_server.py
+8. Start your frontend: npm run dev
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ ALL VERIFIED & READY TO USE!
+
