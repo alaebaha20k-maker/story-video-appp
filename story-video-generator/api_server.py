@@ -1,11 +1,17 @@
 """
-🔌 API SERVER - With Google Colab GPU (FULL GPU Processing)
+🔌 API SERVER - With Google Colab GPU (TWO-STAGE GEMINI + FULL GPU Processing)
 
-System Architecture:
-- Script: Gemini AI (local API call)
+System Architecture (TWO-STAGE INTELLIGENT SYSTEM):
+- STAGE 1: Script Generation - Gemini AI (local) - PURE QUALITY, NO IMAGE PROMPTS
+- STAGE 2: Image Prompt Extraction - Gemini AI (local, separate API) - SDXL-optimized prompts
 - Voice: Kokoro TTS (Colab GPU via ngrok)
-- Images: SDXL-Turbo (Colab GPU via ngrok)
+- Images: SDXL-Turbo (Colab GPU via ngrok) ← Uses Stage 2 prompts
 - Video: FFmpeg (Colab GPU via ngrok) ← ALL EFFECTS on GPU!
+
+WHY TWO STAGES?
+- Stage 1 generates HIGH-QUALITY script without image prompts (better quality!)
+- Stage 2 analyzes finished script and creates perfect SDXL prompts
+- Parallel execution: Script → Voice, Prompts → Images
 """
 
 from flask import Flask, request, jsonify, send_file
@@ -18,6 +24,7 @@ from pydub import AudioSegment
 
 # ✅ IMPORTS
 from src.ai.enhanced_script_generator import enhanced_script_generator
+from src.ai.image_prompt_extractor import image_prompt_extractor  # NEW: Stage 2
 from src.utils.colab_client import get_colab_client
 from src.media.intelligent_media_manager import media_manager
 from src.utils.smart_duration_calculator import duration_calculator
@@ -132,13 +139,40 @@ def generate_video_background(data):
             num_scenes=int(data.get('num_scenes', 10))
         )
 
-        print(f"   ✅ Script: {len(result['script'])} characters")
-        print(f"   ✅ Scenes: {len(result['scenes'])} generated")
+        print(f"   ✅ Script: {len(result['script'])} characters (PURE QUALITY!)")
+        print(f"   ✅ Narrative markers: {len(result['scenes'])} created")
 
-        # STEP 2: Media Generation (INTELLIGENT - AI/Manual/Stock/Mixed)
+        # STEP 2: Image Prompt Extraction (Gemini AI Stage 2 - NEW!)
+        progress_state['status'] = 'Extracting visual prompts (Stage 2 Gemini)...'
+        progress_state['progress'] = 20
+        print("🎨 Step 2/5: Extracting image prompts with Gemini Stage 2...")
+
+        story_type = data.get('story_type', 'scary_horror')
+        image_style = data.get('image_style', 'cinematic')
+        num_scenes = int(data.get('num_scenes', 10))
+
+        # Extract SDXL-optimized prompts from script
+        image_prompts = image_prompt_extractor.extract_prompts(
+            script=result['script'],
+            num_images=num_scenes,
+            story_type=story_type,
+            image_style=image_style
+        )
+
+        print(f"   ✅ Prompts: {len(image_prompts)} SDXL-optimized prompts extracted!")
+        for i, prompt_data in enumerate(image_prompts[:3]):  # Show first 3
+            print(f"      {i+1}. {prompt_data['prompt'][:60]}...")
+
+        # Update scenes with extracted prompts
+        for i, scene in enumerate(result['scenes'][:len(image_prompts)]):
+            if i < len(image_prompts):
+                scene['prompt'] = image_prompts[i]['prompt']
+                scene['image_description'] = image_prompts[i]['prompt']
+
+        # STEP 3: Media Generation (INTELLIGENT - AI/Manual/Stock/Mixed)
         progress_state['status'] = 'Generating media (intelligent mode)...'
-        progress_state['progress'] = 30
-        print("🎨 Step 2/4: Generating media with Intelligent Media Manager...")
+        progress_state['progress'] = 35
+        print("🎨 Step 3/5: Generating media with Intelligent Media Manager...")
 
         # Get media mode and options
         image_mode = data.get('image_mode', 'ai_only')
@@ -165,10 +199,10 @@ def generate_video_background(data):
         for i, item in enumerate(media_items[:5]):  # Show first 5
             print(f"      {i+1}. {item.media_type} ({item.source}): {item.filepath.name}")
 
-        # STEP 3: Voice Generation (Kokoro TTS - Colab GPU)
+        # STEP 4: Voice Generation (Kokoro TTS - Colab GPU)
         progress_state['status'] = 'Generating voice with Kokoro TTS (GPU)...'
         progress_state['progress'] = 60
-        print(f"🎤 Step 3/4: Generating voice with Kokoro TTS (Colab GPU)...")
+        print(f"🎤 Step 4/5: Generating voice with Kokoro TTS (Colab GPU)...")
 
         audio_path = Path("output/temp/narration.wav")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
@@ -201,10 +235,10 @@ def generate_video_background(data):
         print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} min)")
         print(f"      Matches audio: {'✅ YES' if abs(sum(durations) - audio_duration) < 1 else '⚠️ NO'}")
 
-        # STEP 4: Video Compilation (FFmpeg - Colab GPU)
+        # STEP 5: Video Compilation (FFmpeg - Colab GPU)
         progress_state['status'] = 'Compiling video with FFmpeg (GPU)...'
         progress_state['progress'] = 80
-        print("🎬 Step 4/4: Compiling video with FFmpeg (Colab GPU)...")
+        print("🎬 Step 5/5: Compiling video with FFmpeg (Colab GPU)...")
 
         safe_topic = sanitize_filename(data.get('topic', 'video'))
         output_filename = f"{safe_topic}_video.mp4"
@@ -234,7 +268,8 @@ def generate_video_background(data):
         progress_state['video_path'] = output_filename
 
         print(f"\n✅ SUCCESS! Video: {output_filename}")
-        print(f"   Script: Gemini AI")
+        print(f"   Stage 1: Script (Gemini AI) - PURE QUALITY!")
+        print(f"   Stage 2: Image Prompts (Gemini AI) - {len(image_prompts)} SDXL prompts")
         print(f"   Voice: Kokoro TTS (Colab GPU)")
         print(f"   Images: SDXL-Turbo (Colab GPU)")
         print(f"   Video: FFmpeg (Colab GPU)")

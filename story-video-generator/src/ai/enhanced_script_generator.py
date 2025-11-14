@@ -299,46 +299,6 @@ CRITICAL: Learn the STYLE from examples, create ORIGINAL content!
 ✅ SUBTEXT (dialogue says one thing, means another)
 ✅ CHARACTER VOICE (each person talks differently)
 
-🎨 CRITICAL: VISUAL STORYTELLING - {num_scenes} UNIQUE IMAGE DESCRIPTIONS!
-
-⚠️ MANDATORY: You MUST include EXACTLY {num_scenes} IMAGE: descriptions in your story!
-
-FORMAT FOR EACH IMAGE:
-IMAGE: [20-30 word detailed visual description]
-
-REQUIREMENTS FOR EACH IMAGE:
-✅ Include TOPIC elements: "{topic}" (MUST mention aliens if topic is aliens, etc!)
-✅ 20-30 words EXACTLY
-✅ UNIQUE visuals (never repeat!)
-✅ SPECIFIC details (exact lighting, mood, objects, actions)
-✅ CINEMATIC language (like a movie scene!)
-✅ VARIED compositions across all {num_scenes} images
-
-SHOT VARIETY - Use these {num_scenes} different types:
-1. Wide establishing shot - show the full scene
-2. Medium close-up - focus on character
-3. Dramatic angle - unique perspective
-4. Intimate close-up - emotional detail
-5. Environmental wide - setting/world
-6. Character focus - personality moment
-7. Detail shot - important object
-8. Tension shot - building stakes
-9. Climactic shot - peak moment
-10. Resolution shot - ending peace
-
-EXAMPLE FORMATS:
-
-For ALIEN topic:
-IMAGE: Silver-skinned alien with large dark eyes lying on kitchen floor, glowing blue blood pooling, spaceship wreckage visible through window, sci-fi atmosphere, wide establishing shot, dramatic lighting, high detail.
-
-For HORROR topic:
-IMAGE: Woman's trembling hand on old brass doorknob, dim hallway behind with shadows stretching, eerie silence, single flickering bulb overhead, horror atmosphere, close-up shot, cinematic lighting, suspenseful mood, high detail.
-
-For ROMANCE topic:
-IMAGE: Two people's hands almost touching across coffee shop table, warm golden hour lighting streaming through window, steam rising from cups, intimate medium shot, romantic atmosphere, soft focus background, heartwarming mood.
-
-⚠️ CRITICAL: Each IMAGE must MATCH the story moment AND the topic "{topic}"!
-
 🎯 QUALITY TARGETS (10/10!):
 ✅ Emotional impact: 10/10 (MAXIMUM engagement!)
 ✅ Character depth: 10/10 (Complex, relatable)
@@ -364,16 +324,15 @@ IMAGE: Two people's hands almost touching across coffee shop table, warm golden 
 Write EXACTLY {target_words} words of EXTRAORDINARY quality!
 
 MANDATORY REQUIREMENTS:
-✅ EXACTLY {num_scenes} IMAGE: descriptions (COUNT THEM! Must have {num_scenes}!)
 ✅ Present tense, first person throughout
 ✅ All 5 senses in EVERY paragraph
-✅ Each IMAGE includes topic "{topic}" elements!
 ✅ Emotional, visceral, deeply engaging
 ✅ Perfect for voice narration (read-aloud friendly)
-✅ Vivid, unique visual scenes for EACH image (all different!)
 ✅ Hook that IMMEDIATELY grabs attention
 ✅ Satisfying, memorable ending
-✅ Professional story structure
+✅ Professional story structure with {num_scenes} distinct narrative moments
+✅ Vivid, cinematic descriptions throughout (visual storytelling!)
+✅ Topic "{topic}" integrated naturally throughout story
 
 🏆 QUALITY GOAL: Create a script so good that:
 - Viewers can't stop watching
@@ -389,12 +348,12 @@ MANDATORY REQUIREMENTS:
 1. Plan {num_scenes} DIFFERENT image scenes
 2. Each image MUST include "{topic}" elements
 3. Each image MUST be visually DIFFERENT from others
-4. Distribute images evenly throughout story
+4. Ensure {num_scenes} distinct narrative moments throughout story
 
-NOW Generate the complete {target_words}-word script with {num_scenes} IMAGE: descriptions.
-NO preamble, NO commentary, NO explanations - JUST the story with IMAGES!
+NOW Generate the complete {target_words}-word script.
+NO preamble, NO commentary, NO explanations, NO IMAGE DESCRIPTIONS - PURE STORY ONLY!
 
-REMEMBER: {num_scenes} IMAGES REQUIRED - COUNT THEM!"""
+Focus on SCRIPT QUALITY ONLY - visual prompts will be generated separately!"""
         
         return prompt
     
@@ -491,143 +450,41 @@ THINK OF IT LIKE:
         return sorted(list(names))[:10]
     
     def _parse_scenes(self, text: str, num_scenes: int) -> List[Dict]:
-        """Parse text into scenes with proper IMAGE descriptions"""
-        
-        # First, try to extract IMAGE: descriptions from script
-        image_descriptions = re.findall(r'IMAGE:\s*(.+?)(?:\n|$)', text, re.IGNORECASE)
-        
-        if image_descriptions and len(image_descriptions) >= num_scenes:
-            # Use explicit IMAGE: descriptions from script
-            logger.info(f"   ✅ Found {len(image_descriptions)} IMAGE descriptions in script")
-            
-            scenes = []
-            for i in range(min(num_scenes, len(image_descriptions))):
-                # Find the text around this image description
-                img_desc = image_descriptions[i]
-                
-                scenes.append({
-                    'scene_number': i + 1,
-                    'image_description': img_desc.strip(),
-                    'content': img_desc.strip(),  # For character detection
-                    'has_explicit_image': True
-                })
-            
-            return scenes
-        
-        # Fallback: FORCE creation of exactly num_scenes images!
-        logger.warning(f"   ⚠️  Only found {len(image_descriptions)} IMAGE descriptions!")
-        logger.info(f"   🔧 FORCING creation of {num_scenes} topic-specific images...")
-        
-        # Split text into paragraphs
+        """
+        Parse script into narrative scenes (NO image prompts - Stage 2 handles that!)
+
+        This creates scene markers for the script structure.
+        Image prompts will be generated separately by image_prompt_extractor.py
+        """
+
+        logger.info(f"   📝 Parsing script into {num_scenes} narrative scenes...")
+
+        # Split text into paragraphs/sections
         paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
         if not paragraphs:
             paragraphs = [text[:500]]  # Use first part of text
-        
+
         scenes = []
         scene_length = max(1, len(paragraphs) // num_scenes)
-        
-        # FORCE generation of EXACTLY num_scenes images!
+
+        # Divide script into num_scenes segments
         for i in range(num_scenes):
             start_idx = i * scene_length
             end_idx = min(start_idx + scene_length, len(paragraphs))
-            
-            # Get scene text
+
+            # Get scene text excerpt
             scene_paragraphs = paragraphs[start_idx:end_idx] if start_idx < len(paragraphs) else paragraphs[-1:]
-            scene_text = ' '.join(scene_paragraphs)[:200] if scene_paragraphs else text[i*100:(i+1)*100]
-            
-            # Create SPECIFIC image description
-            # FORCE topic inclusion and variety!
-            description = self._create_topic_specific_image(
-                scene_text,
-                scene_num=i + 1,
-                num_scenes=num_scenes
-            )
-            
+            scene_text = ' '.join(scene_paragraphs)[:300] if scene_paragraphs else text[i*100:(i+1)*100]
+
             scenes.append({
                 'scene_number': i + 1,
-                'image_description': description,
-                'content': scene_text[:200],
-                'has_explicit_image': False
+                'description': scene_text,  # Brief excerpt for Stage 2
+                'content': scene_text,
+                'has_explicit_image': False  # Stage 2 generates prompts
             })
-        
-        logger.info(f"   ✅ Created {len(scenes)} topic-specific image descriptions")
+
+        logger.info(f"   ✅ Created {len(scenes)} narrative scene markers (prompts in Stage 2)")
         return scenes
-    
-    def _create_topic_specific_image(self, text: str, scene_num: int, num_scenes: int) -> str:
-        """Create TOPIC-SPECIFIC image description - FORCES correct content!"""
-        
-        # Shot types for variety (cycle through these)
-        shot_types = [
-            "wide establishing shot, cinematic",
-            "medium close-up, character focus",
-            "dramatic low angle, tension",
-            "intimate close-up, emotional",
-            "atmospheric wide, environmental",
-            "over-shoulder, interaction",
-            "extreme close-up, detail",
-            "dutch angle, dramatic",
-            "climactic wide, peak moment",
-            "resolution shot, peaceful"
-        ]
-        
-        shot_type = shot_types[(scene_num - 1) % len(shot_types)]
-        
-        # Extract key snippet from text (first significant words)
-        text_clean = text.replace('\n', ' ').strip()
-        key_words = ' '.join(text_clean.split()[:15])  # First 15 words
-        
-        # Build SPECIFIC description with text content
-        description = f"{key_words}, {shot_type}, cinematic lighting, high detail, professional composition, photorealistic"
-        
-        return description
-    
-    def _create_image_description_from_text(self, text: str, scene_num: int, story_type: str) -> str:
-        """Create detailed image description from story text"""
-        
-        # Extract key elements (characters, objects, actions, emotions)
-        words = text.lower().split()[:50]  # First 50 words of scene
-        
-        # Detect scene elements
-        has_character = any(name.lower() in ' '.join(words) for name in self.character_names[:3])
-        has_action = any(word in ' '.join(words) for word in ['run', 'walk', 'look', 'turn', 'move', 'open', 'close'])
-        has_emotion = any(word in ' '.join(words) for word in ['fear', 'joy', 'sad', 'angry', 'love', 'terror', 'happy'])
-        
-        # Build rich description
-        description_parts = []
-        
-        # Add main subject
-        if has_character and self.character_names:
-            description_parts.append(f"{self.character_names[0]}")
-        else:
-            description_parts.append("Main character")
-        
-        # Add key text snippet (cleaned)
-        clean_snippet = text[:80].replace('\n', ' ').strip()
-        if clean_snippet:
-            description_parts.append(clean_snippet)
-        
-        # Add cinematic elements
-        description_parts.append(f"{story_type} atmosphere")
-        description_parts.append("cinematic lighting")
-        description_parts.append("high detail")
-        
-        # Add composition based on scene number
-        compositions = [
-            "establishing wide shot",
-            "medium close-up",
-            "dramatic angle",
-            "intimate close-up",
-            "atmospheric wide",
-            "character focus",
-            "environmental detail",
-            "tension building shot",
-            "climactic moment",
-            "emotional resolution"
-        ]
-        if scene_num <= len(compositions):
-            description_parts.append(compositions[scene_num - 1])
-        
-        return ', '.join(description_parts)
 
 
 # Create singleton instance
