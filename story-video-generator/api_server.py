@@ -19,6 +19,8 @@ from pydub import AudioSegment
 # ✅ IMPORTS
 from src.ai.enhanced_script_generator import enhanced_script_generator
 from src.utils.colab_client import get_colab_client
+from src.media.intelligent_media_manager import media_manager
+from src.utils.smart_duration_calculator import duration_calculator
 
 app = Flask(__name__)
 
@@ -133,26 +135,35 @@ def generate_video_background(data):
         print(f"   ✅ Script: {len(result['script'])} characters")
         print(f"   ✅ Scenes: {len(result['scenes'])} generated")
 
-        # STEP 2: Image Generation (SDXL-Turbo - Colab GPU)
-        progress_state['status'] = 'Generating images with SDXL-Turbo (GPU)...'
+        # STEP 2: Media Generation (INTELLIGENT - AI/Manual/Stock/Mixed)
+        progress_state['status'] = 'Generating media (intelligent mode)...'
         progress_state['progress'] = 30
-        print("🎨 Step 2/4: Generating images with SDXL-Turbo (Colab GPU)...")
+        print("🎨 Step 2/4: Generating media with Intelligent Media Manager...")
 
-        # Call Colab for batch image generation
+        # Get media mode and options
+        image_mode = data.get('image_mode', 'ai_only')
         image_style = data.get('image_style', 'cinematic')
+        manual_files = data.get('manual_files', [])  # User uploads
+        stock_keywords = data.get('stock_keywords', [])  # For stock mode
+        num_scenes = int(data.get('num_scenes', 10))
 
-        images = colab_client.generate_images_batch(
+        print(f"   Mode: {image_mode}")
+        print(f"   Style: {image_style}")
+        print(f"   Scenes: {num_scenes}")
+
+        # Use intelligent media manager (handles all 7 modes)
+        media_items = media_manager.generate_media(
+            mode=image_mode,
             scenes=result['scenes'],
-            style=image_style
+            image_style=image_style,
+            manual_files=manual_files,
+            stock_keywords=stock_keywords,
+            num_scenes=num_scenes
         )
 
-        # Filter successful images
-        image_paths = [Path(img['filepath']) for img in images if img.get('success')]
-
-        print(f"   ✅ Images: {len(image_paths)} generated (1920x1080)")
-        for i, img_path in enumerate(image_paths):
-            exists = "EXISTS" if img_path.exists() else "MISSING!"
-            print(f"      Image {i+1}: {img_path.name} - {exists}")
+        print(f"   ✅ Media: {len(media_items)} items generated/collected")
+        for i, item in enumerate(media_items[:5]):  # Show first 5
+            print(f"      {i+1}. {item.media_type} ({item.source}): {item.filepath.name}")
 
         # STEP 3: Voice Generation (Kokoro TTS - Colab GPU)
         progress_state['status'] = 'Generating voice with Kokoro TTS (GPU)...'
@@ -173,14 +184,22 @@ def generate_video_background(data):
         audio_duration = get_audio_duration(audio_path)
         print(f"   ✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
 
-        # Calculate durations - MATCH VIDEO TO AUDIO
-        time_per_image = audio_duration / len(image_paths) if image_paths else 5
-        durations = [time_per_image] * len(image_paths)
+        # INTELLIGENT DURATION CALCULATION
+        # Handles mixed media (images + videos) with smart timing
+        print(f"\n   🔧 Calculating intelligent durations...")
 
-        print(f"   🔧 Image timing:")
-        print(f"      Images: {len(image_paths)}")
-        print(f"      Duration per image: {time_per_image:.1f}s")
-        print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} minutes)")
+        # Prepare media items for duration calculator
+        media_for_calc = [item.to_dict() for item in media_items]
+
+        # Use smart duration calculator
+        durations = duration_calculator.calculate_durations(
+            media_items=media_for_calc,
+            audio_duration=audio_duration,
+            variation=0.3  # 30% variation for natural pacing
+        )
+
+        print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} min)")
+        print(f"      Matches audio: {'✅ YES' if abs(sum(durations) - audio_duration) < 1 else '⚠️ NO'}")
 
         # STEP 4: Video Compilation (FFmpeg - Colab GPU)
         progress_state['status'] = 'Compiling video with FFmpeg (GPU)...'
@@ -195,9 +214,12 @@ def generate_video_background(data):
         grain_effect = data.get('grain_effect', False)
         captions = data.get('captions', {})
 
-        # Compile video on Colab GPU
+        # Extract media file paths
+        media_paths = [item.filepath for item in media_items]
+
+        # Compile video on Colab GPU (handles both images AND videos)
         video_path = colab_client.compile_video(
-            image_paths,
+            media_paths,
             audio_path,
             durations,
             output_path=Path(f"output/videos/{output_filename}"),

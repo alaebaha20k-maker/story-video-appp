@@ -301,7 +301,7 @@ class ColabClient:
 
     def compile_video(
         self,
-        image_paths: List[Path],
+        media_paths: List[Path],
         audio_path: Path,
         durations: List[float],
         output_path: Optional[Path] = None,
@@ -312,13 +312,14 @@ class ColabClient:
     ) -> str:
         """
         Compile video using FFmpeg on Colab GPU with ALL effects
+        SUPPORTS MIXED MEDIA: Images AND Videos
 
         Args:
-            image_paths: List of image file paths
+            media_paths: List of media file paths (images AND/OR videos)
             audio_path: Path to audio file
-            durations: Duration for each image
+            durations: Duration for each media item
             output_path: Where to save video (optional)
-            zoom_effect: Enable zoom effect
+            zoom_effect: Enable zoom effect (applies to both images and videos)
             color_filter: Color filter (none, warm, cool, vintage, cinematic)
             grain_effect: Enable grain/noise effect
             captions: Caption settings dict
@@ -326,8 +327,16 @@ class ColabClient:
         Returns:
             str: Path to compiled video file
         """
+
+        # Detect media types
+        image_extensions = {'.jpg', '.jpeg', '.png', '.webp'}
+        video_extensions = {'.mp4', '.mov', '.avi', '.webm'}
+
+        num_images = sum(1 for p in media_paths if Path(p).suffix.lower() in image_extensions)
+        num_videos = sum(1 for p in media_paths if Path(p).suffix.lower() in video_extensions)
+
         print(f"\n🎬 Compiling video with FFmpeg (Colab GPU)...")
-        print(f"   Images: {len(image_paths)}")
+        print(f"   Media: {len(media_paths)} items ({num_images} images, {num_videos} videos)")
         print(f"   Zoom: {'ON' if zoom_effect else 'OFF'}")
         print(f"   Color Filter: {color_filter}")
         print(f"   Grain: {'ON' if grain_effect else 'OFF'}")
@@ -335,13 +344,26 @@ class ColabClient:
         try:
             url = f"{self.server_url}{COLAB_ENDPOINTS['compile_video']}"
 
-            # Read and encode images as base64
-            images_base64 = []
-            for img_path in image_paths:
-                with open(img_path, 'rb') as f:
-                    img_bytes = f.read()
-                    img_base64 = base64.b64encode(img_bytes).decode('utf-8')
-                    images_base64.append(img_base64)
+            # Read and encode ALL media (images AND videos) as base64
+            media_base64 = []
+            media_types = []
+
+            for media_path in media_paths:
+                media_path = Path(media_path)
+                suffix = media_path.suffix.lower()
+
+                with open(media_path, 'rb') as f:
+                    media_bytes = f.read()
+                    media_b64 = base64.b64encode(media_bytes).decode('utf-8')
+                    media_base64.append(media_b64)
+
+                    # Determine type
+                    if suffix in image_extensions:
+                        media_types.append('image')
+                    elif suffix in video_extensions:
+                        media_types.append('video')
+                    else:
+                        media_types.append('image')  # Default to image
 
             # Read and encode audio as base64
             with open(audio_path, 'rb') as f:
@@ -357,7 +379,8 @@ class ColabClient:
             }
 
             payload = {
-                'images': images_base64,
+                'media': media_base64,           # Changed from 'images' to 'media'
+                'media_types': media_types,      # NEW: specify type of each item
                 'audio': audio_base64,
                 'durations': durations,
                 'effects': effects
