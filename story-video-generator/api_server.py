@@ -25,6 +25,7 @@ from pydub import AudioSegment
 # ✅ IMPORTS
 from src.ai.enhanced_script_generator import enhanced_script_generator
 from src.ai.image_prompt_extractor import image_prompt_extractor  # NEW: Stage 2
+from src.ai.template_analyzer import template_analyzer  # NEW: Template Analysis
 from src.utils.colab_client import get_colab_client
 from src.media.intelligent_media_manager import media_manager
 from src.utils.smart_duration_calculator import duration_calculator
@@ -479,6 +480,55 @@ def list_voices():
     }), 200
 
 
+@app.route('/api/analyze-template', methods=['POST', 'OPTIONS'])
+def analyze_template():
+    """Analyze template script to extract structure and style"""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        data = request.json
+
+        if not data.get('template'):
+            return jsonify({'error': 'Template text required'}), 400
+
+        template_text = data.get('template', '')
+        story_type = data.get('story_type', 'scary_horror')
+
+        print(f"\n🔍 Analyzing template...")
+        print(f"   Length: {len(template_text)} characters")
+        print(f"   Story type: {story_type}")
+
+        # Analyze template using dedicated Gemini API
+        analysis = template_analyzer.analyze_template(
+            template_text=template_text,
+            story_type=story_type
+        )
+
+        # Create style guide
+        style_guide = template_analyzer.create_style_guide(analysis)
+
+        print(f"✅ Template analyzed successfully!")
+        print(f"   Hook: {analysis.get('hook_intensity', 'N/A')}")
+        print(f"   Pacing: {analysis.get('pacing_speed', 'N/A')}")
+
+        return jsonify({
+            'success': True,
+            'analysis': analysis,
+            'style_guide': style_guide,
+            'hook_intensity': analysis.get('hook_intensity', 'medium'),
+            'pacing_speed': analysis.get('pacing_speed', 'medium'),
+            'narrative_voice': analysis.get('narrative_voice', '3rd person'),
+            'tone': analysis.get('tone', 'neutral')
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Template analysis failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/generate-video', methods=['POST', 'OPTIONS'])
 def generate_video():
     if request.method == 'OPTIONS':
@@ -618,6 +668,7 @@ if __name__ == '__main__':
     print("\n✅ ENDPOINTS:")
     print("   GET  /health - Server status")
     print("   GET  /api/voices - List all voices")
+    print("   POST /api/analyze-template - Analyze template structure")
     print("   POST /api/generate-video - Generate video")
     print("   POST /api/generate-with-template - Generate with template")
     print("="*60)
