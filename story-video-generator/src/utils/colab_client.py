@@ -299,6 +299,111 @@ class ColabClient:
             print(f"❌ Batch generation failed: {e}")
             raise
 
+    def compile_video(
+        self,
+        image_paths: List[Path],
+        audio_path: Path,
+        durations: List[float],
+        output_path: Optional[Path] = None,
+        zoom_effect: bool = True,
+        color_filter: str = 'none',
+        grain_effect: bool = False,
+        captions: Optional[Dict] = None
+    ) -> str:
+        """
+        Compile video using FFmpeg on Colab GPU with ALL effects
+
+        Args:
+            image_paths: List of image file paths
+            audio_path: Path to audio file
+            durations: Duration for each image
+            output_path: Where to save video (optional)
+            zoom_effect: Enable zoom effect
+            color_filter: Color filter (none, warm, cool, vintage, cinematic)
+            grain_effect: Enable grain/noise effect
+            captions: Caption settings dict
+
+        Returns:
+            str: Path to compiled video file
+        """
+        print(f"\n🎬 Compiling video with FFmpeg (Colab GPU)...")
+        print(f"   Images: {len(image_paths)}")
+        print(f"   Zoom: {'ON' if zoom_effect else 'OFF'}")
+        print(f"   Color Filter: {color_filter}")
+        print(f"   Grain: {'ON' if grain_effect else 'OFF'}")
+
+        try:
+            url = f"{self.server_url}{COLAB_ENDPOINTS['compile_video']}"
+
+            # Read and encode images as base64
+            images_base64 = []
+            for img_path in image_paths:
+                with open(img_path, 'rb') as f:
+                    img_bytes = f.read()
+                    img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+                    images_base64.append(img_base64)
+
+            # Read and encode audio as base64
+            with open(audio_path, 'rb') as f:
+                audio_bytes = f.read()
+                audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+
+            # Prepare effects
+            effects = {
+                'zoom_effect': zoom_effect,
+                'color_filter': color_filter,
+                'grain_effect': grain_effect,
+                'captions': captions or {}
+            }
+
+            payload = {
+                'images': images_base64,
+                'audio': audio_base64,
+                'durations': durations,
+                'effects': effects
+            }
+
+            print(f"   📡 Sending to Colab server...")
+            start_time = time.time()
+
+            # Call Colab endpoint
+            response = requests.post(
+                url,
+                json=payload,
+                timeout=600  # 10 minutes
+            )
+
+            elapsed = time.time() - start_time
+
+            if response.status_code != 200:
+                raise RuntimeError(f"Colab returned error {response.status_code}: {response.text}")
+
+            # Save video file
+            if output_path is None:
+                output_dir = Path("output/videos")
+                output_dir.mkdir(parents=True, exist_ok=True)
+                output_path = output_dir / "final_video.mp4"
+
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write video data
+            with open(output_path, 'wb') as f:
+                f.write(response.content)
+
+            file_size = output_path.stat().st_size
+
+            print(f"\n✅ Video compiled!")
+            print(f"   File: {output_path}")
+            print(f"   Size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
+            print(f"   Time: {elapsed:.1f} seconds")
+
+            return str(output_path)
+
+        except Exception as e:
+            print(f"❌ Video compilation failed: {e}")
+            raise
+
 
 # Singleton instance
 _colab_client = None

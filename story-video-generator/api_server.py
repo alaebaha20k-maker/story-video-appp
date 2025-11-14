@@ -1,11 +1,11 @@
 """
-🔌 API SERVER - With Google Colab GPU (Kokoro TTS + SDXL-Turbo)
+🔌 API SERVER - With Google Colab GPU (FULL GPU Processing)
 
 System Architecture:
 - Script: Gemini AI (local API call)
 - Voice: Kokoro TTS (Colab GPU via ngrok)
 - Images: SDXL-Turbo (Colab GPU via ngrok)
-- Video: FFmpeg (local compilation)
+- Video: FFmpeg (Colab GPU via ngrok) ← ALL EFFECTS on GPU!
 """
 
 from flask import Flask, request, jsonify, send_file
@@ -18,7 +18,6 @@ from pydub import AudioSegment
 
 # ✅ IMPORTS
 from src.ai.enhanced_script_generator import enhanced_script_generator
-from src.editor.ffmpeg_compiler import FFmpegCompiler
 from src.utils.colab_client import get_colab_client
 
 app = Flask(__name__)
@@ -48,6 +47,7 @@ progress_state = {
 print(f"\n🌐 Using Google Colab GPU Server (via ngrok)")
 print("✅ Kokoro TTS (48 voices, GPU-accelerated)")
 print("✅ SDXL-Turbo (16:9 images, GPU-accelerated)")
+print("✅ FFmpeg (video compilation with ALL effects, GPU-accelerated)")
 
 # Initialize Colab client
 try:
@@ -182,21 +182,29 @@ def generate_video_background(data):
         print(f"      Duration per image: {time_per_image:.1f}s")
         print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} minutes)")
 
-        # STEP 4: Video Compilation (FFmpeg - Local)
-        progress_state['status'] = 'Compiling video...'
+        # STEP 4: Video Compilation (FFmpeg - Colab GPU)
+        progress_state['status'] = 'Compiling video with FFmpeg (GPU)...'
         progress_state['progress'] = 80
-        print("🎬 Step 4/4: Compiling video with FFmpeg...")
+        print("🎬 Step 4/4: Compiling video with FFmpeg (Colab GPU)...")
 
-        compiler = FFmpegCompiler()
         safe_topic = sanitize_filename(data.get('topic', 'video'))
         output_filename = f"{safe_topic}_video.mp4"
 
-        video_path = compiler.create_video(
+        # Get effects from request
+        color_filter = data.get('color_filter', 'none')
+        grain_effect = data.get('grain_effect', False)
+        captions = data.get('captions', {})
+
+        # Compile video on Colab GPU
+        video_path = colab_client.compile_video(
             image_paths,
             audio_path,
-            Path(f"output/videos/{output_filename}"),
             durations,
-            zoom_effect=zoom_effect
+            output_path=Path(f"output/videos/{output_filename}"),
+            zoom_effect=zoom_effect,
+            color_filter=color_filter,
+            grain_effect=grain_effect,
+            captions=captions
         )
 
         progress_state['progress'] = 100
@@ -207,8 +215,10 @@ def generate_video_background(data):
         print(f"   Script: Gemini AI")
         print(f"   Voice: Kokoro TTS (Colab GPU)")
         print(f"   Images: SDXL-Turbo (Colab GPU)")
-        print(f"   Video: FFmpeg (Local)")
-        print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}\n")
+        print(f"   Video: FFmpeg (Colab GPU)")
+        print(f"   Zoom: {'ON' if zoom_effect else 'OFF'}")
+        print(f"   Color Filter: {color_filter}")
+        print(f"   Grain: {'ON' if grain_effect else 'OFF'}\n")
 
     except Exception as e:
         progress_state['status'] = 'error'
@@ -309,22 +319,24 @@ def generate_with_template_background(
         progress_state['progress'] = 80
         progress_state['status'] = 'compiling_video'
 
-        print("🎬 Compiling video with FFmpeg...")
+        print("🎬 Compiling video with FFmpeg (Colab GPU)...")
 
-        # Compile video
-        compiler = FFmpegCompiler()
+        # Compile video on Colab GPU
         safe_topic = re.sub(r'[^a-zA-Z0-9_\-]', '', topic)[:50]
         output_filename = f"{safe_topic}_video.mp4"
 
         time_per_image = audio_duration / len(image_paths) if image_paths else 5
         durations = [time_per_image] * len(image_paths)
 
-        video_path = compiler.create_video(
+        video_path = colab_client.compile_video(
             image_paths,
             audio_path,
-            Path(f"output/videos/{output_filename}"),
             durations,
-            zoom_effect=zoom_effect
+            output_path=Path(f"output/videos/{output_filename}"),
+            zoom_effect=zoom_effect,
+            color_filter='none',  # Can be added as parameter
+            grain_effect=False,   # Can be added as parameter
+            captions={}          # Can be added as parameter
         )
 
         progress_state['progress'] = 100
@@ -336,7 +348,8 @@ def generate_with_template_background(
         print(f"   Script: {len(script_text)} chars")
         print(f"   Voice: Kokoro TTS (Colab GPU)")
         print(f"   Images: SDXL-Turbo (Colab GPU)")
-        print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"   Video: FFmpeg (Colab GPU)")
+        print(f"   Zoom: {'ON' if zoom_effect else 'OFF'}")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
 
@@ -534,10 +547,13 @@ if __name__ == '__main__':
     print("   - 4-step generation (ultra-fast)")
     print("   - Cinematic quality")
     print("")
-    print("🎬 VIDEO: FFmpeg (Local)")
+    print("🎬 VIDEO: FFmpeg (Google Colab GPU)")
     print("   - 1080p HD quality")
-    print("   - Zoom effects")
-    print("   - Professional output")
+    print("   - Zoom effects ✅")
+    print("   - Color filters (warm, cool, vintage, cinematic) ✅")
+    print("   - Grain effects ✅")
+    print("   - Captions support ✅")
+    print("   - GPU-accelerated compilation")
     print("="*60)
     print("\n✅ ENDPOINTS:")
     print("   GET  /health - Server status")

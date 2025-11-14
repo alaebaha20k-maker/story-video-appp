@@ -17,5 +17,6 @@ COLAB_ENDPOINTS = {
     'health': '/health',
     'generate_audio': '/generate_audio',  # Kokoro TTS
     'generate_image': '/generate_image',  # SDXL-Turbo single
-    'generate_images_batch': '/generate_images_batch'  # SDXL-Turbo batch
+    'generate_images_batch': '/generate_images_batch',  # SDXL-Turbo batch
+    'compile_video': '/compile_video'  # FFmpeg video compilation with ALL effects
 }
