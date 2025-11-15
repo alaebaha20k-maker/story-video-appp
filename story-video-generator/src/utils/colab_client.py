@@ -389,13 +389,16 @@ class ColabClient:
             }
 
             print(f"   📡 Sending to Colab server...")
+            print(f"   ⏱️  This may take a few minutes for large videos...")
             start_time = time.time()
 
-            # Call Colab endpoint
+            # Call Colab endpoint with extended timeout for large uploads
+            # Separate connection timeout (60s) from read timeout (30 min)
             response = requests.post(
                 url,
                 json=payload,
-                timeout=600  # 10 minutes
+                timeout=(60, 1800),  # (connect timeout, read timeout) - 30 minutes for processing
+                stream=False  # Keep False to get full response
             )
 
             elapsed = time.time() - start_time
