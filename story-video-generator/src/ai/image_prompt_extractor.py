@@ -1,6 +1,12 @@
 """
-🎨 IMAGE PROMPT EXTRACTOR - Stage 2 Gemini AI
-Analyzes finished script and generates SDXL-optimized image prompts
+🎨 IMAGE PROMPT EXTRACTOR - Stage 2 Gemini 2.0 Flash
+Analyzes finished script and generates DreamShaper XL-optimized image prompts
+
+FEATURES:
+- Uses Gemini 2.0 Flash for superior prompt quality
+- Intelligent chunking to handle API rate limits
+- Automatic retries with exponential backoff
+- Fallback prompts for error cases
 
 SEPARATE FROM SCRIPT GENERATION - Uses dedicated Gemini API for visual prompt extraction
 """
@@ -23,9 +29,9 @@ GEMINI_API_KEY_STAGE_2 = "AIzaSyAGbzxD1mg2awU04T1ct2JXZOGy-2IJ95c"
 # Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY_STAGE_2)
 
-# Use Gemini Flash for speed (Stage 2 is fast analysis)
-# FIXED: Use correct model name for v1beta API
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+# Use Gemini 2.0 Flash - Latest and most powerful Flash model
+# Better prompt quality and understanding than 1.5 Flash
+model = genai.GenerativeModel('gemini-2.0-flash-exp')
 
 
 class ImagePromptExtractor:
@@ -46,8 +52,11 @@ class ImagePromptExtractor:
 
     def __init__(self):
         self.model = model
-        self.max_chunk_size = 3000  # Characters per chunk
-        self.delay_between_requests = 2  # Seconds between API calls
+        # Optimized chunking for Gemini 2.0 Flash API limits
+        self.max_chunk_size = 2500  # Characters per chunk (conservative for rate limits)
+        self.delay_between_requests = 3  # Seconds between API calls (avoid rate limits)
+        self.max_retries = 3  # Retry failed requests
+        self.retry_delay = 5  # Seconds to wait before retry
 
     def extract_prompts(
         self,
@@ -173,70 +182,98 @@ class ImagePromptExtractor:
     ) -> List[Dict]:
         """Extract prompts from a single chunk using Gemini"""
 
-        # Map style to SDXL-optimized descriptions
+        # Map style to DreamShaper XL-optimized descriptions
         style_descriptions = {
-            'cinematic': 'cinematic film still, movie quality, professional cinematography, dramatic lighting',
-            'documentary': 'documentary photography, National Geographic style, photorealistic',
-            'anime': 'anime art style, vibrant colors, Japanese animation, detailed illustration',
-            'horror': 'dark horror atmosphere, terrifying, creepy, unsettling, dramatic shadows',
-            'comic': 'comic book style, bold lines, graphic novel art, illustrated',
-            'historical': 'historical photograph, vintage sepia, old photo aesthetic',
-            'scifi': 'sci-fi futuristic, cyberpunk, neon lighting, high-tech',
-            'noir': 'film noir, high contrast black and white, dramatic shadows',
-            'fantasy': 'fantasy art, magical atmosphere, epic fantasy illustration',
-            '3d_render': 'photorealistic 3D render, CGI, highly detailed',
-            'sketch': 'pencil sketch, hand-drawn, artistic sketch style',
-            'watercolor': 'watercolor painting, soft colors, artistic watercolor',
-            'oil_painting': 'oil painting, classical art style, painterly',
-            'retro': 'retro 1970s-1980s aesthetic, vintage colors'
+            'cinematic': 'cinematic movie quality, professional cinematography, dramatic lighting, film photography',
+            'anime': 'anime style, manga illustration, Japanese animation art, vibrant colors, detailed anime',
+            'realistic': 'photorealistic, highly detailed photography, 8k uhd, sharp focus, professional photo',
+            'horror': 'dark horror atmosphere, creepy, terrifying, eerie lighting, ominous mood, disturbing',
+            'fantasy': 'fantasy art, magical atmosphere, mystical, ethereal, dreamlike, enchanted',
+            'scifi': 'sci-fi futuristic, science fiction, cyberpunk aesthetic, advanced technology, neon lighting',
+            'vintage': 'vintage retro style, old photograph, aged, classic 1970s aesthetic, nostalgic',
+            'sketch': 'pencil sketch, hand-drawn illustration, artistic sketch, detailed linework, black and white',
+            'comic': 'comic book style, graphic novel art, bold lines, pop art illustration, comic panel',
+            'watercolor': 'watercolor painting, soft pastel colors, artistic illustration, painted watercolor',
+            'oilpainting': 'oil painting, classical fine art, painterly brushstrokes, artistic painting',
+            'abstract': 'abstract art, modern artistic, creative composition, abstract expressionism',
+            'documentary': 'documentary photography, National Geographic style, photorealistic journalism',
+            'noir': 'film noir, high contrast black and white, dramatic shadows, 1940s crime aesthetic'
         }
 
         style_desc = style_descriptions.get(image_style, 'cinematic film still')
 
-        prompt = f"""You are a visual prompt expert for SDXL-Turbo AI image generation.
+        prompt = f"""You are an expert visual prompt engineer for AI image generation models (SDXL, DreamShaper XL).
 
-TASK: Analyze this script excerpt and generate EXACTLY {target_prompts} SDXL-optimized image prompts for the most important visual scenes.
+TASK: Analyze this script and create EXACTLY {target_prompts} detailed image prompts for the most visually important scenes.
 
-SCRIPT EXCERPT:
+SCRIPT:
 {chunk_text}
 
-REQUIREMENTS:
-1. Generate EXACTLY {target_prompts} prompts
-2. Each prompt must be detailed and visual (not abstract)
-3. Focus on KEY MOMENTS that need illustration
-4. Style: {style_desc}
-5. Story type: {story_type}
-6. Format: 16:9 landscape (1920x1080)
-7. Include specific details: setting, characters, mood, lighting, atmosphere
+VISUAL STYLE: {style_desc}
+STORY TYPE: {story_type}
+IMAGE FORMAT: 16:9 landscape (1536x864)
 
-SDXL-TURBO OPTIMIZATION:
-- Use concrete visual descriptions (not emotions)
-- Specify lighting, colors, composition
-- Mention camera angle if relevant
-- Keep prompts focused (50-100 words each)
-- Avoid: text, logos, faces with text, copyrighted characters
+PROMPT REQUIREMENTS:
+✅ Generate EXACTLY {target_prompts} prompts (no more, no less)
+✅ Each prompt must be 50-100 words of pure visual description
+✅ Focus on concrete, photographable/renderable scenes
+✅ Include: setting, lighting, atmosphere, composition, colors, mood
+✅ Specify camera angle when relevant (wide shot, close-up, aerial view, etc.)
+✅ Use vivid, specific details (not generic descriptions)
 
-OUTPUT FORMAT (EXACTLY {target_prompts} prompts):
-1. [Detailed SDXL prompt for scene 1]
-2. [Detailed SDXL prompt for scene 2]
+AVOID:
+❌ Abstract concepts or emotions without visual elements
+❌ Text, logos, signs with readable text
+❌ Copyrighted characters or trademarked content
+❌ Human faces with specific features (keep descriptions general)
+
+OUTPUT FORMAT - Return ONLY numbered prompts:
+1. [Complete detailed visual prompt for first key scene]
+2. [Complete detailed visual prompt for second key scene]
 ...
-{target_prompts}. [Detailed SDXL prompt for scene {target_prompts}]
+{target_prompts}. [Complete detailed visual prompt for final scene]
 
-Generate the prompts now:"""
+IMPORTANT: Each prompt should paint a complete visual picture that an AI can render. Be specific about lighting, colors, composition, and atmosphere.
 
-        try:
-            response = self.model.generate_content(prompt)
-            response_text = response.text
+Generate the {target_prompts} prompts now:"""
 
-            # Parse numbered prompts
-            prompts = self._parse_prompts_from_response(response_text, target_prompts)
+        # Retry logic for rate limits and transient errors
+        for attempt in range(self.max_retries):
+            try:
+                response = self.model.generate_content(prompt)
+                response_text = response.text
 
-            return prompts
+                # Parse numbered prompts
+                prompts = self._parse_prompts_from_response(response_text, target_prompts)
 
-        except Exception as e:
-            print(f"      ❌ Error: {e}")
-            # Return fallback prompts
-            return self._generate_fallback_prompts(target_prompts, story_type, image_style)
+                if prompts and len(prompts) > 0:
+                    print(f"      ✅ Successfully extracted {len(prompts)} prompts")
+                    return prompts
+                else:
+                    raise ValueError("No valid prompts extracted from response")
+
+            except Exception as e:
+                error_msg = str(e)
+                print(f"      ❌ Error (attempt {attempt + 1}/{self.max_retries}): {error_msg}")
+
+                # Check if it's a rate limit error
+                if "429" in error_msg or "quota" in error_msg.lower() or "rate" in error_msg.lower():
+                    if attempt < self.max_retries - 1:
+                        wait_time = self.retry_delay * (attempt + 1)  # Exponential backoff
+                        print(f"      ⏳ Rate limit hit. Waiting {wait_time}s before retry...")
+                        time.sleep(wait_time)
+                        continue
+
+                # If not rate limit or last attempt, use fallback
+                if attempt == self.max_retries - 1:
+                    print(f"      ⚠️  Max retries reached. Using fallback prompts...")
+                    return self._generate_fallback_prompts(target_prompts, story_type, image_style)
+
+                # Wait before next retry
+                time.sleep(self.retry_delay)
+
+        # Fallback if all retries failed
+        return self._generate_fallback_prompts(target_prompts, story_type, image_style)
 
     def _parse_prompts_from_response(self, response_text: str, target_count: int) -> List[Dict]:
         """Parse numbered prompts from Gemini response"""
