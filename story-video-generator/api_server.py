@@ -172,176 +172,259 @@ def generate_video_background(data):
                 scene['prompt'] = image_prompts[i]['prompt']
                 scene['image_description'] = image_prompts[i]['prompt']
 
-        # STEP 3: Media Generation (INTELLIGENT - AI/Manual/Stock/Mixed)
-        progress_state['status'] = 'Generating media (intelligent mode)...'
-        progress_state['progress'] = 35
-        print("🎨 Step 3/5: Generating media with Intelligent Media Manager...")
-
-        # Get media mode and options
+        # Get media mode and effects
         image_mode = data.get('image_mode', 'ai_only')
         image_style = data.get('image_style', 'cinematic')
-        manual_files = data.get('manual_files', [])  # User uploads
-        stock_keywords = data.get('stock_keywords', [])  # For stock mode
-        num_scenes = int(data.get('num_scenes', 10))
-
-        print(f"   Mode: {image_mode}")
-        print(f"   Style: {image_style}")
-        print(f"   Scenes: {num_scenes}")
-
-        # Use intelligent media manager (handles all 7 modes)
-        media_items = media_manager.generate_media(
-            mode=image_mode,
-            scenes=result['scenes'],
-            image_style=image_style,
-            manual_files=manual_files,
-            stock_keywords=stock_keywords,
-            num_scenes=num_scenes
-        )
-
-        print(f"   ✅ Media: {len(media_items)} items generated/collected")
-        # ✅ FIXED: Show ALL media items (no 5-item limit)
-        for i, item in enumerate(media_items):
-            print(f"      {i+1}. {item.media_type} ({item.source}): {item.filepath.name}")
-
-        # STEP 4: Voice Generation (Kokoro TTS - Colab GPU)
-        progress_state['status'] = 'Generating voice with Kokoro TTS (GPU)...'
-        progress_state['progress'] = 60
-        print(f"🎤 Step 4/5: Generating voice with Kokoro TTS (Colab GPU)...")
-
-        audio_path = Path("output/temp/narration.wav")
-        audio_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # 🧪 Check if using Edge TTS test voice (local generation)
-        if voice_id == 'edge_test':
-            print("   🧪 Using Edge TTS (Local Generation - Fast Testing)...")
-            import edge_tts
-            import asyncio
-
-            # Edge TTS saves as MP3 - we need to convert to WAV for FFmpeg
-            temp_mp3_path = Path("output/temp/narration_edge.mp3")
-            temp_mp3_path.parent.mkdir(parents=True, exist_ok=True)
-
-            async def generate_edge_audio():
-                communicate = edge_tts.Communicate(result['script'], "en-US-JennyNeural")
-                await communicate.save(str(temp_mp3_path))
-
-            asyncio.run(generate_edge_audio())
-
-            # Convert MP3 to WAV using pydub
-            print(f"   🔄 Converting MP3 to WAV format...")
-            audio = AudioSegment.from_mp3(str(temp_mp3_path))
-            audio.export(str(audio_path), format="wav")
-
-            # Clean up temp MP3 file
-            if temp_mp3_path.exists():
-                temp_mp3_path.unlink()
-
-            audio_file = audio_path
-            print(f"   ✅ Edge TTS audio generated locally and converted to WAV!")
-        else:
-            # Call Colab for Kokoro TTS audio generation
-            audio_file = colab_client.generate_audio(
-                text=result['script'],
-                voice=voice_id,
-                speed=float(data.get('voice_speed', 1.0)),
-                output_path=audio_path
-            )
-
-        audio_duration = get_audio_duration(audio_path)
-        print(f"   ✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
-
-        # INTELLIGENT DURATION CALCULATION
-        # Handles mixed media (images + videos) with smart timing
-        print(f"\n   🔧 Calculating intelligent durations...")
-
-        # Prepare media items for duration calculator
-        media_for_calc = [item.to_dict() for item in media_items]
-
-        # Use smart duration calculator
-        durations = duration_calculator.calculate_durations(
-            media_items=media_for_calc,
-            audio_duration=audio_duration,
-            variation=0.3  # 30% variation for natural pacing
-        )
-
-        print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} min)")
-        print(f"      Matches audio: {'✅ YES' if abs(sum(durations) - audio_duration) < 1 else '⚠️ NO'}")
-
-        # STEP 5: Video Compilation (FFmpeg - Colab GPU)
-        progress_state['status'] = 'Compiling video with FFmpeg (GPU)...'
-        progress_state['progress'] = 80
-        print("🎬 Step 5/5: Compiling video with FFmpeg (Colab GPU)...")
-
-        safe_topic = sanitize_filename(data.get('topic', 'video'))
-        output_filename = f"{safe_topic}_video.mp4"
-
-        # Get effects from request
         color_filter = data.get('color_filter', 'none')
         grain_effect = data.get('grain_effect', False)
-
-        # ✅ CAPTION GENERATION (AUTO or MANUAL)
-        captions_data = []
         auto_captions_enabled = data.get('auto_captions', False)
         manual_caption = data.get('caption')
 
-        if auto_captions_enabled:
-            # Generate auto-captions from script with timing
-            print(f"\n   💬 Generating auto-captions from script...")
-            captions_data = generate_auto_captions(
+        # Output filename
+        safe_topic = sanitize_filename(data.get('topic', 'video'))
+        output_filename = f"{safe_topic}_video.mp4"
+
+        # 🚀 NEW: Use COMPLETE COLAB ENDPOINT for AI-only mode (no upload!)
+        if image_mode == 'ai_only':
+            print(f"\n🚀 Using COMPLETE COLAB GENERATION (AI-only mode)")
+            print(f"   Mode: {image_mode}")
+            print(f"   ⚡ Benefits: No upload, faster, GPU-accelerated")
+
+            # Extract image prompts as list of strings
+            image_prompts_list = [p['prompt'] for p in image_prompts]
+
+            # STEP 3: Caption generation (if enabled)
+            captions_data = []
+            estimated_duration = int(data.get('duration', 5)) * 60  # minutes to seconds
+
+            if auto_captions_enabled:
+                print(f"\n💬 Generating auto-captions from script...")
+                captions_data = generate_auto_captions(
+                    script=result['script'],
+                    audio_duration=estimated_duration,
+                    style='bold',
+                    position='bottom'
+                )
+                print(f"   ✅ Generated {len(captions_data)} auto-captions")
+            elif manual_caption and manual_caption.get('text'):
+                print(f"\n💬 Adding manual caption: {manual_caption.get('text')[:30]}...")
+                captions_data = generate_manual_caption(
+                    text=manual_caption.get('text', ''),
+                    audio_duration=estimated_duration,
+                    style=manual_caption.get('style', 'simple'),
+                    position=manual_caption.get('position', 'bottom')
+                )
+                print(f"   ✅ Manual caption added")
+
+            # Prepare effects dict
+            effects = {
+                'zoom_effect': zoom_effect,
+                'color_filter': color_filter,
+                'grain_effect': grain_effect
+            }
+
+            # Show effects status
+            print(f"\n⚙️  Effects:")
+            print(f"   Zoom: {'ON ✅' if zoom_effect else 'OFF ❌'}")
+            print(f"   Grain: {'ON ✅' if grain_effect else 'OFF ❌'}")
+            print(f"   Color Filter: {color_filter}")
+            if captions_data:
+                print(f"   Captions: {len(captions_data)} captions ✅")
+            else:
+                print(f"   Captions: OFF ❌")
+
+            # STEP 4: Complete video generation on Colab (ALL-IN-ONE)
+            progress_state['progress'] = 60
+            progress_state['status'] = 'generating_complete_video_on_colab'
+
+            video_path = colab_client.generate_complete_video(
                 script=result['script'],
+                image_prompts=image_prompts_list,
+                voice_id=voice_id,
+                effects=effects,
+                captions=captions_data if captions_data else None,
+                durations=None,  # Colab will auto-calculate
+                style=image_style,
+                speed=float(data.get('voice_speed', 1.0)),
+                output_path=Path(f"output/videos/{output_filename}")
+            )
+
+            progress_state['progress'] = 100
+            progress_state['status'] = 'complete'
+            progress_state['video_path'] = output_filename
+
+            print(f"\n✅ SUCCESS! Video: {output_filename}")
+            print(f"   Stage 1: Script (Gemini AI)")
+            print(f"   Stage 2: Image Prompts (Gemini AI) - {len(image_prompts)} SDXL prompts")
+            print(f"   Voice: {voice_id} (Colab GPU)")
+            print(f"   Images: SDXL-Turbo (Colab GPU)")
+            print(f"   Video: FFmpeg (Colab GPU)")
+            print(f"   Zoom: {'ON' if zoom_effect else 'OFF'}")
+            print(f"   Color Filter: {color_filter}")
+            print(f"   Grain: {'ON' if grain_effect else 'OFF'}")
+            print(f"   Captions: {len(captions_data) if captions_data else 0}\n")
+
+        else:
+            # Use original flow for manual/stock/mixed modes
+            print(f"\n🎨 Using INTELLIGENT MEDIA MANAGER (Mode: {image_mode})")
+            print(f"   ⚡ Supports: manual uploads, stock media, mixed modes")
+
+            # STEP 3: Media Generation (INTELLIGENT - AI/Manual/Stock/Mixed)
+            progress_state['status'] = 'Generating media (intelligent mode)...'
+            progress_state['progress'] = 35
+            print("🎨 Step 3/5: Generating media with Intelligent Media Manager...")
+
+            manual_files = data.get('manual_files', [])  # User uploads
+            stock_keywords = data.get('stock_keywords', [])  # For stock mode
+
+            print(f"   Mode: {image_mode}")
+            print(f"   Style: {image_style}")
+            print(f"   Scenes: {num_scenes}")
+
+            # Use intelligent media manager (handles all 7 modes)
+            media_items = media_manager.generate_media(
+                mode=image_mode,
+                scenes=result['scenes'],
+                image_style=image_style,
+                manual_files=manual_files,
+                stock_keywords=stock_keywords,
+                num_scenes=num_scenes
+            )
+
+            print(f"   ✅ Media: {len(media_items)} items generated/collected")
+            # ✅ FIXED: Show ALL media items (no 5-item limit)
+            for i, item in enumerate(media_items):
+                print(f"      {i+1}. {item.media_type} ({item.source}): {item.filepath.name}")
+
+            # STEP 4: Voice Generation (Kokoro TTS - Colab GPU)
+            progress_state['status'] = 'Generating voice with Kokoro TTS (GPU)...'
+            progress_state['progress'] = 60
+            print(f"🎤 Step 4/5: Generating voice with Kokoro TTS (Colab GPU)...")
+
+            audio_path = Path("output/temp/narration.wav")
+            audio_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # 🧪 Check if using Edge TTS test voice (local generation)
+            if voice_id == 'edge_test':
+                print("   🧪 Using Edge TTS (Local Generation - Fast Testing)...")
+                import edge_tts
+                import asyncio
+
+                # Edge TTS saves as MP3 - we need to convert to WAV for FFmpeg
+                temp_mp3_path = Path("output/temp/narration_edge.mp3")
+                temp_mp3_path.parent.mkdir(parents=True, exist_ok=True)
+
+                async def generate_edge_audio():
+                    communicate = edge_tts.Communicate(result['script'], "en-US-JennyNeural")
+                    await communicate.save(str(temp_mp3_path))
+
+                asyncio.run(generate_edge_audio())
+
+                # Convert MP3 to WAV using pydub
+                print(f"   🔄 Converting MP3 to WAV format...")
+                audio = AudioSegment.from_mp3(str(temp_mp3_path))
+                audio.export(str(audio_path), format="wav")
+
+                # Clean up temp MP3 file
+                if temp_mp3_path.exists():
+                    temp_mp3_path.unlink()
+
+                audio_file = audio_path
+                print(f"   ✅ Edge TTS audio generated locally and converted to WAV!")
+            else:
+                # Call Colab for Kokoro TTS audio generation
+                audio_file = colab_client.generate_audio(
+                    text=result['script'],
+                    voice=voice_id,
+                    speed=float(data.get('voice_speed', 1.0)),
+                    output_path=audio_path
+                )
+
+            audio_duration = get_audio_duration(audio_path)
+            print(f"   ✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
+
+            # INTELLIGENT DURATION CALCULATION
+            # Handles mixed media (images + videos) with smart timing
+            print(f"\n   🔧 Calculating intelligent durations...")
+
+            # Prepare media items for duration calculator
+            media_for_calc = [item.to_dict() for item in media_items]
+
+            # Use smart duration calculator
+            durations = duration_calculator.calculate_durations(
+                media_items=media_for_calc,
                 audio_duration=audio_duration,
-                style='bold',  # TikTok-style bold captions
-                position='bottom'
-            )
-            print(f"   ✅ Generated {len(captions_data)} auto-captions")
-        elif manual_caption and manual_caption.get('text'):
-            # Single manual caption for entire video
-            print(f"\n   💬 Adding manual caption: {manual_caption.get('text')[:30]}...")
-            captions_data = generate_manual_caption(
-                text=manual_caption.get('text', ''),
-                audio_duration=audio_duration,
-                style=manual_caption.get('style', 'simple'),
-                position=manual_caption.get('position', 'bottom')
-            )
-            print(f"   ✅ Manual caption added")
-
-        # Extract media file paths
-        media_paths = [item.filepath for item in media_items]
-
-        # ⚡ Use LOCAL FFmpeg to avoid large Colab uploads (100+ MB payload issue)
-        # Colab is used for: Voice (Kokoro TTS) + Images (SDXL) only
-        print(f"\n   🎬 Compiling video with LOCAL FFmpeg...")
-
-        if not check_ffmpeg_installed():
-            raise RuntimeError(
-                "FFmpeg not installed! Install from https://ffmpeg.org/download.html\n"
-                "Add to PATH and restart backend."
+                variation=0.3  # 30% variation for natural pacing
             )
 
-        video_path = compile_video_local(
-            media_paths,
-            audio_path,
-            durations,
-            output_path=Path(f"output/videos/{output_filename}"),
-            zoom_effect=zoom_effect,
-            color_filter=color_filter,
-            grain_effect=grain_effect,
-            captions=captions_data
-        )
+            print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} min)")
+            print(f"      Matches audio: {'✅ YES' if abs(sum(durations) - audio_duration) < 1 else '⚠️ NO'}")
 
-        progress_state['progress'] = 100
-        progress_state['status'] = 'complete'
-        progress_state['video_path'] = output_filename
+            # STEP 5: Video Compilation (FFmpeg - LOCAL)
+            progress_state['status'] = 'Compiling video with FFmpeg...'
+            progress_state['progress'] = 80
+            print("🎬 Step 5/5: Compiling video with LOCAL FFmpeg...")
 
-        print(f"\n✅ SUCCESS! Video: {output_filename}")
-        print(f"   Stage 1: Script (Gemini AI) - PURE QUALITY!")
-        print(f"   Stage 2: Image Prompts (Gemini AI) - {len(image_prompts)} SDXL prompts")
-        print(f"   Voice: Kokoro TTS (Colab GPU)")
-        print(f"   Images: SDXL-Turbo (Colab GPU)")
-        print(f"   Video: FFmpeg (Colab GPU)")
-        print(f"   Zoom: {'ON' if zoom_effect else 'OFF'}")
-        print(f"   Color Filter: {color_filter}")
-        print(f"   Grain: {'ON' if grain_effect else 'OFF'}\n")
+            # ✅ CAPTION GENERATION (AUTO or MANUAL)
+            captions_data = []
+            if auto_captions_enabled:
+                # Generate auto-captions from script with timing
+                print(f"\n   💬 Generating auto-captions from script...")
+                captions_data = generate_auto_captions(
+                    script=result['script'],
+                    audio_duration=audio_duration,
+                    style='bold',  # TikTok-style bold captions
+                    position='bottom'
+                )
+                print(f"   ✅ Generated {len(captions_data)} auto-captions")
+            elif manual_caption and manual_caption.get('text'):
+                # Single manual caption for entire video
+                print(f"\n   💬 Adding manual caption: {manual_caption.get('text')[:30]}...")
+                captions_data = generate_manual_caption(
+                    text=manual_caption.get('text', ''),
+                    audio_duration=audio_duration,
+                    style=manual_caption.get('style', 'simple'),
+                    position=manual_caption.get('position', 'bottom')
+                )
+                print(f"   ✅ Manual caption added")
+
+            # Extract media file paths
+            media_paths = [item.filepath for item in media_items]
+
+            # ⚡ Use LOCAL FFmpeg for manual/stock/mixed modes
+            print(f"\n   🎬 Compiling video with LOCAL FFmpeg...")
+
+            if not check_ffmpeg_installed():
+                raise RuntimeError(
+                    "FFmpeg not installed! Install from https://ffmpeg.org/download.html\n"
+                    "Add to PATH and restart backend."
+                )
+
+            video_path = compile_video_local(
+                media_paths,
+                audio_path,
+                durations,
+                output_path=Path(f"output/videos/{output_filename}"),
+                zoom_effect=zoom_effect,
+                color_filter=color_filter,
+                grain_effect=grain_effect,
+                captions=captions_data
+            )
+
+            progress_state['progress'] = 100
+            progress_state['status'] = 'complete'
+            progress_state['video_path'] = output_filename
+
+            print(f"\n✅ SUCCESS! Video: {output_filename}")
+            print(f"   Stage 1: Script (Gemini AI)")
+            print(f"   Stage 2: Image Prompts (Gemini AI) - {len(image_prompts)} SDXL prompts")
+            print(f"   Voice: {voice_id}")
+            print(f"   Images: {image_mode} mode")
+            print(f"   Video: FFmpeg (Local)")
+            print(f"   Zoom: {'ON' if zoom_effect else 'OFF'}")
+            print(f"   Color Filter: {color_filter}")
+            print(f"   Grain: {'ON' if grain_effect else 'OFF'}")
+            print(f"   Captions: {len(captions_data) if captions_data else 0}\n")
 
     except Exception as e:
         progress_state['status'] = 'error'
@@ -354,24 +437,34 @@ def generate_video_background(data):
 def generate_with_template_background(
     topic, story_type, template, research_data, duration, num_scenes,
     voice_engine, voice_id, voice_speed=1.0, zoom_effect=True,
-    auto_captions=False, manual_caption=None, color_filter='none', grain_effect=False
+    auto_captions=False, manual_caption=None, color_filter='none', grain_effect=False,
+    image_style='cinematic'
 ):
-    """Background generation with template + research + Colab GPU"""
+    """
+    🚀 NEW: Background generation using COMPLETE COLAB ENDPOINT (No upload!)
+
+    Everything runs on Colab:
+    - Images generated on Colab (SDXL-Turbo)
+    - Voice generated on Colab (Kokoro TTS)
+    - Video compiled on Colab (FFmpeg)
+    - Only final video downloaded
+    """
     global progress_state
 
     try:
         progress_state['status'] = 'generating'
         progress_state['progress'] = 10
 
-        progress_state['voice_engine'] = 'kokoro'
+        progress_state['voice_engine'] = 'kokoro' if voice_id != 'edge_test' else 'edge'
         progress_state['voice_id'] = voice_id
 
-        print(f"📝 Generating script with template...")
-        print(f"🎤 Voice Engine: Kokoro TTS (Colab GPU)")
-        print(f"🎤 Voice: {voice_id}")
-        print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
+        print(f"\n📝 Step 1/3: Generating script with Gemini AI...")
+        print(f"   Topic: {topic}")
+        print(f"   Story Type: {story_type}")
+        print(f"   Duration: {duration} minutes")
+        print(f"   Scenes: {num_scenes}")
 
-        # Script generation (Gemini AI - Local)
+        # STEP 1: Script generation (Gemini AI - Local)
         result = enhanced_script_generator.generate_with_template(
             topic=topic,
             story_type=story_type,
@@ -382,147 +475,92 @@ def generate_with_template_background(
         )
 
         script_text = result['script']
+        print(f"   ✅ Script: {len(script_text)} characters")
 
-        progress_state['progress'] = 50
-        progress_state['status'] = 'generating_images'
+        # STEP 2: Extract image prompts (Gemini AI Stage 2 - Local)
+        progress_state['progress'] = 30
+        progress_state['status'] = 'extracting_prompts'
 
-        print("🎨 Generating images with SDXL-Turbo (Colab GPU)...")
+        print(f"\n🎨 Step 2/3: Extracting image prompts with Gemini Stage 2...")
 
         # Use scenes from result if available
         if 'scenes' in result and result['scenes']:
             scenes = result['scenes'][:num_scenes]
-            print(f"   Using {len(scenes)} varied scenes from script generator")
+            image_prompts_list = [scene.get('image_description', scene.get('prompt', '')) for scene in scenes]
+            print(f"   ✅ Using {len(image_prompts_list)} prompts from script generator")
         else:
-            # Fallback: Extract image prompts from script
-            image_prompts = re.findall(r'IMAGE:\s*(.+?)(?:\n|$)', script_text, re.IGNORECASE)
+            # Fallback: Extract from script or use Stage 2 extractor
+            print(f"   🔧 Using Stage 2 image prompt extractor...")
+            from src.ai.image_prompt_extractor import image_prompt_extractor
 
-            if not image_prompts or len(image_prompts) < num_scenes:
-                print(f"   ⚠️ Creating varied prompts (no scenes in result)")
-                story_parts = script_text.split('.')[:num_scenes]
-                image_prompts = []
-                for i, part in enumerate(story_parts):
-                    if part.strip():
-                        image_prompts.append(f"{part.strip()[:100]}")
-                    else:
-                        image_prompts.append(f"{topic}, scene {i+1}, {story_type} atmosphere")
-
-            # Convert string prompts to scene dictionaries
-            scenes = []
-            for i, prompt in enumerate(image_prompts[:num_scenes]):
-                scenes.append({
-                    'image_description': prompt,
-                    'content': prompt,
-                    'scene_number': i + 1
-                })
-
-        # Generate images with Colab
-        images = colab_client.generate_images_batch(scenes, style='cinematic')
-        image_paths = [Path(img['filepath']) for img in images if img.get('success')]
-
-        print(f"✅ Generated {len(image_paths)} images")
-
-        progress_state['progress'] = 70
-        progress_state['status'] = 'generating_voice_kokoro'
-
-        print(f"🎤 Generating voice with Kokoro TTS (Colab GPU)...")
-
-        # Generate audio with Colab
-        audio_path = Path("output/temp/narration.wav")
-        audio_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # 🧪 Check if using Edge TTS test voice (local generation)
-        if voice_id == 'edge_test':
-            print("   🧪 Using Edge TTS (Local Generation - Fast Testing)...")
-            import edge_tts
-            import asyncio
-
-            # Edge TTS saves as MP3 - we need to convert to WAV for FFmpeg
-            temp_mp3_path = Path("output/temp/narration_edge.mp3")
-            temp_mp3_path.parent.mkdir(parents=True, exist_ok=True)
-
-            async def generate_edge_audio():
-                communicate = edge_tts.Communicate(script_text, "en-US-JennyNeural")
-                await communicate.save(str(temp_mp3_path))
-
-            asyncio.run(generate_edge_audio())
-
-            # Convert MP3 to WAV using pydub
-            print(f"   🔄 Converting MP3 to WAV format...")
-            audio = AudioSegment.from_mp3(str(temp_mp3_path))
-            audio.export(str(audio_path), format="wav")
-
-            # Clean up temp MP3 file
-            if temp_mp3_path.exists():
-                temp_mp3_path.unlink()
-
-            audio_file = audio_path
-            print(f"   ✅ Edge TTS audio generated locally and converted to WAV!")
-        else:
-            # Call Colab for Kokoro TTS audio generation
-            audio_file = colab_client.generate_audio(
-                text=script_text,
-                voice=voice_id,
-                speed=voice_speed,
-                output_path=audio_path
+            image_prompts_data = image_prompt_extractor.extract_prompts(
+                script=script_text,
+                num_images=num_scenes,
+                story_type=story_type,
+                image_style=image_style
             )
+            image_prompts_list = [p['prompt'] for p in image_prompts_data]
+            print(f"   ✅ Extracted {len(image_prompts_list)} SDXL-optimized prompts")
 
-        audio_duration = get_audio_duration(audio_path)
-        print(f"✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
+        # Show first 3 prompts
+        for i, prompt in enumerate(image_prompts_list[:3]):
+            print(f"      {i+1}. {prompt[:60]}...")
 
-        progress_state['progress'] = 80
-        progress_state['status'] = 'compiling_video'
-
-        print("🎬 Compiling video with FFmpeg (Colab GPU)...")
-
-        # Compile video on Colab GPU
-        safe_topic = re.sub(r'[^a-zA-Z0-9_\-]', '', topic)[:50]
-        output_filename = f"{safe_topic}_video.mp4"
-
-        time_per_image = audio_duration / len(image_paths) if image_paths else 5
-        durations = [time_per_image] * len(image_paths)
-
-        # ✅ CAPTION GENERATION (AUTO or MANUAL)
+        # STEP 3: Caption generation (if enabled)
         captions_data = []
         if auto_captions:
-            # Generate auto-captions from script with timing
-            print(f"\n   💬 Generating auto-captions from script...")
+            print(f"\n💬 Generating auto-captions from script...")
+            # We need audio duration estimate
+            estimated_duration = duration * 60  # Convert minutes to seconds
             captions_data = generate_auto_captions(
                 script=script_text,
-                audio_duration=audio_duration,
+                audio_duration=estimated_duration,
                 style='bold',
                 position='bottom'
             )
             print(f"   ✅ Generated {len(captions_data)} auto-captions")
         elif manual_caption and manual_caption.get('text'):
-            # Single manual caption for entire video
-            print(f"\n   💬 Adding manual caption: {manual_caption.get('text')[:30]}...")
+            print(f"\n💬 Adding manual caption: {manual_caption.get('text')[:30]}...")
+            estimated_duration = duration * 60
             captions_data = generate_manual_caption(
                 text=manual_caption.get('text', ''),
-                audio_duration=audio_duration,
+                audio_duration=estimated_duration,
                 style=manual_caption.get('style', 'simple'),
                 position=manual_caption.get('position', 'bottom')
             )
             print(f"   ✅ Manual caption added")
 
-        # ⚡ Use LOCAL FFmpeg to avoid large Colab uploads (100+ MB payload issue)
-        # Colab is used for: Voice (Kokoro TTS) + Images (SDXL) only
-        print(f"\n   🎬 Compiling video with LOCAL FFmpeg...")
+        # STEP 4: Generate complete video on Colab (ALL-IN-ONE)
+        progress_state['progress'] = 60
+        progress_state['status'] = 'generating_complete_video_on_colab'
 
-        if not check_ffmpeg_installed():
-            raise RuntimeError(
-                "FFmpeg not installed! Install from https://ffmpeg.org/download.html\n"
-                "Add to PATH and restart backend."
-            )
+        print(f"\n🚀 Step 3/3: Generating complete video on Colab...")
+        print(f"   🎤 Voice: {voice_id}")
+        print(f"   🎨 Images: {len(image_prompts_list)} SDXL images")
+        print(f"   🎬 Effects: Zoom {'ON' if zoom_effect else 'OFF'}, Color {color_filter}, Grain {'ON' if grain_effect else 'OFF'}")
 
-        video_path = compile_video_local(
-            image_paths,
-            audio_path,
-            durations,
-            output_path=Path(f"output/videos/{output_filename}"),
-            zoom_effect=zoom_effect,
-            color_filter=color_filter,
-            grain_effect=grain_effect,
-            captions=captions_data
+        # Prepare effects dict
+        effects = {
+            'zoom_effect': zoom_effect,
+            'color_filter': color_filter,
+            'grain_effect': grain_effect
+        }
+
+        # Output filename
+        safe_topic = sanitize_filename(topic)
+        output_filename = f"{safe_topic}_video.mp4"
+
+        # 🚀 Call new Colab endpoint for complete generation
+        video_path = colab_client.generate_complete_video(
+            script=script_text,
+            image_prompts=image_prompts_list,
+            voice_id=voice_id,
+            effects=effects,
+            captions=captions_data if captions_data else None,
+            durations=None,  # Colab will auto-calculate
+            style=image_style,
+            speed=voice_speed,
+            output_path=Path(f"output/videos/{output_filename}")
         )
 
         progress_state['progress'] = 100
@@ -532,10 +570,13 @@ def generate_with_template_background(
         print(f"\n✅ SUCCESS!")
         print(f"   Video: {output_filename}")
         print(f"   Script: {len(script_text)} chars")
-        print(f"   Voice: Kokoro TTS (Colab GPU)")
-        print(f"   Images: SDXL-Turbo (Colab GPU)")
+        print(f"   Voice: {voice_id} (Colab GPU)")
+        print(f"   Images: {len(image_prompts_list)} (Colab GPU)")
         print(f"   Video: FFmpeg (Colab GPU)")
         print(f"   Zoom: {'ON' if zoom_effect else 'OFF'}")
+        print(f"   Color Filter: {color_filter}")
+        print(f"   Grain: {'ON' if grain_effect else 'OFF'}")
+        print(f"   Captions: {len(captions_data) if captions_data else 0}")
         print(f"   Template: {'Used' if template else 'Not used'}")
         print(f"   Research: {'Used' if research_data else 'Not used'}\n")
 

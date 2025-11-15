@@ -466,6 +466,131 @@ class ColabClient:
             print(f"❌ Video compilation failed: {e}")
             raise
 
+    def generate_complete_video(
+        self,
+        script: str,
+        image_prompts: List[str],
+        voice_id: str = 'guy',
+        effects: Optional[Dict] = None,
+        captions: Optional[List[Dict]] = None,
+        durations: Optional[List[float]] = None,
+        style: str = 'cinematic',
+        speed: float = 1.0,
+        output_path: Optional[Path] = None
+    ) -> str:
+        """
+        🚀 NEW: Complete video generation on Colab (NO UPLOAD NEEDED!)
+
+        This endpoint generates EVERYTHING on Colab:
+        - Images generated internally (SDXL-Turbo)
+        - Voice generated internally (Kokoro TTS)
+        - Video compiled internally (FFmpeg)
+        - Returns only final video (NO 100+ MB upload!)
+
+        Args:
+            script: Story text for TTS
+            image_prompts: List of SDXL prompts
+            voice_id: Voice ID (guy, aria, etc.)
+            effects: Dict with zoom_effect, color_filter, grain_effect
+            captions: List of caption dicts with timing
+            durations: List of durations for each image (optional)
+            style: Image style (cinematic, etc.)
+            speed: Voice speed (0.5-2.0)
+            output_path: Where to save video (optional)
+
+        Returns:
+            str: Path to compiled video file
+        """
+
+        print(f"\n🚀 COMPLETE VIDEO GENERATION (ALL ON COLAB)")
+        print(f"="*80)
+        print(f"\n📝 Request:")
+        print(f"   Script: {len(script)} characters")
+        print(f"   Images: {len(image_prompts)} prompts")
+        print(f"   Voice: {voice_id}")
+        print(f"   Style: {style}")
+
+        if effects is None:
+            effects = {}
+
+        # Show effects
+        print(f"\n⚙️  Effects:")
+        print(f"   Zoom: {'ON ✅' if effects.get('zoom_effect', True) else 'OFF ❌'}")
+        print(f"   Grain: {'ON ✅' if effects.get('grain_effect', False) else 'OFF ❌'}")
+        print(f"   Color Filter: {effects.get('color_filter', 'none')}")
+        if captions:
+            print(f"   Captions: {len(captions)} captions ✅")
+        else:
+            print(f"   Captions: OFF ❌")
+
+        try:
+            url = f"{self.server_url}/generate_complete_video"
+
+            payload = {
+                'script': script,
+                'image_prompts': image_prompts,
+                'voice_id': voice_id,
+                'effects': effects,
+                'captions': captions or [],
+                'durations': durations or [],
+                'style': style,
+                'speed': speed
+            }
+
+            # Calculate payload size for logging
+            import json
+            payload_size_kb = len(json.dumps(payload)) / 1024
+            print(f"\n📦 Payload size: {payload_size_kb:.1f} KB (SMALL! No image upload)")
+            print(f"📡 Sending request to Colab...")
+
+            start_time = time.time()
+
+            # Call Colab endpoint with extended timeout for full generation
+            # Connection timeout: 30s
+            # Read timeout: 1800s (30 min for image+voice+video generation)
+            response = requests.post(
+                url,
+                json=payload,
+                timeout=(30, 1800),  # 30 min for complete generation
+                stream=False
+            )
+
+            elapsed = time.time() - start_time
+
+            if response.status_code != 200:
+                raise RuntimeError(f"Colab returned error {response.status_code}: {response.text}")
+
+            # Save video file
+            if output_path is None:
+                output_dir = Path("output/videos")
+                output_dir.mkdir(parents=True, exist_ok=True)
+                output_path = output_dir / "final_video.mp4"
+
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write video data
+            with open(output_path, 'wb') as f:
+                f.write(response.content)
+
+            file_size = output_path.stat().st_size
+
+            print(f"\n" + "="*80)
+            print(f"✅ COMPLETE VIDEO GENERATION SUCCESSFUL!")
+            print(f"="*80)
+            print(f"   File: {output_path}")
+            print(f"   Size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
+            print(f"   Total time: {elapsed/60:.1f} minutes")
+            print(f"   Images: {len(image_prompts)}")
+            print(f"   Captions: {len(captions) if captions else 0}")
+            print("="*80 + "\n")
+
+            return str(output_path)
+
+        except Exception as e:
+            print(f"\n❌ Complete video generation failed: {e}")
+            raise
+
 
 # Singleton instance
 _colab_client = None
