@@ -21,6 +21,17 @@ const KOKORO_VOICES = [
   { id: 'george', name: 'George', gender: 'Male', style: 'British Accent', icon: '👨', bestFor: 'British content, documentaries' },
 ];
 
+// 🧪 EDGE TTS TEST VOICE - LOCAL GENERATION (for testing)
+const EDGE_TEST_VOICE = {
+  id: 'edge_test',
+  name: 'Edge Test (Jenny)',
+  gender: 'Test',
+  style: 'Local Generation',
+  icon: '🧪',
+  bestFor: 'Quick testing - generates locally on your PC',
+  engine: 'edge'
+};
+
 export const VoiceSelector = () => {
   const { voiceId, setVoiceId } = useVideoStore();
 
@@ -116,18 +127,62 @@ export const VoiceSelector = () => {
         </div>
       </div>
 
+      {/* Edge TTS Test Voice */}
+      <div>
+        <h3 className="font-semibold text-gray-900 mb-3">🧪 Test Voice (Local)</h3>
+        <button
+          onClick={() => setVoiceId(EDGE_TEST_VOICE.id)}
+          className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+            voiceId === EDGE_TEST_VOICE.id
+              ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
+              : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'
+          }`}
+        >
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-2xl">{EDGE_TEST_VOICE.icon}</span>
+            <div>
+              <div className="font-bold text-gray-900">{EDGE_TEST_VOICE.name}</div>
+              <div className="text-xs text-gray-600">{EDGE_TEST_VOICE.style}</div>
+            </div>
+          </div>
+          <div className="text-xs text-gray-600 mt-2">
+            <strong>Best for:</strong> {EDGE_TEST_VOICE.bestFor}
+          </div>
+          <div className="text-xs text-blue-600 font-semibold mt-1">
+            ⚡ Generates on your local PC (no Colab needed)
+          </div>
+        </button>
+      </div>
+
       {/* Current Selection */}
-      <div className="bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg p-4 text-white">
+      <div className={`rounded-lg p-4 text-white ${
+        voiceId === EDGE_TEST_VOICE.id
+          ? 'bg-gradient-to-r from-blue-500 to-blue-600'
+          : 'bg-gradient-to-r from-purple-500 to-pink-600'
+      }`}>
         <p className="text-sm font-medium mb-1">Currently Selected:</p>
         <p className="text-lg font-bold">
-          {KOKORO_VOICES.find((v) => v.id === voiceId)?.name || 'Guy (Adam)'}
+          {voiceId === EDGE_TEST_VOICE.id
+            ? EDGE_TEST_VOICE.name
+            : KOKORO_VOICES.find((v) => v.id === voiceId)?.name || 'Guy (Adam)'}
         </p>
         <p className="text-sm opacity-90">
-          {KOKORO_VOICES.find((v) => v.id === voiceId)?.style || 'Natural & Clear'}
+          {voiceId === EDGE_TEST_VOICE.id
+            ? EDGE_TEST_VOICE.style
+            : KOKORO_VOICES.find((v) => v.id === voiceId)?.style || 'Natural & Clear'}
         </p>
         <p className="text-xs mt-2 opacity-80 flex items-center space-x-1">
-          <Cpu className="w-4 h-4" />
-          <span>Powered by Kokoro TTS on Google Colab GPU!</span>
+          {voiceId === EDGE_TEST_VOICE.id ? (
+            <>
+              <span>⚡</span>
+              <span>Local Edge TTS - Fast Testing!</span>
+            </>
+          ) : (
+            <>
+              <Cpu className="w-4 h-4" />
+              <span>Powered by Kokoro TTS on Google Colab GPU!</span>
+            </>
+          )}
         </p>
       </div>
     </div>

@@ -209,13 +209,27 @@ def generate_video_background(data):
         audio_path = Path("output/temp/narration.wav")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Call Colab for audio generation
-        audio_file = colab_client.generate_audio(
-            text=result['script'],
-            voice=voice_id,
-            speed=float(data.get('voice_speed', 1.0)),
-            output_path=audio_path
-        )
+        # 🧪 Check if using Edge TTS test voice (local generation)
+        if voice_id == 'edge_test':
+            print("   🧪 Using Edge TTS (Local Generation - Fast Testing)...")
+            import edge_tts
+            import asyncio
+
+            async def generate_edge_audio():
+                communicate = edge_tts.Communicate(result['script'], "en-US-JennyNeural")
+                await communicate.save(str(audio_path))
+
+            asyncio.run(generate_edge_audio())
+            audio_file = audio_path
+            print(f"   ✅ Edge TTS audio generated locally!")
+        else:
+            # Call Colab for Kokoro TTS audio generation
+            audio_file = colab_client.generate_audio(
+                text=result['script'],
+                voice=voice_id,
+                speed=float(data.get('voice_speed', 1.0)),
+                output_path=audio_path
+            )
 
         audio_duration = get_audio_duration(audio_path)
         print(f"   ✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
@@ -365,12 +379,27 @@ def generate_with_template_background(
         audio_path = Path("output/temp/narration.wav")
         audio_path.parent.mkdir(parents=True, exist_ok=True)
 
-        audio_file = colab_client.generate_audio(
-            text=script_text,
-            voice=voice_id,
-            speed=voice_speed,
-            output_path=audio_path
-        )
+        # 🧪 Check if using Edge TTS test voice (local generation)
+        if voice_id == 'edge_test':
+            print("   🧪 Using Edge TTS (Local Generation - Fast Testing)...")
+            import edge_tts
+            import asyncio
+
+            async def generate_edge_audio():
+                communicate = edge_tts.Communicate(script_text, "en-US-JennyNeural")
+                await communicate.save(str(audio_path))
+
+            asyncio.run(generate_edge_audio())
+            audio_file = audio_path
+            print(f"   ✅ Edge TTS audio generated locally!")
+        else:
+            # Call Colab for Kokoro TTS audio generation
+            audio_file = colab_client.generate_audio(
+                text=script_text,
+                voice=voice_id,
+                speed=voice_speed,
+                output_path=audio_path
+            )
 
         audio_duration = get_audio_duration(audio_path)
         print(f"✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
