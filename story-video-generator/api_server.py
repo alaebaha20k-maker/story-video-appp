@@ -29,6 +29,7 @@ from src.ai.template_analyzer import template_analyzer  # NEW: Template Analysis
 from src.utils.colab_client import get_colab_client
 from src.media.intelligent_media_manager import media_manager
 from src.utils.smart_duration_calculator import duration_calculator
+from src.utils.caption_generator import generate_auto_captions, generate_manual_caption
 
 app = Flask(__name__)
 
@@ -276,7 +277,32 @@ def generate_video_background(data):
         # Get effects from request
         color_filter = data.get('color_filter', 'none')
         grain_effect = data.get('grain_effect', False)
-        captions = data.get('captions', {})
+
+        # ✅ CAPTION GENERATION (AUTO or MANUAL)
+        captions_data = []
+        auto_captions_enabled = data.get('auto_captions', False)
+        manual_caption = data.get('caption')
+
+        if auto_captions_enabled:
+            # Generate auto-captions from script with timing
+            print(f"\n   💬 Generating auto-captions from script...")
+            captions_data = generate_auto_captions(
+                script=result['script'],
+                audio_duration=audio_duration,
+                style='bold',  # TikTok-style bold captions
+                position='bottom'
+            )
+            print(f"   ✅ Generated {len(captions_data)} auto-captions")
+        elif manual_caption and manual_caption.get('text'):
+            # Single manual caption for entire video
+            print(f"\n   💬 Adding manual caption: {manual_caption.get('text')[:30]}...")
+            captions_data = generate_manual_caption(
+                text=manual_caption.get('text', ''),
+                audio_duration=audio_duration,
+                style=manual_caption.get('style', 'simple'),
+                position=manual_caption.get('position', 'bottom')
+            )
+            print(f"   ✅ Manual caption added")
 
         # Extract media file paths
         media_paths = [item.filepath for item in media_items]
@@ -290,7 +316,7 @@ def generate_video_background(data):
             zoom_effect=zoom_effect,
             color_filter=color_filter,
             grain_effect=grain_effect,
-            captions=captions
+            captions=captions_data  # ✅ Pass generated captions
         )
 
         progress_state['progress'] = 100
@@ -317,7 +343,8 @@ def generate_video_background(data):
 
 def generate_with_template_background(
     topic, story_type, template, research_data, duration, num_scenes,
-    voice_engine, voice_id, voice_speed=1.0, zoom_effect=True
+    voice_engine, voice_id, voice_speed=1.0, zoom_effect=True,
+    auto_captions=False, manual_caption=None, color_filter='none', grain_effect=False
 ):
     """Background generation with template + research + Colab GPU"""
     global progress_state
@@ -444,15 +471,38 @@ def generate_with_template_background(
         time_per_image = audio_duration / len(image_paths) if image_paths else 5
         durations = [time_per_image] * len(image_paths)
 
+        # ✅ CAPTION GENERATION (AUTO or MANUAL)
+        captions_data = []
+        if auto_captions:
+            # Generate auto-captions from script with timing
+            print(f"\n   💬 Generating auto-captions from script...")
+            captions_data = generate_auto_captions(
+                script=script_text,
+                audio_duration=audio_duration,
+                style='bold',
+                position='bottom'
+            )
+            print(f"   ✅ Generated {len(captions_data)} auto-captions")
+        elif manual_caption and manual_caption.get('text'):
+            # Single manual caption for entire video
+            print(f"\n   💬 Adding manual caption: {manual_caption.get('text')[:30]}...")
+            captions_data = generate_manual_caption(
+                text=manual_caption.get('text', ''),
+                audio_duration=audio_duration,
+                style=manual_caption.get('style', 'simple'),
+                position=manual_caption.get('position', 'bottom')
+            )
+            print(f"   ✅ Manual caption added")
+
         video_path = colab_client.compile_video(
             image_paths,
             audio_path,
             durations,
             output_path=Path(f"output/videos/{output_filename}"),
             zoom_effect=zoom_effect,
-            color_filter='none',  # Can be added as parameter
-            grain_effect=False,   # Can be added as parameter
-            captions={}          # Can be added as parameter
+            color_filter=color_filter,
+            grain_effect=grain_effect,
+            captions=captions_data  # ✅ Pass generated captions
         )
 
         progress_state['progress'] = 100
@@ -712,6 +762,10 @@ def generate_with_template_endpoint():
         voice_id = data.get('voice_id', 'guy')
         voice_speed = float(data.get('voice_speed', 1.0))
         zoom_effect = data.get('zoom_effect', True)
+        auto_captions = data.get('auto_captions', False)
+        manual_caption = data.get('caption')
+        color_filter = data.get('color_filter', 'none')
+        grain_effect = data.get('grain_effect', False)
 
         print(f"\n🎬 Generating with template: {topic}")
         print(f"   Type: {story_type}")
@@ -731,7 +785,8 @@ def generate_with_template_endpoint():
         thread = threading.Thread(
             target=generate_with_template_background,
             args=(topic, story_type, template, research_data, duration, num_scenes,
-                  voice_engine, voice_id, voice_speed, zoom_effect)
+                  voice_engine, voice_id, voice_speed, zoom_effect,
+                  auto_captions, manual_caption, color_filter, grain_effect)
         )
         thread.start()
 

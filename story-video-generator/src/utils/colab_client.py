@@ -308,7 +308,7 @@ class ColabClient:
         zoom_effect: bool = True,
         color_filter: str = 'none',
         grain_effect: bool = False,
-        captions: Optional[Dict] = None
+        captions: Optional[List[Dict]] = None
     ) -> str:
         """
         Compile video using FFmpeg on Colab GPU with ALL effects
@@ -322,7 +322,7 @@ class ColabClient:
             zoom_effect: Enable zoom effect (applies to both images and videos)
             color_filter: Color filter (none, warm, cool, vintage, cinematic)
             grain_effect: Enable grain/noise effect
-            captions: Caption settings dict
+            captions: List of caption dicts with timing (auto-generated or manual)
 
         Returns:
             str: Path to compiled video file
@@ -340,6 +340,8 @@ class ColabClient:
         print(f"   Zoom: {'ON' if zoom_effect else 'OFF'}")
         print(f"   Color Filter: {color_filter}")
         print(f"   Grain: {'ON' if grain_effect else 'OFF'}")
+        if captions:
+            print(f"   💬 Captions: {len(captions)} captions")
 
         try:
             url = f"{self.server_url}{COLAB_ENDPOINTS['compile_video']}"
@@ -370,12 +372,11 @@ class ColabClient:
                 audio_bytes = f.read()
                 audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
 
-            # Prepare effects
+            # Prepare effects (without captions - sent separately at top level)
             effects = {
                 'zoom_effect': zoom_effect,
                 'color_filter': color_filter,
-                'grain_effect': grain_effect,
-                'captions': captions or {}
+                'grain_effect': grain_effect
             }
 
             payload = {
@@ -383,7 +384,8 @@ class ColabClient:
                 'media_types': media_types,      # NEW: specify type of each item
                 'audio': audio_base64,
                 'durations': durations,
-                'effects': effects
+                'effects': effects,
+                'captions': captions or []       # ✅ Send captions at top level (Colab expects it here)
             }
 
             print(f"   📡 Sending to Colab server...")
