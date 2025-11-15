@@ -215,13 +215,27 @@ def generate_video_background(data):
             import edge_tts
             import asyncio
 
+            # Edge TTS saves as MP3 - we need to convert to WAV for FFmpeg
+            temp_mp3_path = Path("output/temp/narration_edge.mp3")
+            temp_mp3_path.parent.mkdir(parents=True, exist_ok=True)
+
             async def generate_edge_audio():
                 communicate = edge_tts.Communicate(result['script'], "en-US-JennyNeural")
-                await communicate.save(str(audio_path))
+                await communicate.save(str(temp_mp3_path))
 
             asyncio.run(generate_edge_audio())
+
+            # Convert MP3 to WAV using pydub
+            print(f"   🔄 Converting MP3 to WAV format...")
+            audio = AudioSegment.from_mp3(str(temp_mp3_path))
+            audio.export(str(audio_path), format="wav")
+
+            # Clean up temp MP3 file
+            if temp_mp3_path.exists():
+                temp_mp3_path.unlink()
+
             audio_file = audio_path
-            print(f"   ✅ Edge TTS audio generated locally!")
+            print(f"   ✅ Edge TTS audio generated locally and converted to WAV!")
         else:
             # Call Colab for Kokoro TTS audio generation
             audio_file = colab_client.generate_audio(
@@ -385,13 +399,27 @@ def generate_with_template_background(
             import edge_tts
             import asyncio
 
+            # Edge TTS saves as MP3 - we need to convert to WAV for FFmpeg
+            temp_mp3_path = Path("output/temp/narration_edge.mp3")
+            temp_mp3_path.parent.mkdir(parents=True, exist_ok=True)
+
             async def generate_edge_audio():
                 communicate = edge_tts.Communicate(script_text, "en-US-JennyNeural")
-                await communicate.save(str(audio_path))
+                await communicate.save(str(temp_mp3_path))
 
             asyncio.run(generate_edge_audio())
+
+            # Convert MP3 to WAV using pydub
+            print(f"   🔄 Converting MP3 to WAV format...")
+            audio = AudioSegment.from_mp3(str(temp_mp3_path))
+            audio.export(str(audio_path), format="wav")
+
+            # Clean up temp MP3 file
+            if temp_mp3_path.exists():
+                temp_mp3_path.unlink()
+
             audio_file = audio_path
-            print(f"   ✅ Edge TTS audio generated locally!")
+            print(f"   ✅ Edge TTS audio generated locally and converted to WAV!")
         else:
             # Call Colab for Kokoro TTS audio generation
             audio_file = colab_client.generate_audio(
