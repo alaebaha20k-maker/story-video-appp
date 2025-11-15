@@ -10,7 +10,7 @@ Configuration package
 # The Colab notebook will show you the ngrok URL after running all cells.
 # Example: https://xxxx-xxxx-xxxx.ngrok-free.app
 
-COLAB_SERVER_URL = 'https://contemplable-suzy-unfussing.ngrok-free.dev'
+COLAB_SERVER_URL = 'YOUR_NEW_NGROK_URL_HERE'  # ⚠️ UPDATE THIS with URL from Colab output!
 
 # Colab endpoints
 COLAB_ENDPOINTS = {
