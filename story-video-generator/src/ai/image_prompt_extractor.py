@@ -24,7 +24,8 @@ GEMINI_API_KEY_STAGE_2 = "AIzaSyAGbzxD1mg2awU04T1ct2JXZOGy-2IJ95c"
 genai.configure(api_key=GEMINI_API_KEY_STAGE_2)
 
 # Use Gemini Flash for speed (Stage 2 is fast analysis)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# FIXED: Use correct model name for v1beta API
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 
 class ImagePromptExtractor:
