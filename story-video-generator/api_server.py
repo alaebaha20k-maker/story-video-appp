@@ -308,25 +308,11 @@ def generate_video_background(data):
         # Extract media file paths
         media_paths = [item.filepath for item in media_items]
 
-        # ⚡ OPTIMIZATION: Use LOCAL FFmpeg to avoid large Colab uploads
-        print(f"\n   🎬 Using LOCAL FFmpeg compilation (no upload needed)...")
+        # ✅ PRIMARY: Use Colab GPU for FFmpeg compilation (GPU-accelerated)
+        # Local FFmpeg available as fallback if Colab fails
+        print(f"\n   🎬 Compiling video with Colab GPU FFmpeg...")
 
         try:
-            video_path = compile_video_local(
-                media_paths,
-                audio_path,
-                durations,
-                output_path=Path(f"output/videos/{output_filename}"),
-                zoom_effect=zoom_effect,
-                color_filter=color_filter,
-                grain_effect=grain_effect,
-                captions=captions_data
-            )
-        except Exception as e:
-            print(f"   ⚠️  Local FFmpeg failed: {e}")
-            print(f"   🔄 Falling back to Colab GPU...")
-
-            # Fallback to Colab if local fails
             video_path = colab_client.compile_video(
                 media_paths,
                 audio_path,
@@ -337,6 +323,24 @@ def generate_video_background(data):
                 grain_effect=grain_effect,
                 captions=captions_data
             )
+        except Exception as e:
+            print(f"   ⚠️  Colab compilation failed: {e}")
+
+            # Check if local FFmpeg is available as fallback
+            if check_ffmpeg_installed():
+                print(f"   🔄 Falling back to LOCAL FFmpeg...")
+                video_path = compile_video_local(
+                    media_paths,
+                    audio_path,
+                    durations,
+                    output_path=Path(f"output/videos/{output_filename}"),
+                    zoom_effect=zoom_effect,
+                    color_filter=color_filter,
+                    grain_effect=grain_effect,
+                    captions=captions_data
+                )
+            else:
+                raise RuntimeError("Colab compilation failed and FFmpeg not installed locally") from e
 
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'
@@ -513,25 +517,11 @@ def generate_with_template_background(
             )
             print(f"   ✅ Manual caption added")
 
-        # ⚡ OPTIMIZATION: Use LOCAL FFmpeg to avoid large Colab uploads
-        print(f"\n   🎬 Using LOCAL FFmpeg compilation (no upload needed)...")
+        # ✅ PRIMARY: Use Colab GPU for FFmpeg compilation (GPU-accelerated)
+        # Local FFmpeg available as fallback if Colab fails
+        print(f"\n   🎬 Compiling video with Colab GPU FFmpeg...")
 
         try:
-            video_path = compile_video_local(
-                image_paths,
-                audio_path,
-                durations,
-                output_path=Path(f"output/videos/{output_filename}"),
-                zoom_effect=zoom_effect,
-                color_filter=color_filter,
-                grain_effect=grain_effect,
-                captions=captions_data
-            )
-        except Exception as e:
-            print(f"   ⚠️  Local FFmpeg failed: {e}")
-            print(f"   🔄 Falling back to Colab GPU...")
-
-            # Fallback to Colab if local fails
             video_path = colab_client.compile_video(
                 image_paths,
                 audio_path,
@@ -542,6 +532,24 @@ def generate_with_template_background(
                 grain_effect=grain_effect,
                 captions=captions_data
             )
+        except Exception as e:
+            print(f"   ⚠️  Colab compilation failed: {e}")
+
+            # Check if local FFmpeg is available as fallback
+            if check_ffmpeg_installed():
+                print(f"   🔄 Falling back to LOCAL FFmpeg...")
+                video_path = compile_video_local(
+                    image_paths,
+                    audio_path,
+                    durations,
+                    output_path=Path(f"output/videos/{output_filename}"),
+                    zoom_effect=zoom_effect,
+                    color_filter=color_filter,
+                    grain_effect=grain_effect,
+                    captions=captions_data
+                )
+            else:
+                raise RuntimeError("Colab compilation failed and FFmpeg not installed locally") from e
 
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'

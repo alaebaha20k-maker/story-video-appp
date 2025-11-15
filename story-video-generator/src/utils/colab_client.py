@@ -234,10 +234,12 @@ class ColabClient:
             print(f"   📡 Calling Colab server...")
             start_time = time.time()
 
+            # ⚡ EXTENDED TIMEOUT for batch image generation (GPU-heavy operation)
+            # Image generation takes ~20 sec/image, so 10 images = 200+ seconds
             response = requests.post(
                 url,
                 json=payload,
-                timeout=600  # 10 minutes for batch
+                timeout=(30, 900)  # 30s connect, 15 min read (for slow GPU)
             )
 
             elapsed = time.time() - start_time
