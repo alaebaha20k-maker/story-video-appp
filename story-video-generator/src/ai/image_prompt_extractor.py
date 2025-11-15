@@ -2,11 +2,12 @@
 🎨 IMAGE PROMPT EXTRACTOR - Stage 2 Gemini 2.0 Flash
 Analyzes finished script and generates DreamShaper XL-optimized image prompts
 
-FEATURES:
-- Uses Gemini 2.0 Flash for superior prompt quality
-- Intelligent chunking to handle API rate limits
-- Automatic retries with exponential backoff
-- Fallback prompts for error cases
+OPTIMIZED FOR RATE LIMITS:
+- Uses Gemini 2.0 Flash (separate API key)
+- LARGE chunks (8000 chars) = FEWER API calls
+- NO retries = immediate fallback on errors
+- 5 second delay between chunks
+- Fallback prompts always available
 
 SEPARATE FROM SCRIPT GENERATION - Uses dedicated Gemini API for visual prompt extraction
 """
@@ -52,11 +53,11 @@ class ImagePromptExtractor:
 
     def __init__(self):
         self.model = model
-        # Optimized chunking for Gemini 2.0 Flash API limits
-        self.max_chunk_size = 2500  # Characters per chunk (conservative for rate limits)
-        self.delay_between_requests = 3  # Seconds between API calls (avoid rate limits)
-        self.max_retries = 3  # Retry failed requests
-        self.retry_delay = 5  # Seconds to wait before retry
+        # OPTIMIZED: Minimize API calls to avoid rate limits
+        self.max_chunk_size = 8000  # LARGER chunks = fewer requests (was 2500)
+        self.delay_between_requests = 5  # LONGER delay between chunks (was 3s)
+        self.max_retries = 1  # NO retries - use fallback immediately (was 3)
+        self.retry_delay = 0  # No retry delay needed
 
     def extract_prompts(
         self,
@@ -237,43 +238,26 @@ IMPORTANT: Each prompt should paint a complete visual picture that an AI can ren
 
 Generate the {target_prompts} prompts now:"""
 
-        # Retry logic for rate limits and transient errors
-        for attempt in range(self.max_retries):
-            try:
-                response = self.model.generate_content(prompt)
-                response_text = response.text
+        # Single attempt - NO retries (to avoid rate limits)
+        try:
+            response = self.model.generate_content(prompt)
+            response_text = response.text
 
-                # Parse numbered prompts
-                prompts = self._parse_prompts_from_response(response_text, target_prompts)
+            # Parse numbered prompts
+            prompts = self._parse_prompts_from_response(response_text, target_prompts)
 
-                if prompts and len(prompts) > 0:
-                    print(f"      ✅ Successfully extracted {len(prompts)} prompts")
-                    return prompts
-                else:
-                    raise ValueError("No valid prompts extracted from response")
+            if prompts and len(prompts) > 0:
+                print(f"      ✅ Successfully extracted {len(prompts)} prompts")
+                return prompts
+            else:
+                print(f"      ⚠️  No valid prompts in response. Using fallback...")
+                return self._generate_fallback_prompts(target_prompts, story_type, image_style)
 
-            except Exception as e:
-                error_msg = str(e)
-                print(f"      ❌ Error (attempt {attempt + 1}/{self.max_retries}): {error_msg}")
-
-                # Check if it's a rate limit error
-                if "429" in error_msg or "quota" in error_msg.lower() or "rate" in error_msg.lower():
-                    if attempt < self.max_retries - 1:
-                        wait_time = self.retry_delay * (attempt + 1)  # Exponential backoff
-                        print(f"      ⏳ Rate limit hit. Waiting {wait_time}s before retry...")
-                        time.sleep(wait_time)
-                        continue
-
-                # If not rate limit or last attempt, use fallback
-                if attempt == self.max_retries - 1:
-                    print(f"      ⚠️  Max retries reached. Using fallback prompts...")
-                    return self._generate_fallback_prompts(target_prompts, story_type, image_style)
-
-                # Wait before next retry
-                time.sleep(self.retry_delay)
-
-        # Fallback if all retries failed
-        return self._generate_fallback_prompts(target_prompts, story_type, image_style)
+        except Exception as e:
+            error_msg = str(e)
+            print(f"      ❌ Error: {error_msg[:100]}")
+            print(f"      ⚠️  Using fallback prompts (no retries to avoid rate limits)...")
+            return self._generate_fallback_prompts(target_prompts, story_type, image_style)
 
     def _parse_prompts_from_response(self, response_text: str, target_count: int) -> List[Dict]:
         """Parse numbered prompts from Gemini response"""
