@@ -388,20 +388,52 @@ class ColabClient:
                 'captions': captions or []       # ✅ Send captions at top level (Colab expects it here)
             }
 
+            # Calculate payload size for logging
+            import json
+            payload_size_mb = len(json.dumps(payload)) / 1024 / 1024
             print(f"   📡 Sending to Colab server...")
-            print(f"   ⏱️  This may take a few minutes for large videos...")
+            print(f"   📦 Payload size: {payload_size_mb:.1f} MB")
+            print(f"   ⏱️  Upload may take a few minutes for large videos...")
+
             start_time = time.time()
 
-            # Call Colab endpoint with extended timeout for large uploads
-            # Separate connection timeout (60s) from read timeout (30 min)
-            response = requests.post(
-                url,
-                json=payload,
-                timeout=(60, 1800),  # (connect timeout, read timeout) - 30 minutes for processing
-                stream=False  # Keep False to get full response
-            )
+            # ⚡ UPLOAD WITH RETRY for large payloads
+            max_retries = 3
+            retry_delay = 5  # seconds
+
+            for attempt in range(max_retries):
+                try:
+                    # Call Colab endpoint with VERY extended timeout for large uploads
+                    # connection timeout: 120s (2 min to establish connection)
+                    # read timeout: 3600s (60 min for processing)
+                    print(f"   🔄 Upload attempt {attempt + 1}/{max_retries}...")
+
+                    response = requests.post(
+                        url,
+                        json=payload,
+                        timeout=(120, 3600),  # (connect timeout, read timeout) - 60 minutes
+                        stream=False
+                    )
+
+                    # Success - break retry loop
+                    break
+
+                except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                    if attempt < max_retries - 1:
+                        print(f"   ⚠️  Upload failed: {type(e).__name__}")
+                        print(f"   ⏳ Retrying in {retry_delay} seconds...")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        # Last attempt failed
+                        raise RuntimeError(
+                            f"Upload failed after {max_retries} attempts. "
+                            f"Payload size: {payload_size_mb:.1f} MB. "
+                            f"Try reducing the number of images or disabling effects to reduce upload size."
+                        ) from e
 
             elapsed = time.time() - start_time
+            print(f"   ✅ Upload completed in {elapsed:.1f} seconds")
 
             if response.status_code != 200:
                 raise RuntimeError(f"Colab returned error {response.status_code}: {response.text}")
