@@ -1,9 +1,9 @@
 """
-🎨 IMAGE PROMPT EXTRACTOR - Stage 2 Gemini 2.0 Flash
+🎨 IMAGE PROMPT EXTRACTOR - Stage 2 Gemini 1.5 Flash
 Analyzes finished script and generates DreamShaper XL-optimized image prompts
 
-OPTIMIZED FOR RATE LIMITS:
-- Uses Gemini 2.0 Flash (separate API key)
+OPTIMIZED FOR FREE TIER LIMITS:
+- Uses Gemini 1.5 Flash (higher free tier limits: 15 RPM, 1M TPM)
 - LARGE chunks (8000 chars) = FEWER API calls
 - NO retries = immediate fallback on errors
 - 5 second delay between chunks
@@ -30,9 +30,9 @@ GEMINI_API_KEY_STAGE_2 = "AIzaSyAGbzxD1mg2awU04T1ct2JXZOGy-2IJ95c"
 # Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY_STAGE_2)
 
-# Use Gemini 2.0 Flash - Latest and most powerful Flash model
-# Better prompt quality and understanding than 1.5 Flash
-model = genai.GenerativeModel('gemini-2.0-flash-exp')
+# Use Gemini 1.5 Flash - Higher free tier limits than 2.0 Flash
+# Free tier: 15 RPM, 1M TPM (vs 2.0 Flash: much lower limits)
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 
 class ImagePromptExtractor:
