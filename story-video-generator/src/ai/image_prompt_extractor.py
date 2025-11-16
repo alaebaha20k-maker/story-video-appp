@@ -2,12 +2,11 @@
 🎨 IMAGE PROMPT EXTRACTOR - Stage 2 Gemini 1.5 Flash
 Analyzes finished script and generates DreamShaper XL-optimized image prompts
 
-OPTIMIZED FOR FREE TIER LIMITS:
-- Uses Gemini 1.5 Flash (higher free tier limits: 15 RPM, 1M TPM)
-- LARGE chunks (8000 chars) = FEWER API calls
+MATCHES SERVER 1 APPROACH:
+- Uses Gemini 1.5 Flash (higher free tier: 15 RPM, 1M TPM)
+- ONE request per story (no chunking like Server 1)
 - NO retries = immediate fallback on errors
-- 5 second delay between chunks
-- Fallback prompts always available
+- Simple and efficient like Server 1
 
 SEPARATE FROM SCRIPT GENERATION - Uses dedicated Gemini API for visual prompt extraction
 """
@@ -42,22 +41,23 @@ class ImagePromptExtractor:
     PURPOSE:
     - Receives high-quality script from Stage 1
     - Analyzes important visual scenes
-    - Generates SDXL-Turbo optimized prompts
+    - Generates DreamShaper XL optimized prompts
     - Matches exact number of images needed
 
-    CHUNKING STRATEGY:
-    - Processes script in chunks to avoid rate limits
-    - Each chunk extracts prompts for its portion
-    - Combines all prompts at the end
+    STRATEGY (MATCHES SERVER 1):
+    - Sends entire script in ONE request (no chunking)
+    - Simple and efficient like script generator
+    - Immediate fallback on errors
     """
 
     def __init__(self):
         self.model = model
-        # OPTIMIZED: Minimize API calls to avoid rate limits
-        self.max_chunk_size = 8000  # LARGER chunks = fewer requests (was 2500)
-        self.delay_between_requests = 5  # LONGER delay between chunks (was 3s)
-        self.max_retries = 1  # NO retries - use fallback immediately (was 3)
-        self.retry_delay = 0  # No retry delay needed
+        # SIMPLIFIED: Match Server 1 approach - NO chunking, ONE request
+        # Server 1 sends entire script in one request → Server 2 does the same
+        self.max_chunk_size = 30000  # Large enough for any script (no chunking needed)
+        self.delay_between_requests = 0  # No delay needed (only 1 request)
+        self.max_retries = 1  # Single attempt like Server 1
+        self.retry_delay = 0  # No retry delay
 
     def extract_prompts(
         self,
