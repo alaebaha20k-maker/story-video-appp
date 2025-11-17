@@ -53,6 +53,9 @@ class GeminiServer1:
         Generate ONLY the script (no image prompts)
         Server 2 will handle image prompts separately
 
+        CHUNKING: If script is too long (>10 min), splits into chunks
+        and generates each separately, then merges seamlessly
+
         Args:
             topic: Story topic
             story_type: Type of story
@@ -74,6 +77,32 @@ class GeminiServer1:
         # Calculate target word count (150 words/min for narration)
         target_words = duration_minutes * 150
 
+        # Check if chunking needed for long scripts (>10 min = 1500 words)
+        CHUNK_THRESHOLD = 1500  # words (10 minutes)
+
+        if target_words > CHUNK_THRESHOLD:
+            logger.info(f"   🔪 Long script detected - using chunked generation")
+            return self._generate_in_chunks(
+                topic, story_type, template, target_words, num_scenes, duration_minutes
+            )
+        else:
+            logger.info(f"   ✅ Standard generation (within limits)")
+            return self._generate_single(
+                topic, story_type, template, target_words, num_scenes, duration_minutes
+            )
+
+    def _generate_single(
+        self,
+        topic: str,
+        story_type: str,
+        template: Optional[Dict],
+        target_words: int,
+        num_scenes: int,
+        duration_minutes: int
+    ) -> str:
+        """
+        Generate script in a single call (for scripts under 1500 words / 10 min)
+        """
         # Build prompt
         prompt = self._build_script_prompt(
             topic, story_type, template, target_words, num_scenes
@@ -94,6 +123,153 @@ class GeminiServer1:
         except Exception as e:
             logger.error(f"❌ Gemini Server 1 error: {e}")
             raise
+
+    def _generate_in_chunks(
+        self,
+        topic: str,
+        story_type: str,
+        template: Optional[Dict],
+        target_words: int,
+        num_scenes: int,
+        duration_minutes: int
+    ) -> str:
+        """
+        Generate a long script in chunks to avoid API token limits
+
+        Strategy:
+        1. Split into 3 parts: Beginning (25%), Middle (50%), End (25%)
+        2. Generate each chunk with clear instructions for seamless flow
+        3. Merge chunks intelligently with smooth transitions
+        """
+        logger.info(f"   📊 Target: {target_words} words")
+        logger.info(f"   📊 Chunking into 3 parts...")
+
+        # Calculate word targets for each chunk
+        beginning_words = int(target_words * 0.25)
+        middle_words = int(target_words * 0.50)
+        end_words = int(target_words * 0.25)
+
+        # Calculate scenes per chunk
+        beginning_scenes = int(num_scenes * 0.25)
+        middle_scenes = int(num_scenes * 0.50)
+        end_scenes = int(num_scenes * 0.25)
+
+        logger.info(f"   📊 Chunk 1 (Beginning): {beginning_words} words, {beginning_scenes} scenes")
+        logger.info(f"   📊 Chunk 2 (Middle): {middle_words} words, {middle_scenes} scenes")
+        logger.info(f"   📊 Chunk 3 (End): {end_words} words, {end_scenes} scenes")
+
+        try:
+            # Generate beginning chunk (hook + setup)
+            logger.info(f"   🔄 Generating BEGINNING chunk...")
+            chunk_beginning = self._generate_chunk(
+                topic,
+                story_type,
+                template,
+                beginning_words,
+                beginning_scenes,
+                "beginning",
+                "Start with a powerful hook and establish the setup. End at a point where tension is building.",
+                None  # No previous chunk
+            )
+
+            # Generate middle chunk (rising action + climax build)
+            logger.info(f"   🔄 Generating MIDDLE chunk...")
+            chunk_middle = self._generate_chunk(
+                topic,
+                story_type,
+                template,
+                middle_words,
+                middle_scenes,
+                "middle",
+                "Continue from the setup, build rising action and tension. Move toward the climax.",
+                chunk_beginning[-300:]  # Last 300 chars for context
+            )
+
+            # Generate end chunk (climax + resolution)
+            logger.info(f"   🔄 Generating END chunk...")
+            chunk_end = self._generate_chunk(
+                topic,
+                story_type,
+                template,
+                end_words,
+                end_scenes,
+                "end",
+                "Deliver the climax and provide a satisfying resolution. End the story powerfully.",
+                chunk_middle[-300:]  # Last 300 chars for context
+            )
+
+            # Merge chunks seamlessly
+            logger.info(f"   🔀 Merging chunks...")
+            merged_script = self._merge_script_chunks(
+                chunk_beginning,
+                chunk_middle,
+                chunk_end
+            )
+
+            logger.success(f"✅ Chunked script generated!")
+            logger.info(f"   Total: {len(merged_script)} chars, ~{len(merged_script.split())} words")
+            logger.info(f"   Chunks merged: 3")
+
+            return merged_script
+
+        except Exception as e:
+            logger.error(f"❌ Gemini Server 1: Chunked generation error: {e}")
+            raise
+
+    def _generate_chunk(
+        self,
+        topic: str,
+        story_type: str,
+        template: Optional[Dict],
+        target_words: int,
+        num_scenes: int,
+        chunk_position: str,
+        special_instruction: str,
+        previous_chunk_context: Optional[str]
+    ) -> str:
+        """
+        Generate a single chunk of a long script
+        """
+        prompt = self._build_script_prompt(
+            topic, story_type, template, target_words, num_scenes
+        )
+
+        # Add chunk-specific instructions
+        chunk_instruction = f"""
+
+CHUNK POSITION: {chunk_position.upper()}
+{special_instruction}
+
+"""
+        # Add context from previous chunk for smooth transition
+        if previous_chunk_context:
+            chunk_instruction += f"""PREVIOUS CHUNK ENDING (for context):
+...{previous_chunk_context}
+
+Continue naturally from this point. DO NOT repeat this text.
+"""
+
+        prompt += chunk_instruction
+
+        response = self.model.generate_content(prompt)
+        if not response or not response.text:
+            raise Exception(f"Empty response for {chunk_position} chunk")
+
+        return response.text.strip()
+
+    def _merge_script_chunks(
+        self,
+        beginning: str,
+        middle: str,
+        end: str
+    ) -> str:
+        """
+        Merge script chunks seamlessly
+        Simply concatenate with paragraph breaks
+        """
+        # Add paragraph breaks between chunks for natural flow
+        merged = beginning + "\n\n" + middle + "\n\n" + end
+        return merged
 
     def _build_script_prompt(
         self,
