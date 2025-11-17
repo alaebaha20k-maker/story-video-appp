@@ -77,7 +77,13 @@ IMAGE_SETTINGS = {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# 🎤 VOICE ENGINE SETTINGS - EDGE-TTS ONLY
+# 🌐 COLAB SERVER SETTINGS
+# ═══════════════════════════════════════════════════════════════
+COLAB_SERVER_URL = "https://contemplable-suzy-unfussing.ngrok-free.dev"
+USE_COLAB = True  # Set to True to use Colab for voice + images + video
+
+# ═══════════════════════════════════════════════════════════════
+# 🎤 VOICE ENGINE SETTINGS - EDGE-TTS ONLY (FALLBACK)
 # ═══════════════════════════════════════════════════════════════
 
 # Voice engine priority (Edge is the only supported option)

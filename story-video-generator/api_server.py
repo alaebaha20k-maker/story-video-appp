@@ -11,6 +11,8 @@ import re
 from pydub import AudioSegment
 import asyncio
 import edge_tts
+import requests
+import time as time_module
 
 # ✅ IMPORTS FOR TEMPLATES + RESEARCH
 from src.ai.script_analyzer import script_analyzer
@@ -20,6 +22,9 @@ from src.ai.enhanced_script_generator import enhanced_script_generator
 # ✅ EXISTING IMPORTS
 from src.ai.image_generator import create_image_generator
 from src.editor.ffmpeg_compiler import FFmpegCompiler
+
+# ✅ CONFIG
+from config.settings import COLAB_SERVER_URL, USE_COLAB
 
 app = Flask(__name__)
 
@@ -260,70 +265,135 @@ def generate_video_background(data):
         )
         
         print(f"   ✅ Script: {len(result['script'])} characters")
-        
-        # Images
-        progress_state['status'] = 'Generating images...'
-        progress_state['progress'] = 30
-        print("🎨 Step 2/4: Generating images...")
-        
-        image_gen = create_image_generator(
-            data.get('image_style', 'cinematic_film'), 
-            data.get('story_type', 'scary_horror')
-        )
-        characters = {char: f"{char}, character" for char in result.get('characters', [])[:3]}
-        images = image_gen.generate_batch(result['scenes'], characters)
-        image_paths = [Path(img['filepath']) for img in images if img]
-        
-        print(f"   ✅ Images: {len(image_paths)} generated")
-        print(f"   🔍 DEBUG: Image paths:")
-        for i, img_path in enumerate(image_paths):
-            exists = "EXISTS" if img_path.exists() else "MISSING!"
-            print(f"      Image {i+1}: {img_path.name} - {exists}")
-        
-        # Voice Generation - Edge-TTS
-        progress_state['status'] = 'Generating voice with Edge-TTS...'
-        progress_state['progress'] = 60
-        print(f"🎤 Step 3/4: Generating voice with Edge-TTS (FREE!)...")
-        
-        audio_path = Path("output/temp/narration.mp3")
-        audio_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # ✅ EDGE-TTS - FREE & UNLIMITED!
-        generate_audio_edge(
-            text=result['script'],
-            voice=voice_id,
-            output_path=str(audio_path)
-        )
-        
-        audio_duration = get_audio_duration(audio_path)
-        print(f"   ✅ Audio: {audio_duration:.1f} seconds ({audio_duration/60:.1f} minutes)")
-        
-        # Calculate durations - MATCH VIDEO TO AUDIO!
-        time_per_image = audio_duration / len(image_paths) if image_paths else 5
-        durations = [time_per_image] * len(image_paths)
-        
-        # Debug: Show calculation
-        print(f"   🔧 Image timing:")
-        print(f"      Images: {len(image_paths)}")
-        print(f"      Duration per image: {time_per_image:.1f}s")
-        print(f"      Total video duration: {sum(durations):.1f}s ({sum(durations)/60:.1f} minutes)")
-        
-        # Video
-        progress_state['status'] = 'Compiling video...'
-        progress_state['progress'] = 80
-        print("🎬 Step 4/4: Compiling video...")
 
-        compiler = FFmpegCompiler()
-        safe_topic = sanitize_filename(data.get('topic', 'video'))
-        output_filename = f"{safe_topic}_video.mp4"
+        # ✅ Extract image prompts from scenes
+        image_prompts = []
+        for scene in result.get('scenes', []):
+            prompt = scene.get('image_description') or scene.get('content', '')
+            if prompt:
+                image_prompts.append(prompt)
 
-        video_path = compiler.create_video(
-            image_paths,
-            str(audio_path),
-            Path(f"output/videos/{output_filename}"),
-            durations,
-            zoom_effect=zoom_effect
-        )
+        print(f"   ✅ Image prompts: {len(image_prompts)} scenes")
+
+        # ═══════════════════════════════════════════════════════════════
+        # ✅ SEND TO COLAB FOR VOICE + IMAGES + VIDEO!
+        # ═══════════════════════════════════════════════════════════════
+        if USE_COLAB and COLAB_SERVER_URL:
+            progress_state['status'] = 'Sending to Colab (Coqui TTS + SDXL + FFmpeg)...'
+            progress_state['progress'] = 40
+            print(f"\n🌐 Sending to Colab: {COLAB_SERVER_URL}")
+
+            # Prepare payload for Colab
+            colab_payload = {
+                'script': result['script'],
+                'image_prompts': image_prompts,
+                'voice': data.get('voice_id', 'aria'),
+                'style': data.get('image_style', 'cinematic')
+            }
+
+            try:
+                # Call Colab
+                print(f"   📤 Calling /generate_complete_video...")
+                colab_response = requests.post(
+                    f"{COLAB_SERVER_URL}/generate_complete_video",
+                    json=colab_payload,
+                    timeout=600  # 10 minute timeout
+                )
+
+                if colab_response.status_code == 200:
+                    colab_result = colab_response.json()
+                    job_id = colab_result.get('job_id')
+                    print(f"   ✅ Colab job started: {job_id}")
+
+                    # Download video from Colab
+                    progress_state['status'] = 'Downloading video from Colab...'
+                    progress_state['progress'] = 90
+                    print(f"   📥 Downloading video...")
+
+                    video_response = requests.get(
+                        f"{COLAB_SERVER_URL}/download/{job_id}",
+                        timeout=60
+                    )
+
+                    if video_response.status_code == 200:
+                        # Save video locally
+                        safe_topic = sanitize_filename(data.get('topic', 'video'))
+                        output_filename = f"{safe_topic}_video.mp4"
+                        output_path = Path(f"output/videos/{output_filename}")
+                        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+                        with open(output_path, 'wb') as f:
+                            f.write(video_response.content)
+
+                        print(f"   ✅ Video downloaded: {output_filename}")
+                        video_path = output_path
+                    else:
+                        raise Exception(f"Colab video download failed: {video_response.status_code}")
+                else:
+                    raise Exception(f"Colab generation failed: {colab_response.status_code}")
+
+            except Exception as colab_error:
+                print(f"   ⚠️ Colab failed: {colab_error}")
+                print(f"   ⏭️ Falling back to local generation...")
+                USE_COLAB_FALLBACK = False  # Fall back to local
+        else:
+            USE_COLAB_FALLBACK = False
+
+        # ═══════════════════════════════════════════════════════════════
+        # FALLBACK: LOCAL GENERATION (if Colab fails)
+        # ═══════════════════════════════════════════════════════════════
+        if not USE_COLAB or 'USE_COLAB_FALLBACK' in locals() and not USE_COLAB_FALLBACK:
+            progress_state['status'] = 'Generating images...'
+            progress_state['progress'] = 30
+            print("🎨 Step 2/4: Generating images...")
+
+            image_gen = create_image_generator(
+                data.get('image_style', 'cinematic_film'),
+                data.get('story_type', 'scary_horror')
+            )
+            characters = {char: f"{char}, character" for char in result.get('characters', [])[:3]}
+            images = image_gen.generate_batch(result['scenes'], characters)
+            image_paths = [Path(img['filepath']) for img in images if img]
+
+            print(f"   ✅ Images: {len(image_paths)} generated")
+
+            # Voice Generation - Edge-TTS
+            progress_state['status'] = 'Generating voice with Edge-TTS...'
+            progress_state['progress'] = 60
+            print(f"🎤 Step 3/4: Generating voice with Edge-TTS (FREE!)...")
+
+            audio_path = Path("output/temp/narration.mp3")
+            audio_path.parent.mkdir(parents=True, exist_ok=True)
+
+            generate_audio_edge(
+                text=result['script'],
+                voice=voice_id,
+                output_path=str(audio_path)
+            )
+
+            audio_duration = get_audio_duration(audio_path)
+            print(f"   ✅ Audio: {audio_duration:.1f} seconds")
+
+            # Calculate durations
+            time_per_image = audio_duration / len(image_paths) if image_paths else 5
+            durations = [time_per_image] * len(image_paths)
+
+            # Video
+            progress_state['status'] = 'Compiling video...'
+            progress_state['progress'] = 80
+            print("🎬 Step 4/4: Compiling video...")
+
+            compiler = FFmpegCompiler()
+            safe_topic = sanitize_filename(data.get('topic', 'video'))
+            output_filename = f"{safe_topic}_video.mp4"
+
+            video_path = compiler.create_video(
+                image_paths,
+                str(audio_path),
+                Path(f"output/videos/{output_filename}"),
+                durations,
+                zoom_effect=zoom_effect
+            )
         
         progress_state['progress'] = 100
         progress_state['status'] = 'complete'
