@@ -8,9 +8,9 @@ from pathlib import Path
 import threading
 import uuid
 
-# Import our servers
-from src.ai.gemini_server_1 import gemini_server_1  # Script generation
-from src.ai.gemini_server_2 import gemini_server_2  # Image prompts
+# Import old backend generators (SAME as original)
+from src.ai.enhanced_script_generator import enhanced_script_generator
+from src.ai.image_generator import create_image_generator
 from src.colab.colab_client import colab_client
 
 app = Flask(__name__)
@@ -141,8 +141,8 @@ def health():
     return jsonify({
         'status': 'ok',
         'message': 'Backend server running',
-        'gemini_server_1': 'ready',
-        'gemini_server_2': 'ready',
+        'script_engine': 'gemini_ai',
+        'script_generator': 'enhanced_script_generator',
         'colab_connected': colab_client.check_health() if COLAB_URL else False,
         'colab_url': COLAB_URL
     }), 200
@@ -228,59 +228,64 @@ def generate_video_background(data):
         print(f"   Auto-Captions: {data.get('auto_captions', False)}")
 
         # ═══════════════════════════════════════════════════════════
-        # STEP 1: Generate Script with Gemini Server 1
+        # STEP 1: Generate Script (OLD BACKEND METHOD)
         # ═══════════════════════════════════════════════════════════
         progress_state['status'] = 'generating_script'
         progress_state['progress'] = 10
-        progress_state['message'] = 'Gemini Server 1: Generating script...'
+        progress_state['message'] = 'Generating script with Gemini AI...'
 
         print(f"\n{'='*60}")
-        print(f"📝 STEP 1/4: GEMINI SERVER 1 - Script Generation")
+        print(f"📝 STEP 1/4: SCRIPT GENERATION (OLD BACKEND METHOD)")
         print(f"{'='*60}")
 
-        script = gemini_server_1.generate_script_from_template(
+        # Use OLD backend's script generator (same as original)
+        result = enhanced_script_generator.generate_with_template(
             topic=topic,
             story_type=story_type,
             template=template,
+            research_data=None,  # No research
             duration_minutes=duration,
             num_scenes=num_scenes
         )
 
+        script = result['script']
+
         print(f"\n✅ Script generated!")
         print(f"   Length: {len(script)} chars")
         print(f"   Words: ~{len(script.split())}")
+        print(f"   Scenes in result: {len(result.get('scenes', []))}")
+        print(f"   Characters: {result.get('characters', [])[:3]}")
         print(f"   Preview: {script[:100]}...")
 
         # ═══════════════════════════════════════════════════════════
-        # STEP 2: Generate Image Prompts with Gemini Server 2
+        # STEP 2: Extract Image Prompts from Scenes (OLD BACKEND METHOD)
         # ═══════════════════════════════════════════════════════════
         progress_state['status'] = 'generating_image_prompts'
         progress_state['progress'] = 30
-        progress_state['message'] = 'Gemini Server 2: Generating image prompts...'
+        progress_state['message'] = 'Extracting image prompts from scenes...'
 
         print(f"\n{'='*60}")
-        print(f"🎨 STEP 2/4: GEMINI SERVER 2 - Image Prompts")
+        print(f"🎨 STEP 2/4: IMAGE PROMPTS (OLD BACKEND METHOD)")
         print(f"{'='*60}")
 
-        # Use chunked generation for large numbers of images
-        if num_scenes > 15:
-            image_prompts = gemini_server_2.generate_image_prompts_chunked(
-                script=script,
-                num_images=num_scenes,
-                story_type=story_type,
-                image_style=image_style,
-                chunk_size=10
-            )
-        else:
-            image_prompts = gemini_server_2.generate_image_prompts(
-                script=script,
-                num_images=num_scenes,
-                story_type=story_type,
-                image_style=image_style
-            )
+        # Extract image descriptions from scenes (same as old backend)
+        scenes = result.get('scenes', [])
 
-        print(f"\n✅ Image prompts generated!")
+        # Build image prompts from scenes
+        image_prompts = []
+        for scene in scenes[:num_scenes]:
+            # Use image_description if available, otherwise use content
+            prompt = scene.get('image_description') or scene.get('content', '')
+            if prompt:
+                image_prompts.append(prompt)
+
+        # If not enough prompts, create fallback prompts
+        while len(image_prompts) < num_scenes:
+            image_prompts.append(f"{topic}, scene {len(image_prompts) + 1}, {story_type} atmosphere, {image_style}")
+
+        print(f"\n✅ Image prompts extracted!")
         print(f"   Count: {len(image_prompts)}")
+        print(f"   From scenes: {len(scenes)}")
         print(f"   First prompt: {image_prompts[0][:60]}...")
 
         # ═══════════════════════════════════════════════════════════
@@ -456,7 +461,7 @@ def generate_video():
 
     return jsonify({
         'success': True,
-        'message': 'Generation started with new flow (Gemini 1 → Gemini 2 → Colab)'
+        'message': 'Generation started (Script+Prompts LOCAL → Colab REMOTE)'
     }), 200
 
 
@@ -515,24 +520,19 @@ def list_voices():
 
 if __name__ == '__main__':
     print("\n" + "="*70)
-    print("🔥 NEW VIDEO GENERATOR - Server 1 → 2 → Colab Flow!")
+    print("🔥 VIDEO GENERATOR - OLD BACKEND METHOD + COLAB")
     print("="*70)
     print(f"📍 Backend URL: http://localhost:5000")
     print(f"")
-    print(f"🎯 NEW ARCHITECTURE - 3 SERVERS:")
-    print(f"   1️⃣  Gemini Server 1: Script generation (LOCAL)")
-    print(f"   2️⃣  Gemini Server 2: Image prompts (LOCAL - separate API key!)")
-    print(f"   3️⃣  Google Colab: SDXL + Coqui TTS + FFmpeg (REMOTE)")
-    print(f"")
-    print(f"🔑 QUOTA SEPARATION:")
-    print(f"   ✅ Server 1: Dedicated quota for script generation")
-    print(f"   ✅ Server 2: Dedicated quota for image prompts")
-    print(f"   → NO QUOTA CONFLICTS!")
+    print(f"🎯 ARCHITECTURE:")
+    print(f"   📝 Script Generation: Gemini AI (LOCAL - old backend)")
+    print(f"   🎨 Image Prompts: From script scenes (LOCAL - old backend)")
+    print(f"   🎬 Video Processing: Google Colab (REMOTE)")
     print(f"")
     print(f"📝 PROCESSING FLOW:")
-    print(f"   📝 Server 1: Script generation (LOCAL - Gemini API)")
-    print(f"   🎨 Server 2: Image prompts (LOCAL - Gemini API)")
-    print(f"   🎬 Google Colab: Video processing (REMOTE)")
+    print(f"   1. Generate script + scenes (LOCAL - Gemini API)")
+    print(f"   2. Extract image prompts from scenes (LOCAL)")
+    print(f"   3. Send to Google Colab for video processing (REMOTE):")
     print(f"      ├── SDXL image generation")
     print(f"      ├── Coqui TTS voice generation")
     print(f"      ├── FFmpeg video compilation")
@@ -557,9 +557,10 @@ if __name__ == '__main__':
     print(f"")
     print(f"🔧 ENDPOINTS:")
     print(f"   POST /api/set-colab-url - Set Colab ngrok URL")
-    print(f"   POST /api/generate-video - Generate (1→2→Colab)")
+    print(f"   POST /api/generate-video - Generate (Script+Prompts→Colab)")
     print(f"   GET  /api/progress - Check progress")
     print(f"   GET  /api/video/<file> - Download video")
+    print(f"   GET  /api/voices - List available voices")
     print(f"   GET  /health - System status")
     print("="*70 + "\n")
 
