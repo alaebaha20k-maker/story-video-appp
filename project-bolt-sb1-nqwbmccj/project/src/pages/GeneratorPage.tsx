@@ -179,6 +179,7 @@ export const GeneratorPage = () => {
         image_style: store.imageStyle,
         image_mode: store.imageMode,
         voice_id: store.voiceId,
+        voice_engine: store.voiceEngine,  // NEW
         voice_speed: store.voiceSpeed,
         duration: store.duration,
         hook_intensity: store.hookIntensity,
@@ -189,8 +190,11 @@ export const GeneratorPage = () => {
         // Filters and Effects
         color_filter: store.colorFilter,
         zoom_effect: store.zoomEffect,
+        zoom_intensity: store.zoomIntensity,  // NEW: User-configurable zoom %
         // Auto Captions
         auto_captions: store.autoCaptions,
+        // Template (if analyzed from example script)
+        template: template,  // NEW: From template analysis
         // Manual Captions (single text)
         caption: store.captionEnabled ? {
           text: store.captionText,

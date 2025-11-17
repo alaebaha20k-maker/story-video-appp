@@ -1,0 +1,541 @@
+"""
+🔌 NEW API SERVER - Orchestrates Gemini Server 1 → Server 2 → Colab Flow
+"""
+
+from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
+from pathlib import Path
+import threading
+import uuid
+
+# Import old backend generators (SAME as original)
+from src.ai.enhanced_script_generator import enhanced_script_generator
+from src.ai.image_generator import create_image_generator
+from src.colab.colab_client import colab_client
+
+app = Flask(__name__)
+
+# CORS for all origins
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
+# Global state for progress tracking
+progress_state = {
+    'status': 'ready',
+    'progress': 0,
+    'message': '',
+    'video_path': None,
+    'error': None,
+    'job_id': None,
+    'colab_url': None  # Frontend will use this to poll Colab directly
+}
+
+# Colab URL (auto-loaded from file or set via API)
+COLAB_URL = None
+
+# Output directory
+OUTPUT_DIR = Path("output/videos")
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ═══════════════════════════════════════════════════════════════
+# AUTO-LOAD COLAB URL FROM FILE
+# ═══════════════════════════════════════════════════════════════
+
+def extract_clean_url(url_string: str) -> str:
+    """
+    Extract clean ngrok URL from various formats:
+    - "https://contemplable-suzy-unfussing.ngrok-free.dev" → as-is
+    - "NgrokTunnel: "https://..." -> "http://..." → extract https URL
+    - Lines from file with markdown → extract URL
+    """
+    import re
+
+    # Remove markdown formatting
+    url_string = url_string.replace('**', '').strip()
+
+    # If it looks like the NgrokTunnel format, extract the https URL
+    if 'NgrokTunnel:' in url_string or '->' in url_string:
+        # Extract https URL from: NgrokTunnel: "https://..." -> "http://..."
+        match = re.search(r'https://[a-zA-Z0-9\-\.]+\.ngrok-free\.dev', url_string)
+        if match:
+            return match.group()
+
+    # If it's already a clean URL
+    if url_string.startswith('http'):
+        return url_string
+
+    # Try to find any ngrok URL in the string
+    match = re.search(r'https://[a-zA-Z0-9\-\.]+\.ngrok-free\.dev', url_string)
+    if match:
+        return match.group()
+
+    return url_string
+
+
+def load_colab_url_from_file():
+    """
+    Try to auto-load Colab URL from COLAB_NGROK_URL.txt
+    This runs at startup to avoid manual configuration
+    """
+    global COLAB_URL
+
+    # Try multiple possible locations
+    possible_paths = [
+        Path(__file__).parent.parent / "COLAB_NGROK_URL.txt",
+        Path("../COLAB_NGROK_URL.txt"),
+        Path("COLAB_NGROK_URL.txt"),
+    ]
+
+    for file_path in possible_paths:
+        try:
+            if file_path.exists():
+                content = file_path.read_text()
+
+                # Extract URL from file (handles markdown, comments, etc.)
+                lines = content.split('\n')
+                for line in lines:
+                    line = line.strip()
+
+                    # Skip empty lines and comments
+                    if not line or line.startswith('#'):
+                        continue
+
+                    # Extract clean URL
+                    clean_url = extract_clean_url(line)
+
+                    # Validate it's a proper URL
+                    if clean_url.startswith('http'):
+                        COLAB_URL = clean_url
+                        colab_client.set_url(clean_url)
+
+                        # Test connection
+                        is_connected = colab_client.check_health()
+
+                        print(f"✅ Auto-loaded Colab URL from: {file_path.name}")
+                        print(f"   URL: {clean_url}")
+                        print(f"   Connected: {'✅ Yes' if is_connected else '❌ No (might be down)'}")
+                        return True
+        except Exception as e:
+            continue
+
+    print(f"⚠️  Colab URL not found in file")
+    print(f"   You'll need to set it via: POST /api/set-colab-url")
+    return False
+
+
+# ═══════════════════════════════════════════════════════════════
+# HEALTH & CONFIG
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/health', methods=['GET', 'OPTIONS'])
+def health():
+    """Health check endpoint"""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    return jsonify({
+        'status': 'ok',
+        'message': 'Backend server running',
+        'script_engine': 'gemini_ai',
+        'script_generator': 'enhanced_script_generator',
+        'colab_connected': colab_client.check_health() if COLAB_URL else False,
+        'colab_url': COLAB_URL
+    }), 200
+
+
+@app.route('/api/set-colab-url', methods=['POST', 'OPTIONS'])
+def set_colab_url():
+    """
+    Set Colab ngrok URL
+    Accepts various formats:
+    - Clean URL: https://your-url.ngrok-free.dev
+    - NgrokTunnel format: NgrokTunnel: "https://..." -> "http://..."
+    """
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    global COLAB_URL
+
+    data = request.json
+    raw_url = data.get('url', '').strip()
+
+    if not raw_url:
+        return jsonify({'error': 'URL required'}), 400
+
+    # Extract clean URL from various formats
+    clean_url = extract_clean_url(raw_url)
+
+    if not clean_url.startswith('http'):
+        return jsonify({
+            'error': 'Invalid URL format',
+            'received': raw_url,
+            'tip': 'Use format: https://your-url.ngrok-free.dev'
+        }), 400
+
+    # Set URL
+    colab_client.set_url(clean_url)
+    COLAB_URL = clean_url
+
+    # Test connection
+    is_connected = colab_client.check_health()
+
+    return jsonify({
+        'success': True,
+        'raw_input': raw_url if raw_url != clean_url else None,
+        'clean_url': clean_url,
+        'connected': is_connected,
+        'message': 'Connected to Colab!' if is_connected else 'URL set but cannot connect'
+    }), 200
+
+
+# ═══════════════════════════════════════════════════════════════
+# VIDEO GENERATION - NEW FLOW
+# ═══════════════════════════════════════════════════════════════
+
+def generate_video_background(data):
+    """
+    Background task: Orchestrate complete generation flow
+    Gemini Server 1 → Gemini Server 2 → Colab
+    """
+    global progress_state
+
+    try:
+        print(f"\n{'='*60}")
+        print(f"🎬 NEW GENERATION FLOW STARTED")
+        print(f"{'='*60}")
+
+        # Extract all options
+        topic = data.get('topic', 'Untitled')
+        story_type = data.get('story_type') or data.get('storytype', 'scary_horror')
+        duration = int(data.get('duration', 10))
+        num_scenes = int(data.get('num_scenes', 10))
+        image_style = data.get('image_style', 'cinematic_film')
+        template = None  # No template analysis - removed Server 0
+
+        print(f"\n📋 Generation Options:")
+        print(f"   Topic: {topic}")
+        print(f"   Story Type: {story_type}")
+        print(f"   Duration: {duration} min")
+        print(f"   Scenes/Images: {num_scenes}")
+        print(f"   Image Style: {image_style}")
+        print(f"   Voice: {data.get('voice_id', 'aria')}")
+        print(f"   Zoom: {data.get('zoom_intensity', 5.0)}%")
+        print(f"   Auto-Captions: {data.get('auto_captions', False)}")
+
+        # ═══════════════════════════════════════════════════════════
+        # STEP 1: Generate Script (OLD BACKEND METHOD)
+        # ═══════════════════════════════════════════════════════════
+        progress_state['status'] = 'generating_script'
+        progress_state['progress'] = 10
+        progress_state['message'] = 'Generating script with Gemini AI...'
+
+        print(f"\n{'='*60}")
+        print(f"📝 STEP 1/4: SCRIPT GENERATION (OLD BACKEND METHOD)")
+        print(f"{'='*60}")
+
+        # Use OLD backend's script generator (same as original)
+        result = enhanced_script_generator.generate_with_template(
+            topic=topic,
+            story_type=story_type,
+            template=template,
+            research_data=None,  # No research
+            duration_minutes=duration,
+            num_scenes=num_scenes
+        )
+
+        script = result['script']
+
+        print(f"\n✅ Script generated!")
+        print(f"   Length: {len(script)} chars")
+        print(f"   Words: ~{len(script.split())}")
+        print(f"   Scenes in result: {len(result.get('scenes', []))}")
+        print(f"   Characters: {result.get('characters', [])[:3]}")
+        print(f"   Preview: {script[:100]}...")
+
+        # ═══════════════════════════════════════════════════════════
+        # STEP 2: Extract Image Prompts from Scenes (OLD BACKEND METHOD)
+        # ═══════════════════════════════════════════════════════════
+        progress_state['status'] = 'generating_image_prompts'
+        progress_state['progress'] = 30
+        progress_state['message'] = 'Extracting image prompts from scenes...'
+
+        print(f"\n{'='*60}")
+        print(f"🎨 STEP 2/4: IMAGE PROMPTS (OLD BACKEND METHOD)")
+        print(f"{'='*60}")
+
+        # Extract image descriptions from scenes (same as old backend)
+        scenes = result.get('scenes', [])
+
+        # Build image prompts from scenes
+        image_prompts = []
+        for scene in scenes[:num_scenes]:
+            # Use image_description if available, otherwise use content
+            prompt = scene.get('image_description') or scene.get('content', '')
+            if prompt:
+                image_prompts.append(prompt)
+
+        # If not enough prompts, create fallback prompts
+        while len(image_prompts) < num_scenes:
+            image_prompts.append(f"{topic}, scene {len(image_prompts) + 1}, {story_type} atmosphere, {image_style}")
+
+        print(f"\n✅ Image prompts extracted!")
+        print(f"   Count: {len(image_prompts)}")
+        print(f"   From scenes: {len(scenes)}")
+        print(f"   First prompt: {image_prompts[0][:60]}...")
+
+        # ═══════════════════════════════════════════════════════════
+        # STEP 3: Send to Colab for Video Generation
+        # ═══════════════════════════════════════════════════════════
+        # Script + prompts are ALREADY generated locally (above)
+        # Now send to Colab for video processing (images + voice + ffmpeg)
+        progress_state['status'] = 'sending_to_colab'
+        progress_state['progress'] = 50
+        progress_state['message'] = 'Sending to Google Colab...'
+
+        print(f"\n{'='*60}")
+        print(f"🚀 STEP 3/4: SENDING TO GOOGLE COLAB")
+        print(f"{'='*60}")
+
+        if not COLAB_URL:
+            # Script + prompts are already generated (local)
+            # Save them to file so user can see the output
+            output_file = OUTPUT_DIR / f"script_and_prompts_{topic[:30]}.txt"
+            with open(output_file, 'w') as f:
+                f.write("="*60 + "\n")
+                f.write("SCRIPT & IMAGE PROMPTS (Generated Locally)\n")
+                f.write("="*60 + "\n\n")
+                f.write(f"SCRIPT ({len(script)} chars):\n")
+                f.write("-"*60 + "\n")
+                f.write(script + "\n\n")
+                f.write("="*60 + "\n")
+                f.write(f"IMAGE PROMPTS ({len(image_prompts)}):\n")
+                f.write("-"*60 + "\n")
+                for i, prompt in enumerate(image_prompts, 1):
+                    f.write(f"{i}. {prompt}\n")
+
+            print(f"\n✅ Script + prompts saved to: {output_file}")
+            print(f"\n⚠️  COLAB URL NOT SET - Cannot generate video")
+            print(f"   Script and prompts are ready!")
+            print(f"   To generate video: Set Colab URL via /api/set-colab-url")
+
+            raise Exception(f"Colab URL not set. Script and prompts saved to {output_file.name}. To generate video, set Colab URL via /api/set-colab-url")
+
+        # Prepare all options for Colab
+        colab_options = {
+            'topic': topic,
+            'story_type': story_type,
+            'duration': duration,
+            'image_style': image_style,
+            'voice_id': data.get('voice_id', 'aria'),
+            'voice_speed': float(data.get('voice_speed', 1.0)),
+            'zoom_effect': data.get('zoom_effect', True),
+            'zoom_intensity': float(data.get('zoom_intensity', 5.0)),
+            'auto_captions': data.get('auto_captions', False),
+            'color_filter': data.get('color_filter', 'none'),
+        }
+
+        # Send to Colab (async - don't wait for completion)
+        result = colab_client.generate_complete_video(
+            script=script,
+            image_prompts=image_prompts,
+            options=colab_options
+        )
+
+        job_id = result.get('job_id')
+        progress_state['job_id'] = job_id
+        progress_state['colab_url'] = COLAB_URL
+
+        print(f"\n✅ Sent to Colab!")
+        print(f"   Job ID: {job_id}")
+        print(f"   Colab URL: {COLAB_URL}")
+
+        # ═══════════════════════════════════════════════════════════
+        # COMPLETE! (Backend job done - Colab will process independently)
+        # ═══════════════════════════════════════════════════════════
+        progress_state['status'] = 'sent_to_colab'
+        progress_state['progress'] = 100
+        progress_state['message'] = 'Sent to Colab! Frontend will poll Colab directly for progress.'
+
+        print(f"\n{'='*60}")
+        print(f"✅ BACKEND COMPLETE!")
+        print(f"{'='*60}")
+        print(f"   Script: Generated ✅")
+        print(f"   Image Prompts: Generated ✅")
+        print(f"   Sent to Colab: ✅")
+        print(f"   Job ID: {job_id}")
+        print(f"\n   ℹ️  Frontend will poll Colab directly:")
+        print(f"      GET {COLAB_URL}/status/{job_id}")
+        print(f"      GET {COLAB_URL}/download/{job_id}")
+        print(f"{'='*60}\n")
+
+    except Exception as e:
+        progress_state['status'] = 'error'
+        progress_state['error'] = str(e)
+        progress_state['message'] = f'Error: {str(e)}'
+        print(f"\n❌ ERROR: {e}\n")
+        import traceback
+        traceback.print_exc()
+
+
+@app.route('/api/generate-video', methods=['POST', 'OPTIONS'])
+def generate_video():
+    """
+    Main endpoint: Generate video with new flow
+    Gemini 1 → Gemini 2 → Colab
+    """
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    data = request.json
+
+    # Validate required fields
+    if not data.get('topic'):
+        return jsonify({'error': 'Topic is required'}), 400
+
+    # NOTE: We don't check Colab URL here!
+    # Script + prompts are generated locally with Gemini
+    # Colab URL is only checked when sending to Colab for video processing
+
+    # Reset progress
+    global progress_state
+    progress_state = {
+        'status': 'starting',
+        'progress': 0,
+        'message': 'Starting generation...',
+        'video_path': None,
+        'error': None,
+        'job_id': None,
+        'colab_url': None
+    }
+
+    # Start background thread
+    threading.Thread(target=generate_video_background, args=(data,), daemon=True).start()
+
+    return jsonify({
+        'success': True,
+        'message': 'Generation started (Script+Prompts LOCAL → Colab REMOTE)'
+    }), 200
+
+
+@app.route('/api/progress', methods=['GET', 'OPTIONS'])
+def get_progress():
+    """
+    Get current generation progress
+
+    When status is 'sent_to_colab', frontend should poll Colab directly:
+    - GET {colab_url}/status/{job_id} - Check video generation progress
+    - GET {colab_url}/download/{job_id} - Download completed video
+    """
+    if request.method == 'OPTIONS':
+        return '', 204
+    return jsonify(progress_state), 200
+
+
+@app.route('/api/video/<path:filename>', methods=['GET', 'OPTIONS'])
+def stream_video(filename):
+    """Stream completed video"""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        video_path = OUTPUT_DIR / filename
+        if not video_path.exists():
+            return jsonify({'error': 'Video not found'}), 404
+        return send_file(str(video_path), mimetype='video/mp4')
+    except FileNotFoundError:
+        return jsonify({'error': 'Video not found'}), 404
+
+
+# ═══════════════════════════════════════════════════════════════
+# VOICES (for frontend compatibility)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/voices', methods=['GET', 'OPTIONS'])
+def list_voices():
+    """List available voices (Coqui TTS in Colab)"""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    # These will be used by Coqui TTS in Colab
+    voices = {
+        'aria': {'engine': 'coqui', 'name': 'Aria', 'gender': 'female', 'style': 'Natural & Warm'},
+        'guy': {'engine': 'coqui', 'name': 'Guy', 'gender': 'male', 'style': 'Natural & Clear'},
+        'jenny': {'engine': 'coqui', 'name': 'Jenny', 'gender': 'female', 'style': 'Cheerful'},
+        'matthew': {'engine': 'coqui', 'name': 'Matthew', 'gender': 'male', 'style': 'Deep & Professional'},
+    }
+
+    return jsonify({
+        'voices': voices,
+        'engine': 'coqui_tts',
+        'total': len(voices),
+        'location': 'Google Colab'
+    }), 200
+
+
+# ═══════════════════════════════════════════════════════════════
+# MAIN
+# ═══════════════════════════════════════════════════════════════
+
+if __name__ == '__main__':
+    print("\n" + "="*70)
+    print("🔥 VIDEO GENERATOR - OLD BACKEND METHOD + COLAB")
+    print("="*70)
+    print(f"📍 Backend URL: http://localhost:5000")
+    print(f"")
+    print(f"🎯 ARCHITECTURE:")
+    print(f"   📝 Script Generation: Gemini AI (LOCAL - old backend)")
+    print(f"   🎨 Image Prompts: From script scenes (LOCAL - old backend)")
+    print(f"   🎬 Video Processing: Google Colab (REMOTE)")
+    print(f"")
+    print(f"📝 PROCESSING FLOW (ASYNC):")
+    print(f"   BACKEND (this server):")
+    print(f"   1. Generate script + scenes (LOCAL - Gemini API)")
+    print(f"   2. Extract image prompts from scenes (LOCAL)")
+    print(f"   3. Send to Google Colab → Returns job_id immediately")
+    print(f"")
+    print(f"   FRONTEND (polls Colab directly):")
+    print(f"   4. Poll Colab for progress: GET /status/{{job_id}}")
+    print(f"   5. Download video when done: GET /download/{{job_id}}")
+    print(f"")
+    print(f"   COLAB (processes independently):")
+    print(f"      ├── SDXL image generation")
+    print(f"      ├── Coqui TTS voice generation")
+    print(f"      ├── FFmpeg video compilation")
+    print(f"      ├── Zoom effects (1-10%)")
+    print(f"      └── TikTok-style auto-captions")
+    print(f"")
+
+    # Auto-load Colab URL from file
+    print(f"🔍 Checking for Colab URL...")
+    url_loaded = load_colab_url_from_file()
+
+    if not url_loaded:
+        print(f"")
+        print(f"⚠️  COLAB URL NOT SET:")
+        print(f"   • Scripts and prompts will still be generated (local)")
+        print(f"   • Video generation will fail (need Colab for processing)")
+        print(f"")
+        print(f"   To set Colab URL:")
+        print(f"   Option 1: Add to COLAB_NGROK_URL.txt in project root")
+        print(f"   Option 2: POST /api/set-colab-url with your ngrok URL")
+        print(f"   Example: https://your-url.ngrok-free.dev")
+    print(f"")
+    print(f"🔧 BACKEND ENDPOINTS:")
+    print(f"   POST /api/set-colab-url - Set Colab ngrok URL")
+    print(f"   POST /api/generate-video - Generate script+prompts, send to Colab")
+    print(f"   GET  /api/progress - Get progress (includes job_id + colab_url)")
+    print(f"   GET  /api/voices - List available voices")
+    print(f"   GET  /health - System status")
+    print(f"")
+    print(f"📡 COLAB ENDPOINTS (frontend polls these):")
+    print(f"   GET  {{colab_url}}/status/{{job_id}} - Check video progress")
+    print(f"   GET  {{colab_url}}/download/{{job_id}} - Download video")
+    print("="*70 + "\n")
+
+    app.run(host='0.0.0.0', port=5000, debug=True)

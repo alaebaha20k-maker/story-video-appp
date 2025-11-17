@@ -28,6 +28,11 @@ interface AnalyzedTemplate {
   tone: string[];
   keyPatterns: string[];
   sentenceVariation: string;
+  perspective?: string;  // Server 0 adds this
+  pacing?: string;  // Server 0 adds this
+  chunkSize?: string;  // Server 0 adds this
+  writingTechniques?: string[];  // Server 0 adds this
+  uniqueFeatures?: string[];  // Server 0 adds this
 }
 
 export const ExampleScriptUpload: React.FC<{
@@ -114,16 +119,28 @@ export const ExampleScriptUpload: React.FC<{
         throw new Error(data.error || 'Failed to analyze');
       }
 
+      // Check if quota was exceeded and default template was used
+      if (data.quotaExceeded) {
+        toast.warning('⚠️ Server 0 quota exceeded - using default template. You can still generate videos!', {
+          duration: 5000,
+        });
+      }
+
       const analyzedTemplate: AnalyzedTemplate = {
-        hookExample: data.hook_example,
-        hookStyle: data.hook_style,
-        setupLength: data.setup_length,
-        riseLength: data.rise_length,
-        climaxLength: data.climax_length,
-        endLength: data.end_length,
+        hookExample: data.hookExample || data.hook_example || '',
+        hookStyle: data.hookStyle || data.hook_style || 'engaging',
+        setupLength: data.setupLength || data.setup_length || 20,
+        riseLength: data.riseLength || data.rise_length || 40,
+        climaxLength: data.climaxLength || data.climax_length || 30,
+        endLength: data.endLength || data.end_length || 10,
         tone: data.tone || [],
-        keyPatterns: data.key_patterns || [],
-        sentenceVariation: data.sentence_variation || 'medium',
+        keyPatterns: data.keyPatterns || data.key_patterns || [],
+        sentenceVariation: data.sentenceVariation || data.sentence_variation || 'medium',
+        perspective: data.perspective,
+        pacing: data.pacing,
+        chunkSize: data.chunkSize,
+        writingTechniques: data.writingTechniques || [],
+        uniqueFeatures: data.uniqueFeatures || [],
       };
 
       setTemplate(analyzedTemplate);
@@ -131,7 +148,20 @@ export const ExampleScriptUpload: React.FC<{
       onScriptSelected(script);
       onTemplateExtracted(analyzedTemplate);
 
-      toast.success('🎯 Template extracted! Ready to generate');
+      if (data.quotaExceeded) {
+        toast.success('✅ Default template applied - Server 1 ready to generate!');
+      } else {
+        // Check if chunked analysis was used
+        if (data.chunked) {
+          toast.success(`🔬 SERVER 0 analyzed ${data.chunksAnalyzed} chunks! Server 1 ready!`, {
+            duration: 4000,
+          });
+        } else {
+          toast.success('🔬 SERVER 0 extracted template! Server 1 ready to generate!', {
+            duration: 4000,
+          });
+        }
+      }
     } catch (error) {
       toast.error(`❌ Analysis failed: ${error}`);
     } finally {
@@ -254,9 +284,17 @@ export const ExampleScriptUpload: React.FC<{
 
       {/* Status */}
       {analyzing && (
-        <div className="text-center p-4 bg-yellow-900/30 rounded-lg border border-yellow-600">
-          <div className="inline-block animate-spin">⚙️</div>
-          <span className="ml-2 text-yellow-300">Analyzing template structure...</span>
+        <div className="text-center p-4 bg-blue-900/30 rounded-lg border border-blue-500 animate-pulse">
+          <div className="inline-block animate-spin text-2xl mb-2">🔬</div>
+          <div className="text-blue-200 font-bold text-lg mb-1">
+            SERVER 0 Analyzing Template...
+          </div>
+          <div className="text-blue-300 text-sm">
+            Extracting structure, style & patterns with dedicated Server 0
+          </div>
+          <div className="text-blue-400 text-xs mt-2">
+            ✅ Separate API quota - No conflicts with script generation!
+          </div>
         </div>
       )}
     </div>

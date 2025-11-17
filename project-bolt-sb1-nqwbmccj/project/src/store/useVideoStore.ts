@@ -28,7 +28,9 @@ interface VideoStore {
   // Filters and Effects
   colorFilter: string;
   zoomEffect: boolean;
-  
+  zoomIntensity: number;  // NEW: Zoom percentage (1-10%)
+  voiceEngine: string;  // NEW: Voice engine (for compatibility)
+
   // Captions
   autoCaptions: boolean;  // NEW: Auto captions from script
   captionEnabled: boolean;
@@ -59,6 +61,8 @@ interface VideoStore {
   
   setColorFilter: (filter: string) => void;
   setZoomEffect: (enabled: boolean) => void;
+  setZoomIntensity: (intensity: number) => void;  // NEW
+  setVoiceEngine: (engine: string) => void;  // NEW
   setAutoCaptions: (enabled: boolean) => void;  // NEW
   setCaptionEnabled: (enabled: boolean) => void;
   setCaptionText: (text: string) => void;
@@ -92,7 +96,9 @@ export const useVideoStore = create<VideoStore>((set) => ({
   // Filters and Effects
   colorFilter: 'none',
   zoomEffect: false,
-  
+  zoomIntensity: 5.0,  // NEW: Default 5% zoom
+  voiceEngine: 'coqui',  // NEW: Default voice engine
+
   // Captions
   autoCaptions: false,  // NEW: Auto captions from script
   captionEnabled: false,
@@ -123,6 +129,8 @@ export const useVideoStore = create<VideoStore>((set) => ({
   
   setColorFilter: (colorFilter) => set({ colorFilter }),
   setZoomEffect: (zoomEffect) => set({ zoomEffect }),
+  setZoomIntensity: (zoomIntensity) => set({ zoomIntensity: Math.max(1, Math.min(10, zoomIntensity)) }),  // NEW: 1-10%
+  setVoiceEngine: (voiceEngine) => set({ voiceEngine }),  // NEW
   setAutoCaptions: (autoCaptions) => set({ autoCaptions }),  // NEW
   setCaptionEnabled: (captionEnabled) => set({ captionEnabled }),
   setCaptionText: (captionText) => set({ captionText }),
