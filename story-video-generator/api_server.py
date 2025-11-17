@@ -760,10 +760,9 @@ if __name__ == '__main__':
     print("   GET  /api/cache-stats - Cache statistics")
     print("   POST /api/clear-cache - Clear cache")
     print("="*60)
-    print("\n🏆 PROFESSIONAL YOUTUBE VIDEO GENERATOR READY!")
-    print("💰 FREE - Puter TTS (voice) + Gemini (scripts) + FLUX (images)!")
-    print("⚡ Fast: 3-10 minutes for 10-60 minute videos")
-    print("🎬 Quality: 10/10 - Professional YouTube content!")
+    print("\n🏆 LOCAL FALLBACK SERVER (NOT FOR PRODUCTION!)")
+    print("⚠️  WARNING: This is Edge-TTS local server - NOT the main Colab server!")
+    print("💡 YOU SHOULD BE USING GOOGLE COLAB with Coqui TTS + SDXL instead!")
     print("="*60 + "\n")
     
     app.run(host='0.0.0.0', port=5000, debug=True)
