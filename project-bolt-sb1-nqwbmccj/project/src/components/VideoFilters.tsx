@@ -15,7 +15,7 @@ const FILTERS = [
 ];
 
 export const VideoFilters = () => {
-  const { colorFilter, setColorFilter, zoomEffect, setZoomEffect } = useVideoStore();
+  const { colorFilter, setColorFilter, zoomEffect, setZoomEffect, zoomIntensity, setZoomIntensity } = useVideoStore();
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
@@ -42,10 +42,35 @@ export const VideoFilters = () => {
               <span className="font-semibold text-gray-900">Ken Burns Zoom Effect</span>
             </div>
             <p className="text-sm text-gray-600 mt-1">
-              Smooth zoom on all images/videos (5% zoom in) - Creates dynamic motion
+              Smooth zoom on all images/videos - Creates dynamic motion
             </p>
           </div>
         </label>
+
+        {/* Zoom Intensity Slider - Only show when zoom effect is enabled */}
+        {zoomEffect && (
+          <div className="mt-4 pt-4 border-t border-indigo-200">
+            <label className="block">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-gray-900">Zoom Intensity</span>
+                <span className="text-sm font-bold text-indigo-600">{zoomIntensity}%</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                step="0.5"
+                value={zoomIntensity}
+                onChange={(e) => setZoomIntensity(Number(e.target.value))}
+                className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Subtle (1%)</span>
+                <span>Dramatic (10%)</span>
+              </div>
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Color Filter Selection */}
