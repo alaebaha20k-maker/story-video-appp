@@ -100,6 +100,8 @@ def analyze_script_endpoint():
     """
     Step 1: Analyze example script with Gemini Server 1
     Extract structure and hook style
+
+    NOTE: If quota is exceeded, returns default template instead of failing
     """
     if request.method == 'OPTIONS':
         return '', 204
@@ -114,18 +116,46 @@ def analyze_script_endpoint():
 
         print(f"\n📊 Analyzing template script ({len(script_content)} chars)...")
 
-        # Use Gemini Server 1 to analyze
-        template = gemini_server_1.analyze_template_script(
-            script_content,
-            script_type
-        )
+        try:
+            # Use Gemini Server 1 to analyze
+            template = gemini_server_1.analyze_template_script(
+                script_content,
+                script_type
+            )
 
-        print(f"✅ Template extracted")
+            print(f"✅ Template extracted successfully")
+            return jsonify(template), 200
 
-        return jsonify(template), 200
+        except Exception as gemini_error:
+            error_str = str(gemini_error)
+
+            # Check if it's a quota error
+            if '429' in error_str or 'quota' in error_str.lower() or 'rate limit' in error_str.lower():
+                print(f"⚠️ Gemini quota exceeded - returning default template")
+                print(f"   Error: {error_str[:200]}...")
+
+                # Return a basic default template based on script content
+                default_template = {
+                    "hookExample": script_content[:200] + "...",
+                    "hookStyle": "engaging",
+                    "setupLength": 20,
+                    "riseLength": 40,
+                    "climaxLength": 30,
+                    "endLength": 10,
+                    "tone": ["engaging", "narrative", "dramatic"],
+                    "keyPatterns": ["Descriptive storytelling", "First-person perspective"],
+                    "sentenceVariation": "Mix of short and long sentences",
+                    "quotaExceeded": True,  # Flag to indicate fallback was used
+                    "message": "Using default template - Gemini quota exceeded"
+                }
+
+                return jsonify(default_template), 200
+            else:
+                # Other error - re-raise
+                raise
 
     except Exception as e:
-        print(f"❌ Analysis failed: {e}")
+        print(f"❌ Template analysis failed: {e}")
         return jsonify({'error': str(e)}), 500
 
 
