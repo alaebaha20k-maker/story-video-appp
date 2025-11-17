@@ -151,9 +151,16 @@ export const ExampleScriptUpload: React.FC<{
       if (data.quotaExceeded) {
         toast.success('✅ Default template applied - Server 1 ready to generate!');
       } else {
-        toast.success('🔬 SERVER 0 extracted template! Server 1 ready to generate!', {
-          duration: 4000,
-        });
+        // Check if chunked analysis was used
+        if (data.chunked) {
+          toast.success(`🔬 SERVER 0 analyzed ${data.chunksAnalyzed} chunks! Server 1 ready!`, {
+            duration: 4000,
+          });
+        } else {
+          toast.success('🔬 SERVER 0 extracted template! Server 1 ready to generate!', {
+            duration: 4000,
+          });
+        }
       }
     } catch (error) {
       toast.error(`❌ Analysis failed: ${error}`);
