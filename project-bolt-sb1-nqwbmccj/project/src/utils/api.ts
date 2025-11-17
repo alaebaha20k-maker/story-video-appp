@@ -17,22 +17,31 @@ export const checkHealth = async (): Promise<boolean> => {
 
 interface GenerateVideoRequest {
   topic: string;
-  storytype: string;
+  story_type: string;  // Fixed: was "storytype"
   duration: number;
   image_style: string;
   image_mode: string;
   voice_id: string;
+  voice_engine?: string;
   voice_speed?: number;
   num_scenes: number;
   hook_intensity: string;
   pacing: string;
   characters?: any[];
   stock_keywords?: string[];
+  // NEW: Effects and options
+  zoom_effect?: boolean;
+  zoom_intensity?: number;
+  auto_captions?: boolean;
+  color_filter?: string;
+  template?: any;  // Optional template from script analysis
 }
 
-// ✅ GENERATE VIDEO
+// ✅ GENERATE VIDEO (NEW FLOW: Gemini 1 → Gemini 2 → Colab)
 export const generateVideo = async (requestData: GenerateVideoRequest) => {
   try {
+    console.log('🚀 Sending to NEW backend (Gemini 1 → 2 → Colab):', requestData);
+
     const response = await fetch(`${API_URL}/api/generate-video`, {
       method: 'POST',
       headers: {
@@ -42,12 +51,15 @@ export const generateVideo = async (requestData: GenerateVideoRequest) => {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}: ${errorText}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log('✅ Backend response:', result);
+    return result;
   } catch (error) {
-    console.error('Generation failed:', error);
+    console.error('❌ Generation failed:', error);
     throw error;
   }
 };
