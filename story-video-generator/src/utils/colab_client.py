@@ -591,6 +591,169 @@ class ColabClient:
             print(f"\n❌ Complete video generation failed: {e}")
             raise
 
+    def generate_complete_video_async(
+        self,
+        script: str,
+        image_prompts: List[str],
+        voice_id: str = 'guy',
+        effects: Optional[Dict] = None,
+        captions: Optional[List[Dict]] = None,
+        durations: Optional[List[float]] = None,
+        style: str = 'cinematic',
+        speed: float = 1.0,
+        output_path: Optional[Path] = None,
+        poll_interval: int = 10
+    ) -> str:
+        """
+        🚀 ASYNC: Complete video generation with NO TIMEOUT ISSUES!
+
+        This method:
+        1. Submits job to Colab → Gets job_id instantly
+        2. Polls for status every `poll_interval` seconds
+        3. Downloads video when complete
+        4. NO ngrok timeout issues!
+
+        Args:
+            script: Story text for TTS
+            image_prompts: List of SDXL prompts
+            voice_id: Voice ID (guy, aria, etc.)
+            effects: Dict with zoom_effect, color_filter, grain_effect
+            captions: List of caption dicts with timing
+            durations: List of durations for each image (optional)
+            style: Image style (cinematic, etc.)
+            speed: Voice speed (0.5-2.0)
+            output_path: Where to save video (optional)
+            poll_interval: Seconds between status checks (default: 10)
+
+        Returns:
+            str: Path to compiled video file
+        """
+
+        print(f"\n🚀 ASYNC VIDEO GENERATION (NO TIMEOUT ISSUES!)")
+        print(f"="*80)
+        print(f"\n📝 Request:")
+        print(f"   Script: {len(script)} characters")
+        print(f"   Images: {len(image_prompts)} prompts")
+        print(f"   Voice: {voice_id}")
+        print(f"   Style: {style}")
+
+        if effects is None:
+            effects = {}
+
+        try:
+            # Step 1: Submit job
+            print(f"\n📤 STEP 1: Submitting job to Colab...")
+            submit_url = f"{self.server_url}/submit_job"
+
+            payload = {
+                'script': script,
+                'image_prompts': image_prompts,
+                'voice': voice_id,
+                'effects': effects,
+                'captions': captions or [],
+                'durations': durations or [],
+                'style': style,
+                'speed': speed
+            }
+
+            submit_response = requests.post(
+                submit_url,
+                json=payload,
+                timeout=(30, 60)  # Quick timeout - just submitting job
+            )
+
+            if submit_response.status_code != 200:
+                raise RuntimeError(f"Job submission failed {submit_response.status_code}: {submit_response.text}")
+
+            result = submit_response.json()
+            job_id = result.get('job_id')
+
+            if not job_id:
+                raise RuntimeError(f"No job_id returned: {result}")
+
+            print(f"✅ Job submitted!")
+            print(f"   Job ID: {job_id}")
+            print(f"   Status URL: {self.server_url}/job_status/{job_id}")
+
+            # Step 2: Poll for completion
+            print(f"\n⏳ STEP 2: Waiting for completion (polling every {poll_interval}s)...")
+            print(f"   Colab is processing in background - NO timeout issues!")
+
+            start_time = time.time()
+            last_progress = -1
+
+            while True:
+                status_url = f"{self.server_url}/job_status/{job_id}"
+                status_response = requests.get(status_url, timeout=30)
+
+                if status_response.status_code != 200:
+                    raise RuntimeError(f"Status check failed {status_response.status_code}")
+
+                status_data = status_response.json()
+                current_status = status_data.get('status')
+                progress = status_data.get('progress', 0)
+
+                # Show progress updates
+                if progress != last_progress:
+                    elapsed = time.time() - start_time
+                    print(f"   [{current_status.upper()}] Progress: {progress}% (elapsed: {elapsed/60:.1f}min)")
+                    last_progress = progress
+
+                # Check if completed
+                if current_status == 'completed':
+                    print(f"\n✅ Job completed!")
+                    break
+
+                # Check if failed
+                if current_status == 'failed':
+                    error = status_data.get('error', 'Unknown error')
+                    raise RuntimeError(f"Job failed: {error}")
+
+                # Wait before next poll
+                time.sleep(poll_interval)
+
+            # Step 3: Download video
+            print(f"\n📥 STEP 3: Downloading video...")
+            download_url = f"{self.server_url}/download/{job_id}"
+
+            download_response = requests.get(download_url, timeout=(30, 300))  # 5 min download timeout
+
+            if download_response.status_code != 200:
+                raise RuntimeError(f"Download failed {download_response.status_code}: {download_response.text}")
+
+            # Save video file
+            if output_path is None:
+                output_dir = Path("output/videos")
+                output_dir.mkdir(parents=True, exist_ok=True)
+                output_path = output_dir / "final_video.mp4"
+
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write video data
+            with open(output_path, 'wb') as f:
+                f.write(download_response.content)
+
+            file_size = output_path.stat().st_size
+            total_elapsed = time.time() - start_time
+
+            print(f"\n" + "="*80)
+            print(f"✅ ASYNC VIDEO GENERATION SUCCESSFUL!")
+            print(f"="*80)
+            print(f"   File: {output_path}")
+            print(f"   Size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
+            print(f"   Total time: {total_elapsed/60:.1f} minutes")
+            print(f"   Images: {len(image_prompts)}")
+            print(f"   Captions: {len(captions) if captions else 0}")
+            print(f"   Job ID: {job_id}")
+            print("="*80 + "\n")
+
+            return str(output_path)
+
+        except Exception as e:
+            print(f"\n❌ Async video generation failed: {e}")
+            raise
+
 
 # Singleton instance
 _colab_client = None

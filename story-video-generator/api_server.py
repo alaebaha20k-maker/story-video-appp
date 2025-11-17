@@ -233,11 +233,11 @@ def generate_video_background(data):
             else:
                 print(f"   Captions: OFF ❌")
 
-            # STEP 4: Complete video generation on Colab (ALL-IN-ONE)
+            # STEP 4: Complete video generation on Colab (ASYNC - NO TIMEOUT!)
             progress_state['progress'] = 60
             progress_state['status'] = 'generating_complete_video_on_colab'
 
-            video_path = colab_client.generate_complete_video(
+            video_path = colab_client.generate_complete_video_async(
                 script=result['script'],
                 image_prompts=image_prompts_list,
                 voice_id=voice_id,
@@ -246,7 +246,8 @@ def generate_video_background(data):
                 durations=None,  # Colab will auto-calculate
                 style=image_style,
                 speed=float(data.get('voice_speed', 1.0)),
-                output_path=Path(f"output/videos/{output_filename}")
+                output_path=Path(f"output/videos/{output_filename}"),
+                poll_interval=10  # Check status every 10 seconds
             )
 
             progress_state['progress'] = 100
@@ -550,8 +551,8 @@ def generate_with_template_background(
         safe_topic = sanitize_filename(topic)
         output_filename = f"{safe_topic}_video.mp4"
 
-        # 🚀 Call new Colab endpoint for complete generation
-        video_path = colab_client.generate_complete_video(
+        # 🚀 Call async Colab endpoint (NO TIMEOUT ISSUES!)
+        video_path = colab_client.generate_complete_video_async(
             script=script_text,
             image_prompts=image_prompts_list,
             voice_id=voice_id,
@@ -560,7 +561,8 @@ def generate_with_template_background(
             durations=None,  # Colab will auto-calculate
             style=image_style,
             speed=voice_speed,
-            output_path=Path(f"output/videos/{output_filename}")
+            output_path=Path(f"output/videos/{output_filename}"),
+            poll_interval=10  # Check status every 10 seconds
         )
 
         progress_state['progress'] = 100
