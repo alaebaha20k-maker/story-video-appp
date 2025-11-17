@@ -1,0 +1,67 @@
+# 🔗 COLAB NGROK URL
+
+Your Colab server is running at:
+
+**https://contemplable-suzy-unfussing.ngrok-free.dev**
+
+## 🚀 Quick Setup:
+
+### Step 1: Set Colab URL in Backend
+
+**Option A: Using curl:**
+```bash
+curl -X POST http://localhost:5000/api/set-colab-url \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://contemplable-suzy-unfussing.ngrok-free.dev"}'
+```
+
+**Option B: Using Python:**
+```python
+import requests
+
+response = requests.post(
+    'http://localhost:5000/api/set-colab-url',
+    json={'url': 'https://contemplable-suzy-unfussing.ngrok-free.dev'}
+)
+print(response.json())
+```
+
+**Option C: In your code:**
+```python
+# In api_server_new.py or when starting backend
+from src.colab.colab_client import colab_client
+
+colab_client.set_url('https://contemplable-suzy-unfussing.ngrok-free.dev')
+```
+
+### Step 2: Verify Connection
+
+```bash
+curl http://localhost:5000/health
+```
+
+You should see:
+```json
+{
+  "status": "ok",
+  "gemini_server_1": "ready",
+  "gemini_server_2": "ready",
+  "colab_connected": true,
+  "colab_url": "https://contemplable-suzy-unfussing.ngrok-free.dev"
+}
+```
+
+## ⚠️ Note:
+
+Ngrok URLs can expire or change when you restart Colab. If you restart your Colab notebook:
+
+1. Get the new ngrok URL from Colab output
+2. Set it again using the commands above
+
+## 📝 Current Configuration:
+
+- **Colab URL**: https://contemplable-suzy-unfussing.ngrok-free.dev
+- **Backend URL**: http://localhost:5000
+- **Frontend URL**: http://localhost:5173
+
+All communication goes through these endpoints!
