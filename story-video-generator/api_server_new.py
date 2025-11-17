@@ -9,7 +9,6 @@ import threading
 import uuid
 
 # Import our servers
-from src.ai.gemini_server_0 import gemini_server_0  # Template analysis
 from src.ai.gemini_server_1 import gemini_server_1  # Script generation
 from src.ai.gemini_server_2 import gemini_server_2  # Image prompts
 from src.colab.colab_client import colab_client
@@ -195,61 +194,6 @@ def set_colab_url():
 
 
 # ═══════════════════════════════════════════════════════════════
-# TEMPLATE ANALYSIS
-# ═══════════════════════════════════════════════════════════════
-
-@app.route('/api/analyze-script', methods=['POST', 'OPTIONS'])
-def analyze_script_endpoint():
-    """
-    🔬 STEP 0: Analyze example script with Gemini Server 0
-    Extract structure, style, and patterns
-
-    Server 0 = Template Analysis (separate API key = separate quota!)
-    This runs BEFORE Server 1 to learn from example scripts
-    """
-    if request.method == 'OPTIONS':
-        return '', 204
-
-    try:
-        data = request.json
-        script_content = data.get('scriptContent', '')
-        script_type = data.get('scriptType', 'story')
-
-        if not script_content or len(script_content) < 100:
-            return jsonify({'error': 'Script too short (min 100 chars)'}), 400
-
-        print(f"\n" + "="*60)
-        print(f"🔬 SERVER 0: TEMPLATE ANALYSIS STARTED")
-        print(f"="*60)
-        print(f"📊 Script length: {len(script_content)} characters")
-        print(f"📊 Script type: {script_type}")
-        print(f"🔑 Using dedicated Server 0 API key (separate quota)")
-        print(f"")
-
-        # Use Gemini Server 0 for template analysis
-        # This has its own API key so no quota conflict!
-        template = gemini_server_0.analyze_template_script(
-            script_content,
-            script_type
-        )
-
-        print(f"")
-        print(f"✅ SERVER 0: Template analysis complete!")
-        if template.get('quotaExceeded'):
-            print(f"⚠️  Note: Default template used (Server 0 quota exceeded)")
-        else:
-            print(f"✅ Full template extracted successfully")
-        print(f"="*60)
-        print(f"")
-
-        return jsonify(template), 200
-
-    except Exception as e:
-        print(f"❌ SERVER 0: Template analysis failed: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-# ═══════════════════════════════════════════════════════════════
 # VIDEO GENERATION - NEW FLOW
 # ═══════════════════════════════════════════════════════════════
 
@@ -271,7 +215,7 @@ def generate_video_background(data):
         duration = int(data.get('duration', 10))
         num_scenes = int(data.get('num_scenes', 10))
         image_style = data.get('image_style', 'cinematic_film')
-        template = data.get('template')  # From template analysis
+        template = None  # No template analysis - removed Server 0
 
         print(f"\n📋 Generation Options:")
         print(f"   Topic: {topic}")
@@ -279,7 +223,6 @@ def generate_video_background(data):
         print(f"   Duration: {duration} min")
         print(f"   Scenes/Images: {num_scenes}")
         print(f"   Image Style: {image_style}")
-        print(f"   Template: {'Yes' if template else 'No'}")
         print(f"   Voice: {data.get('voice_id', 'aria')}")
         print(f"   Zoom: {data.get('zoom_intensity', 5.0)}%")
         print(f"   Auto-Captions: {data.get('auto_captions', False)}")
@@ -572,24 +515,21 @@ def list_voices():
 
 if __name__ == '__main__':
     print("\n" + "="*70)
-    print("🔥 NEW VIDEO GENERATOR - Server 0 → 1 → 2 → Colab Flow!")
+    print("🔥 NEW VIDEO GENERATOR - Server 1 → 2 → Colab Flow!")
     print("="*70)
     print(f"📍 Backend URL: http://localhost:5000")
     print(f"")
-    print(f"🎯 NEW ARCHITECTURE - 4 SERVERS:")
-    print(f"   0️⃣  Gemini Server 0: Template analysis (separate API key!)")
-    print(f"   1️⃣  Gemini Server 1: Script generation")
-    print(f"   2️⃣  Gemini Server 2: Image prompts (separate API key!)")
-    print(f"   3️⃣  Google Colab: SDXL + Coqui TTS + FFmpeg")
+    print(f"🎯 NEW ARCHITECTURE - 3 SERVERS:")
+    print(f"   1️⃣  Gemini Server 1: Script generation (LOCAL)")
+    print(f"   2️⃣  Gemini Server 2: Image prompts (LOCAL - separate API key!)")
+    print(f"   3️⃣  Google Colab: SDXL + Coqui TTS + FFmpeg (REMOTE)")
     print(f"")
     print(f"🔑 QUOTA SEPARATION:")
-    print(f"   ✅ Server 0: Dedicated quota for template analysis")
     print(f"   ✅ Server 1: Dedicated quota for script generation")
     print(f"   ✅ Server 2: Dedicated quota for image prompts")
-    print(f"   → NO MORE QUOTA CONFLICTS!")
+    print(f"   → NO QUOTA CONFLICTS!")
     print(f"")
     print(f"📝 PROCESSING FLOW:")
-    print(f"   🔬 Server 0: Template analysis (LOCAL - Gemini API)")
     print(f"   📝 Server 1: Script generation (LOCAL - Gemini API)")
     print(f"   🎨 Server 2: Image prompts (LOCAL - Gemini API)")
     print(f"   🎬 Google Colab: Video processing (REMOTE)")
@@ -617,8 +557,7 @@ if __name__ == '__main__':
     print(f"")
     print(f"🔧 ENDPOINTS:")
     print(f"   POST /api/set-colab-url - Set Colab ngrok URL")
-    print(f"   POST /api/analyze-script - Analyze template (Server 0)")
-    print(f"   POST /api/generate-video - Generate (0→1→2→Colab)")
+    print(f"   POST /api/generate-video - Generate (1→2→Colab)")
     print(f"   GET  /api/progress - Check progress")
     print(f"   GET  /api/video/<file> - Download video")
     print(f"   GET  /health - System status")
