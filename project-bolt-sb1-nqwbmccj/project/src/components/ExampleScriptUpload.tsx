@@ -28,6 +28,11 @@ interface AnalyzedTemplate {
   tone: string[];
   keyPatterns: string[];
   sentenceVariation: string;
+  perspective?: string;  // Server 0 adds this
+  pacing?: string;  // Server 0 adds this
+  chunkSize?: string;  // Server 0 adds this
+  writingTechniques?: string[];  // Server 0 adds this
+  uniqueFeatures?: string[];  // Server 0 adds this
 }
 
 export const ExampleScriptUpload: React.FC<{
@@ -116,7 +121,7 @@ export const ExampleScriptUpload: React.FC<{
 
       // Check if quota was exceeded and default template was used
       if (data.quotaExceeded) {
-        toast.warning('⚠️ Gemini quota exceeded - using default template. You can still generate videos!', {
+        toast.warning('⚠️ Server 0 quota exceeded - using default template. You can still generate videos!', {
           duration: 5000,
         });
       }
@@ -131,6 +136,11 @@ export const ExampleScriptUpload: React.FC<{
         tone: data.tone || [],
         keyPatterns: data.keyPatterns || data.key_patterns || [],
         sentenceVariation: data.sentenceVariation || data.sentence_variation || 'medium',
+        perspective: data.perspective,
+        pacing: data.pacing,
+        chunkSize: data.chunkSize,
+        writingTechniques: data.writingTechniques || [],
+        uniqueFeatures: data.uniqueFeatures || [],
       };
 
       setTemplate(analyzedTemplate);
@@ -139,9 +149,11 @@ export const ExampleScriptUpload: React.FC<{
       onTemplateExtracted(analyzedTemplate);
 
       if (data.quotaExceeded) {
-        toast.success('✅ Default template applied - Ready to generate!');
+        toast.success('✅ Default template applied - Server 1 ready to generate!');
       } else {
-        toast.success('🎯 Template extracted! Ready to generate');
+        toast.success('🔬 SERVER 0 extracted template! Server 1 ready to generate!', {
+          duration: 4000,
+        });
       }
     } catch (error) {
       toast.error(`❌ Analysis failed: ${error}`);
@@ -265,9 +277,17 @@ export const ExampleScriptUpload: React.FC<{
 
       {/* Status */}
       {analyzing && (
-        <div className="text-center p-4 bg-yellow-900/30 rounded-lg border border-yellow-600">
-          <div className="inline-block animate-spin">⚙️</div>
-          <span className="ml-2 text-yellow-300">Analyzing template structure...</span>
+        <div className="text-center p-4 bg-blue-900/30 rounded-lg border border-blue-500 animate-pulse">
+          <div className="inline-block animate-spin text-2xl mb-2">🔬</div>
+          <div className="text-blue-200 font-bold text-lg mb-1">
+            SERVER 0 Analyzing Template...
+          </div>
+          <div className="text-blue-300 text-sm">
+            Extracting structure, style & patterns with dedicated Server 0
+          </div>
+          <div className="text-blue-400 text-xs mt-2">
+            ✅ Separate API quota - No conflicts with script generation!
+          </div>
         </div>
       )}
     </div>

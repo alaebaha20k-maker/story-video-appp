@@ -9,8 +9,9 @@ import threading
 import uuid
 
 # Import our servers
-from src.ai.gemini_server_1 import gemini_server_1
-from src.ai.gemini_server_2 import gemini_server_2
+from src.ai.gemini_server_0 import gemini_server_0  # Template analysis
+from src.ai.gemini_server_1 import gemini_server_1  # Script generation
+from src.ai.gemini_server_2 import gemini_server_2  # Image prompts
 from src.colab.colab_client import colab_client
 
 app = Flask(__name__)
@@ -200,10 +201,11 @@ def set_colab_url():
 @app.route('/api/analyze-script', methods=['POST', 'OPTIONS'])
 def analyze_script_endpoint():
     """
-    Step 1: Analyze example script with Gemini Server 1
-    Extract structure and hook style
+    🔬 STEP 0: Analyze example script with Gemini Server 0
+    Extract structure, style, and patterns
 
-    NOTE: If quota is exceeded, returns default template instead of failing
+    Server 0 = Template Analysis (separate API key = separate quota!)
+    This runs BEFORE Server 1 to learn from example scripts
     """
     if request.method == 'OPTIONS':
         return '', 204
@@ -216,48 +218,34 @@ def analyze_script_endpoint():
         if not script_content or len(script_content) < 100:
             return jsonify({'error': 'Script too short (min 100 chars)'}), 400
 
-        print(f"\n📊 Analyzing template script ({len(script_content)} chars)...")
+        print(f"\n" + "="*60)
+        print(f"🔬 SERVER 0: TEMPLATE ANALYSIS STARTED")
+        print(f"="*60)
+        print(f"📊 Script length: {len(script_content)} characters")
+        print(f"📊 Script type: {script_type}")
+        print(f"🔑 Using dedicated Server 0 API key (separate quota)")
+        print(f"")
 
-        try:
-            # Use Gemini Server 1 to analyze
-            template = gemini_server_1.analyze_template_script(
-                script_content,
-                script_type
-            )
+        # Use Gemini Server 0 for template analysis
+        # This has its own API key so no quota conflict!
+        template = gemini_server_0.analyze_template_script(
+            script_content,
+            script_type
+        )
 
-            print(f"✅ Template extracted successfully")
-            return jsonify(template), 200
+        print(f"")
+        print(f"✅ SERVER 0: Template analysis complete!")
+        if template.get('quotaExceeded'):
+            print(f"⚠️  Note: Default template used (Server 0 quota exceeded)")
+        else:
+            print(f"✅ Full template extracted successfully")
+        print(f"="*60)
+        print(f"")
 
-        except Exception as gemini_error:
-            error_str = str(gemini_error)
-
-            # Check if it's a quota error
-            if '429' in error_str or 'quota' in error_str.lower() or 'rate limit' in error_str.lower():
-                print(f"⚠️ Gemini quota exceeded - returning default template")
-                print(f"   Error: {error_str[:200]}...")
-
-                # Return a basic default template based on script content
-                default_template = {
-                    "hookExample": script_content[:200] + "...",
-                    "hookStyle": "engaging",
-                    "setupLength": 20,
-                    "riseLength": 40,
-                    "climaxLength": 30,
-                    "endLength": 10,
-                    "tone": ["engaging", "narrative", "dramatic"],
-                    "keyPatterns": ["Descriptive storytelling", "First-person perspective"],
-                    "sentenceVariation": "Mix of short and long sentences",
-                    "quotaExceeded": True,  # Flag to indicate fallback was used
-                    "message": "Using default template - Gemini quota exceeded"
-                }
-
-                return jsonify(default_template), 200
-            else:
-                # Other error - re-raise
-                raise
+        return jsonify(template), 200
 
     except Exception as e:
-        print(f"❌ Template analysis failed: {e}")
+        print(f"❌ SERVER 0: Template analysis failed: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -559,22 +547,29 @@ def list_voices():
 # ═══════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
-    print("\n" + "="*60)
-    print("🔥 NEW VIDEO GENERATOR - Gemini 1 → Gemini 2 → Colab Flow!")
-    print("="*60)
+    print("\n" + "="*70)
+    print("🔥 NEW VIDEO GENERATOR - Server 0 → 1 → 2 → Colab Flow!")
+    print("="*70)
     print(f"📍 Backend URL: http://localhost:5000")
     print(f"")
-    print(f"🎯 NEW ARCHITECTURE:")
-    print(f"   1️⃣  Gemini Server 1: Script generation (no image prompts)")
-    print(f"   2️⃣  Gemini Server 2: Image prompt generation")
-    print(f"   3️⃣  Google Colab: Image/voice/video generation")
+    print(f"🎯 NEW ARCHITECTURE - 4 SERVERS:")
+    print(f"   0️⃣  Gemini Server 0: Template analysis (separate API key!)")
+    print(f"   1️⃣  Gemini Server 1: Script generation")
+    print(f"   2️⃣  Gemini Server 2: Image prompts (separate API key!)")
+    print(f"   3️⃣  Google Colab: SDXL + Coqui TTS + FFmpeg")
+    print(f"")
+    print(f"🔑 QUOTA SEPARATION:")
+    print(f"   ✅ Server 0: Dedicated quota for template analysis")
+    print(f"   ✅ Server 1: Dedicated quota for script generation")
+    print(f"   ✅ Server 2: Dedicated quota for image prompts")
+    print(f"   → NO MORE QUOTA CONFLICTS!")
     print(f"")
     print(f"📝 FEATURES:")
-    print(f"   ✅ Template script analysis")
-    print(f"   ✅ High-quality script generation")
-    print(f"   ✅ SDXL image prompts from separate server")
+    print(f"   ✅ Template script analysis (Server 0)")
+    print(f"   ✅ High-quality script generation (Server 1)")
+    print(f"   ✅ SDXL image prompts (Server 2)")
     print(f"   ✅ All processing in Colab (Coqui TTS + SDXL + FFmpeg)")
-    print(f"   ✅ Configurable zoom percentage")
+    print(f"   ✅ Configurable zoom percentage (1-10%)")
     print(f"   ✅ TikTok-style auto-captions")
     print(f"")
 
@@ -591,11 +586,11 @@ if __name__ == '__main__':
     print(f"")
     print(f"🔧 ENDPOINTS:")
     print(f"   POST /api/set-colab-url - Set Colab ngrok URL")
-    print(f"   POST /api/analyze-script - Analyze template (Server 1)")
-    print(f"   POST /api/generate-video - Generate (1→2→Colab)")
+    print(f"   POST /api/analyze-script - Analyze template (Server 0)")
+    print(f"   POST /api/generate-video - Generate (0→1→2→Colab)")
     print(f"   GET  /api/progress - Check progress")
     print(f"   GET  /api/video/<file> - Download video")
     print(f"   GET  /health - System status")
-    print("="*60 + "\n")
+    print("="*70 + "\n")
 
     app.run(host='0.0.0.0', port=5000, debug=True)
