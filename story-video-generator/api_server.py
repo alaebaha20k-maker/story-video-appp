@@ -236,18 +236,21 @@ def generate_video_background(data):
 
     try:
         print(f"\n🎬 Starting generation: {data.get('topic', 'Untitled')}")
-        
-        # Get voice from user (Edge-TTS only)
-        voice_id = get_voice_id(data.get('voice_id'))
+
         zoom_effect = data.get('zoom_effect', True)
-        
-        print(f"🎤 Voice Engine: EDGE-TTS (Microsoft)")
-        print(f"🎤 Voice ID: {voice_id}")
+
+        # Determine if using Colab or local
+        if USE_COLAB and COLAB_SERVER_URL:
+            print(f"🌐 Mode: Google Colab (Coqui TTS + SDXL + FFmpeg)")
+            print(f"⚡ Voice: {data.get('voice_id', 'aria')} (GPU Powered)")
+        else:
+            print(f"💻 Mode: Local (Edge-TTS + FLUX + FFmpeg)")
+
         print(f"🎬 Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}")
-        
+
         # Update progress state
-        progress_state['voice_engine'] = 'edge'
-        progress_state['voice_id'] = voice_id
+        progress_state['voice_engine'] = 'colab' if USE_COLAB else 'edge'
+        progress_state['voice_id'] = data.get('voice_id', 'aria')
         
         # Script
         progress_state['status'] = 'Generating script...'
@@ -278,6 +281,8 @@ def generate_video_background(data):
         # ═══════════════════════════════════════════════════════════════
         # ✅ SEND TO COLAB FOR VOICE + IMAGES + VIDEO!
         # ═══════════════════════════════════════════════════════════════
+        colab_success = False  # Track if Colab succeeded
+
         if USE_COLAB and COLAB_SERVER_URL:
             progress_state['status'] = 'Sending to Colab (Coqui TTS + SDXL + FFmpeg)...'
             progress_state['progress'] = 40
@@ -327,6 +332,7 @@ def generate_video_background(data):
 
                         print(f"   ✅ Video downloaded: {output_filename}")
                         video_path = output_path
+                        colab_success = True  # Mark Colab as successful
                     else:
                         raise Exception(f"Colab video download failed: {video_response.status_code}")
                 else:
@@ -335,14 +341,17 @@ def generate_video_background(data):
             except Exception as colab_error:
                 print(f"   ⚠️ Colab failed: {colab_error}")
                 print(f"   ⏭️ Falling back to local generation...")
-                USE_COLAB_FALLBACK = False  # Fall back to local
-        else:
-            USE_COLAB_FALLBACK = False
+                colab_success = False
 
         # ═══════════════════════════════════════════════════════════════
-        # FALLBACK: LOCAL GENERATION (if Colab fails)
+        # FALLBACK: LOCAL GENERATION (if Colab fails or disabled)
         # ═══════════════════════════════════════════════════════════════
-        if not USE_COLAB or 'USE_COLAB_FALLBACK' in locals() and not USE_COLAB_FALLBACK:
+        if not colab_success:
+            print("\n💻 Using LOCAL generation (Edge-TTS + FLUX + FFmpeg)")
+
+            # Get Edge-TTS voice ID for local generation
+            voice_id = get_voice_id(data.get('voice_id'))
+
             progress_state['status'] = 'Generating images...'
             progress_state['progress'] = 30
             print("🎨 Step 2/4: Generating images...")
@@ -400,8 +409,14 @@ def generate_video_background(data):
         progress_state['video_path'] = output_filename
 
         print(f"\n✅ SUCCESS! Video: {output_filename}")
-        print(f"   Voice Engine: Edge-TTS (Microsoft)")
-        print(f"   Voice: {voice_id}")
+        if colab_success:
+            print(f"   🎤 Voice Engine: Coqui TTS (Google Colab GPU)")
+            print(f"   🎨 Images: DreamShaper XL (Google Colab GPU)")
+            print(f"   🎬 Video: FFmpeg Hardware Accelerated (Google Colab)")
+            print(f"   ⚡ Voice: {data.get('voice_id', 'aria')} (GPU Powered)")
+        else:
+            print(f"   Voice Engine: Edge-TTS (Microsoft)")
+            print(f"   Voice: {voice_id}")
         print(f"   Zoom Effect: {'ENABLED' if zoom_effect else 'DISABLED'}\n")
         
     except Exception as e:
