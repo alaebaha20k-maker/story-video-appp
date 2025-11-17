@@ -1,6 +1,8 @@
 """
-📝 GEMINI SERVER 1 - Script Generation (NO Image Prompts)
-Dedicated to generating high-quality scripts in chunks
+📝 GEMINI SERVER 1 - Script Generation ONLY
+Dedicated to generating high-quality scripts
+Does NOT analyze templates (Server 0 handles that)
+Does NOT generate image prompts (Server 2 handles that)
 """
 
 import google.generativeai as genai
@@ -190,114 +192,13 @@ Write the {target_words}-word script now:"""
 
         return prompt
 
-    def analyze_template_script(
-        self,
-        example_script: str,
-        script_type: str
-    ) -> Dict:
-        """
-        Analyze example script to extract structure and style
-        This helps Gemini learn the desired format
-
-        Args:
-            example_script: User's example script
-            script_type: Type of script
-
-        Returns:
-            Template structure dict
-        """
-
-        logger.info(f"\n📊 Gemini Server 1: Analyzing template script...")
-
-        prompt = f"""Analyze this example script and extract its structure, style, and patterns.
-
-EXAMPLE SCRIPT:
-{example_script}
-
-SCRIPT TYPE: {script_type}
-
-Extract and return:
-
-1. **HOOK:**
-   - First 2-3 sentences of the script
-   - Style (dramatic, mysterious, emotional, etc.)
-
-2. **STRUCTURE:**
-   - Setup percentage (opening)
-   - Rising action percentage
-   - Climax percentage
-   - Conclusion percentage
-
-3. **TONE:**
-   - List 3-5 tone keywords (e.g., suspenseful, heartfelt, creepy)
-
-4. **KEY PATTERNS:**
-   - Sentence structure patterns
-   - Recurring phrases or techniques
-   - Pacing style
-
-5. **SENTENCE VARIATION:**
-   - How are short and long sentences mixed?
-
-FORMAT YOUR RESPONSE AS JSON:
-{{
-  "hookExample": "first 2-3 sentences",
-  "hookStyle": "dramatic/mysterious/etc",
-  "setupLength": 20,
-  "riseLength": 40,
-  "climaxLength": 30,
-  "endLength": 10,
-  "tone": ["keyword1", "keyword2", "keyword3"],
-  "keyPatterns": ["pattern1", "pattern2"],
-  "sentenceVariation": "description"
-}}
-
-Analyze now:"""
-
-        try:
-            response = self.model.generate_content(prompt)
-
-            if not response or not response.text:
-                raise Exception("Empty response")
-
-            # Try to extract JSON
-            import json
-            text = response.text
-
-            # Find JSON in response
-            json_match = re.search(r'\{[\s\S]*\}', text)
-            if json_match:
-                template = json.loads(json_match.group())
-            else:
-                # Fallback
-                template = {
-                    "hookExample": example_script[:200],
-                    "hookStyle": "engaging",
-                    "setupLength": 20,
-                    "riseLength": 40,
-                    "climaxLength": 30,
-                    "endLength": 10,
-                    "tone": ["engaging", "immersive"],
-                    "keyPatterns": ["first-person narrative"],
-                    "sentenceVariation": "mixed"
-                }
-
-            logger.success(f"✅ Template analyzed")
-            return template
-
-        except Exception as e:
-            logger.error(f"❌ Template analysis error: {e}")
-            return {
-                "hookExample": example_script[:200],
-                "hookStyle": "engaging",
-                "setupLength": 20,
-                "riseLength": 40,
-                "climaxLength": 30,
-                "endLength": 10,
-                "tone": ["engaging"],
-                "keyPatterns": [],
-                "sentenceVariation": "mixed"
-            }
+    # ═══════════════════════════════════════════════════════════════
+    # NOTE: Template analysis removed from Server 1
+    # ═══════════════════════════════════════════════════════════════
+    # Server 0 (gemini_server_0.py) handles ALL template analysis
+    # Server 1 is dedicated to script generation ONLY
+    # This separation prevents quota conflicts and improves clarity
+    # ═══════════════════════════════════════════════════════════════
 
 
 # Global instance
