@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-🎬 AI Video Generator - UPDATED FOR BACKEND INTEGRATION
-Receives requests from backend with script + image prompts + options
+🎬 AI Video Generator - ASYNC VERSION
+Receives requests from backend, returns job_id immediately
+Processes videos in background thread
 Uses Coqui TTS + SDXL + FFmpeg
 """
 
@@ -181,53 +182,24 @@ def create_caption_filter(script_text, audio_duration):
 print("✅ Caption system ready")
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# CELL 6: FLASK SERVER
+# CELL 6: FLASK SERVER (ASYNC)
 # ═══════════════════════════════════════════════════════════════════════════════
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/health')
-def health():
-    return jsonify({
-        "ok": True,
-        "gpu": device == 'cuda',
-        "model": "SDXL DreamShaper XL",
-        "tts": "Coqui TTS (VCTK)",
-        "status": "ready"
-    })
+# Job tracking (in-memory)
+jobs = {}
 
-@app.route('/generate_complete_video', methods=['POST'])
-def gen_video():
+def process_video_async(jid, script, image_prompts, options):
     """
-    Receive from backend:
-    - script (from Gemini Server 1)
-    - image_prompts (from Gemini Server 2)
-    - options (all settings)
+    Process video in background thread
+    This runs independently and updates job status
     """
     try:
-        data = request.get_json(force=True)
-        import uuid
-        jid = str(uuid.uuid4())
         wd = output_dir / jid
-        wd.mkdir()
 
-        print(f"\n{'='*60}")
-        print(f"🎬 NEW VIDEO REQUEST")
-        print(f"{'='*60}")
-        print(f"Job ID: {jid}")
-
-        # Extract data from backend
-        script = data.get('script', '')
-        image_prompts = data.get('image_prompts', [])
-        options = data
-
-        print(f"Script: {len(script)} chars")
-        print(f"Image Prompts: {len(image_prompts)}")
-        print(f"Options:")
-        print(f"  - Voice: {options.get('voice', 'aria')}")
-        print(f"  - Zoom: {options.get('zoom_intensity', 5.0)}%")
-        print(f"  - Auto-Captions: {options.get('auto_captions', False)}")
-        print(f"  - Filter: {options.get('color_filter', 'none')}")
+        # Update status
+        jobs[jid] = {"status": "processing", "progress": 10, "message": "Generating images..."}
 
         # ═══════════════════════════════════════════════════════════
         # STEP 1: Generate Images using SDXL
@@ -240,9 +212,15 @@ def gen_video():
             img.save(wd / f"{i:04d}.png")
             print(f"    ✅ Saved")
 
+            # Update progress
+            progress = 10 + int((i + 1) / len(image_prompts) * 40)
+            jobs[jid]["progress"] = progress
+            jobs[jid]["message"] = f"Generated image {i+1}/{len(image_prompts)}"
+
         # ═══════════════════════════════════════════════════════════
         # STEP 2: Generate Voice using Coqui TTS
         # ═══════════════════════════════════════════════════════════
+        jobs[jid] = {"status": "processing", "progress": 50, "message": "Generating voice..."}
         print(f"\n🎤 Generating voice with Coqui TTS...")
 
         voice_id = options.get('voice', 'aria')
@@ -260,6 +238,7 @@ def gen_video():
         # ═══════════════════════════════════════════════════════════
         # STEP 3: Compile Video with FFmpeg
         # ═══════════════════════════════════════════════════════════
+        jobs[jid] = {"status": "processing", "progress": 70, "message": "Compiling video with FFmpeg..."}
         print(f"\n🎬 Compiling video with FFmpeg...")
 
         op = wd / "final.mp4"
@@ -324,13 +303,75 @@ def gen_video():
         # ═══════════════════════════════════════════════════════════
         # DONE!
         # ═══════════════════════════════════════════════════════════
+        jobs[jid] = {"status": "complete", "progress": 100, "message": "Video ready!"}
         print(f"\n{'='*60}")
-        print(f"✅ VIDEO COMPLETE!")
+        print(f"✅ VIDEO COMPLETE! Job ID: {jid}")
         print(f"{'='*60}\n")
 
+    except Exception as e:
+        print(f"\n❌ ERROR in job {jid}: {e}")
+        import traceback
+        traceback.print_exc()
+        jobs[jid] = {"status": "error", "progress": 0, "message": str(e)}
+
+
+@app.route('/health')
+def health():
+    return jsonify({
+        "ok": True,
+        "gpu": device == 'cuda',
+        "model": "SDXL DreamShaper XL",
+        "tts": "Coqui TTS (VCTK)",
+        "status": "ready"
+    })
+
+@app.route('/generate_complete_video', methods=['POST'])
+def gen_video():
+    """
+    Receive from backend and START PROCESSING IN BACKGROUND
+    Returns job_id immediately (within 1-2 seconds)
+    """
+    try:
+        data = request.get_json(force=True)
+        import uuid
+        jid = str(uuid.uuid4())
+        wd = output_dir / jid
+        wd.mkdir()
+
+        print(f"\n{'='*60}")
+        print(f"🎬 NEW VIDEO REQUEST (ASYNC)")
+        print(f"{'='*60}")
+        print(f"Job ID: {jid}")
+
+        # Extract data from backend
+        script = data.get('script', '')
+        image_prompts = data.get('image_prompts', [])
+        options = data
+
+        print(f"Script: {len(script)} chars")
+        print(f"Image Prompts: {len(image_prompts)}")
+        print(f"Options:")
+        print(f"  - Voice: {options.get('voice', 'aria')}")
+        print(f"  - Zoom: {options.get('zoom_intensity', 5.0)}%")
+        print(f"  - Auto-Captions: {options.get('auto_captions', False)}")
+        print(f"  - Filter: {options.get('color_filter', 'none')}")
+
+        # Initialize job status
+        jobs[jid] = {"status": "starting", "progress": 0, "message": "Initializing..."}
+
+        # Start processing in background thread
+        thread = Thread(target=process_video_async, args=(jid, script, image_prompts, options))
+        thread.daemon = True
+        thread.start()
+
+        print(f"\n✅ Job started in background thread!")
+        print(f"   Frontend can poll: /status/{jid}")
+
+        # Return immediately
         return jsonify({
             "success": True,
-            "job_id": jid
+            "job_id": jid,
+            "message": "Video generation started in background"
         })
 
     except Exception as e:
@@ -341,20 +382,24 @@ def gen_video():
 
 @app.route('/status/<jid>')
 def status(jid):
-    """Check if video is ready"""
-    v = output_dir / jid / "final.mp4"
-    if v.exists():
-        return jsonify({
-            "status": "complete",
-            "progress": 100,
-            "message": "Video ready!"
-        })
+    """Check video generation progress"""
+    if jid in jobs:
+        return jsonify(jobs[jid])
     else:
-        return jsonify({
-            "status": "processing",
-            "progress": 50,
-            "message": "Generating..."
-        })
+        # Job not found - maybe old job or invalid ID
+        v = output_dir / jid / "final.mp4"
+        if v.exists():
+            return jsonify({
+                "status": "complete",
+                "progress": 100,
+                "message": "Video ready!"
+            })
+        else:
+            return jsonify({
+                "status": "not_found",
+                "progress": 0,
+                "message": "Job not found"
+            }), 404
 
 @app.route('/download/<jid>')
 def dl(jid):
@@ -378,16 +423,26 @@ url = ngrok.connect(5001)
 print("\n" + "="*80)
 print(f"🌐 COLAB SERVER RUNNING AT: {url}")
 print("="*80)
-print(f"\n✅ UPDATED ARCHITECTURE:")
-print(f"   Backend → Sends script + image_prompts + options → This Colab server")
-print(f"   This server:")
-print(f"     1. Generates images with SDXL (not Flux)")
-print(f"     2. Generates voice with Coqui TTS (not Edge-TTS)")
-print(f"     3. Compiles video with FFmpeg (with zoom + captions)")
-print(f"     4. Returns video to backend")
-print(f"\n🔧 COPY THIS URL TO BACKEND:")
-print(f"   POST http://localhost:5000/api/set-colab-url")
-print(f"   Body: {{'url': '{url}'}}")
+print(f"\n✅ ASYNC ARCHITECTURE:")
+print(f"   BACKEND → Sends script + image_prompts + options → THIS SERVER")
+print(f"   THIS SERVER:")
+print(f"     • Returns job_id immediately (1-2 seconds)")
+print(f"     • Processes video in background thread:")
+print(f"       1. Generates images with SDXL (not Flux)")
+print(f"       2. Generates voice with Coqui TTS (not Edge-TTS)")
+print(f"       3. Compiles video with FFmpeg (with zoom + captions)")
+print(f"")
+print(f"   FRONTEND → Polls this server directly:")
+print(f"     • GET {url}/status/{{job_id}} - Check progress")
+print(f"     • GET {url}/download/{{job_id}} - Download video")
+print(f"")
+print(f"🔧 SETUP:")
+print(f"   1. Copy this URL to your backend:")
+print(f"      POST http://localhost:5000/api/set-colab-url")
+print(f"      Body: {{'url': '{url}'}}")
+print(f"")
+print(f"   2. Backend will send requests here")
+print(f"   3. Frontend will poll status directly (no backend involved)")
 print("="*80 + "\n")
 
 # Start Flask server
