@@ -1,6 +1,6 @@
 import { useVideoStore } from '../store/useVideoStore';
 
-const API_URL = 'http://localhost:5000';
+const API_URL = 'https://contemplable-suzy-unfussing.ngrok-free.dev';
 
 // ✅ HEALTH CHECK
 export const checkHealth = async (): Promise<boolean> => {
