@@ -38,9 +38,6 @@ progress_state = {
 # Colab URL (auto-loaded from file or set via API)
 COLAB_URL = None
 
-# LOCAL MODE - Test without Colab (just Gemini servers)
-LOCAL_MODE = True  # Set to False to require Colab
-
 # Output directory
 OUTPUT_DIR = Path("output/videos")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -344,30 +341,25 @@ def generate_video_background(data):
         print(f"   First prompt: {image_prompts[0][:60]}...")
 
         # ═══════════════════════════════════════════════════════════
-        # STEP 3: Send to Colab for Video Generation (or skip in LOCAL MODE)
+        # STEP 3: Send to Colab for Video Generation
         # ═══════════════════════════════════════════════════════════
+        # Script + prompts are ALREADY generated locally (above)
+        # Now send to Colab for video processing (images + voice + ffmpeg)
+        progress_state['status'] = 'sending_to_colab'
+        progress_state['progress'] = 50
+        progress_state['message'] = 'Sending to Google Colab...'
 
-        if LOCAL_MODE:
-            # LOCAL MODE: Skip Colab, just return script and prompts
-            print(f"\n{'='*60}")
-            print(f"🏠 LOCAL MODE - Skipping Colab")
-            print(f"{'='*60}")
-            print(f"✅ Script generated: {len(script)} chars")
-            print(f"✅ Image prompts generated: {len(image_prompts)}")
-            print(f"📝 In LOCAL MODE - No video file created")
-            print(f"   Set LOCAL_MODE=False in api_server_new.py to use Colab")
-            print(f"{'='*60}\n")
+        print(f"\n{'='*60}")
+        print(f"🚀 STEP 3/4: SENDING TO GOOGLE COLAB")
+        print(f"{'='*60}")
 
-            progress_state['status'] = 'completed'
-            progress_state['progress'] = 100
-            progress_state['message'] = 'LOCAL MODE: Script and prompts ready!'
-            progress_state['video_path'] = None
-
-            # Save script and prompts to file for inspection
-            output_file = OUTPUT_DIR / f"local_output_{topic[:30]}.txt"
+        if not COLAB_URL:
+            # Script + prompts are already generated (local)
+            # Save them to file so user can see the output
+            output_file = OUTPUT_DIR / f"script_and_prompts_{topic[:30]}.txt"
             with open(output_file, 'w') as f:
                 f.write("="*60 + "\n")
-                f.write("LOCAL MODE OUTPUT\n")
+                f.write("SCRIPT & IMAGE PROMPTS (Generated Locally)\n")
                 f.write("="*60 + "\n\n")
                 f.write(f"SCRIPT ({len(script)} chars):\n")
                 f.write("-"*60 + "\n")
@@ -378,19 +370,12 @@ def generate_video_background(data):
                 for i, prompt in enumerate(image_prompts, 1):
                     f.write(f"{i}. {prompt}\n")
 
-            print(f"✅ Output saved to: {output_file}")
-            return
+            print(f"\n✅ Script + prompts saved to: {output_file}")
+            print(f"\n⚠️  COLAB URL NOT SET - Cannot generate video")
+            print(f"   Script and prompts are ready!")
+            print(f"   To generate video: Set Colab URL via /api/set-colab-url")
 
-        progress_state['status'] = 'sending_to_colab'
-        progress_state['progress'] = 50
-        progress_state['message'] = 'Sending to Google Colab...'
-
-        print(f"\n{'='*60}")
-        print(f"🚀 STEP 3/4: SENDING TO GOOGLE COLAB")
-        print(f"{'='*60}")
-
-        if not COLAB_URL:
-            raise Exception("Colab URL not set! Use /api/set-colab-url first. Or enable LOCAL_MODE in api_server_new.py for testing.")
+            raise Exception(f"Colab URL not set. Script and prompts saved to {output_file.name}. To generate video, set Colab URL via /api/set-colab-url")
 
         # Prepare all options for Colab
         colab_options = {
@@ -508,9 +493,9 @@ def generate_video():
     if not data.get('topic'):
         return jsonify({'error': 'Topic is required'}), 400
 
-    # Only require Colab URL if NOT in LOCAL_MODE
-    if not LOCAL_MODE and not COLAB_URL:
-        return jsonify({'error': 'Colab URL not set. Use /api/set-colab-url first. Or enable LOCAL_MODE in api_server_new.py for testing.'}), 400
+    # NOTE: We don't check Colab URL here!
+    # Script + prompts are generated locally with Gemini
+    # Colab URL is only checked when sending to Colab for video processing
 
     # Reset progress
     global progress_state
@@ -603,34 +588,33 @@ if __name__ == '__main__':
     print(f"   ✅ Server 2: Dedicated quota for image prompts")
     print(f"   → NO MORE QUOTA CONFLICTS!")
     print(f"")
-    print(f"📝 FEATURES:")
-    print(f"   ✅ Template script analysis (Server 0)")
-    print(f"   ✅ High-quality script generation (Server 1)")
-    print(f"   ✅ SDXL image prompts (Server 2)")
-    print(f"   ✅ All processing in Colab (Coqui TTS + SDXL + FFmpeg)")
-    print(f"   ✅ Configurable zoom percentage (1-10%)")
-    print(f"   ✅ TikTok-style auto-captions")
+    print(f"📝 PROCESSING FLOW:")
+    print(f"   🔬 Server 0: Template analysis (LOCAL - Gemini API)")
+    print(f"   📝 Server 1: Script generation (LOCAL - Gemini API)")
+    print(f"   🎨 Server 2: Image prompts (LOCAL - Gemini API)")
+    print(f"   🎬 Google Colab: Video processing (REMOTE)")
+    print(f"      ├── SDXL image generation")
+    print(f"      ├── Coqui TTS voice generation")
+    print(f"      ├── FFmpeg video compilation")
+    print(f"      ├── Zoom effects (1-10%)")
+    print(f"      └── TikTok-style auto-captions")
     print(f"")
 
-    # Show LOCAL MODE status
-    if LOCAL_MODE:
-        print(f"🏠 LOCAL MODE: ENABLED")
-        print(f"   Testing with Gemini servers only (no Colab needed)")
-        print(f"   Output: Scripts + Image prompts saved to files")
-        print(f"   To use Colab: Set LOCAL_MODE=False in api_server_new.py")
-        print(f"")
-    else:
-        # Auto-load Colab URL from file
-        print(f"🔍 Checking for Colab URL...")
-        url_loaded = load_colab_url_from_file()
+    # Auto-load Colab URL from file
+    print(f"🔍 Checking for Colab URL...")
+    url_loaded = load_colab_url_from_file()
 
-        if not url_loaded:
-            print(f"")
-            print(f"⚠️  COLAB URL NOT SET:")
-            print(f"   Option 1: Add to COLAB_NGROK_URL.txt in project root")
-            print(f"   Option 2: POST /api/set-colab-url with your ngrok URL")
-            print(f"   Example: https://your-url.ngrok-free.dev")
+    if not url_loaded:
         print(f"")
+        print(f"⚠️  COLAB URL NOT SET:")
+        print(f"   • Scripts and prompts will still be generated (local)")
+        print(f"   • Video generation will fail (need Colab for processing)")
+        print(f"")
+        print(f"   To set Colab URL:")
+        print(f"   Option 1: Add to COLAB_NGROK_URL.txt in project root")
+        print(f"   Option 2: POST /api/set-colab-url with your ngrok URL")
+        print(f"   Example: https://your-url.ngrok-free.dev")
+    print(f"")
     print(f"🔧 ENDPOINTS:")
     print(f"   POST /api/set-colab-url - Set Colab ngrok URL")
     print(f"   POST /api/analyze-script - Analyze template (Server 0)")
