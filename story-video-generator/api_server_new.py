@@ -31,7 +31,8 @@ progress_state = {
     'message': '',
     'video_path': None,
     'error': None,
-    'job_id': None
+    'job_id': None,
+    'colab_url': None  # Frontend will use this to poll Colab directly
 }
 
 # Colab URL (auto-loaded from file or set via API)
@@ -339,7 +340,7 @@ def generate_video_background(data):
             'color_filter': data.get('color_filter', 'none'),
         }
 
-        # Send to Colab
+        # Send to Colab (async - don't wait for completion)
         result = colab_client.generate_complete_video(
             script=script,
             image_prompts=image_prompts,
@@ -348,73 +349,29 @@ def generate_video_background(data):
 
         job_id = result.get('job_id')
         progress_state['job_id'] = job_id
+        progress_state['colab_url'] = COLAB_URL
 
         print(f"\n✅ Sent to Colab!")
         print(f"   Job ID: {job_id}")
+        print(f"   Colab URL: {COLAB_URL}")
 
         # ═══════════════════════════════════════════════════════════
-        # STEP 4: Wait for Colab to Complete
+        # COMPLETE! (Backend job done - Colab will process independently)
         # ═══════════════════════════════════════════════════════════
-        progress_state['status'] = 'colab_processing'
-        progress_state['progress'] = 60
-        progress_state['message'] = 'Colab: Generating images, voice, and video...'
-
-        print(f"\n{'='*60}")
-        print(f"⏳ STEP 4/4: WAITING FOR COLAB")
-        print(f"{'='*60}")
-
-        def update_progress(status):
-            """Update our progress from Colab status"""
-            colab_progress = status.get('progress', 60)
-            # Map Colab 0-100 to our 60-95
-            progress_state['progress'] = 60 + (colab_progress * 0.35)
-            progress_state['message'] = status.get('message', 'Processing in Colab...')
-
-        # Wait for completion
-        final_status = colab_client.wait_for_completion(
-            job_id=job_id,
-            timeout_minutes=30,
-            callback=update_progress
-        )
-
-        if final_status['status'] != 'complete':
-            raise Exception(f"Colab failed: {final_status.get('message', 'Unknown error')}")
-
-        # ═══════════════════════════════════════════════════════════
-        # STEP 5: Download Video from Colab
-        # ═══════════════════════════════════════════════════════════
-        progress_state['status'] = 'downloading'
-        progress_state['progress'] = 95
-        progress_state['message'] = 'Downloading video from Colab...'
-
-        print(f"\n⬇️  Downloading video from Colab...")
-
-        # Generate local filename
-        import re
-        safe_topic = re.sub(r'[^a-zA-Z0-9_\-]', '', topic)[:50]
-        output_filename = f"{safe_topic}_{job_id[:8]}_video.mp4"
-        output_path = OUTPUT_DIR / output_filename
-
-        # Download
-        success = colab_client.download_video(job_id, output_path)
-
-        if not success:
-            raise Exception("Failed to download video from Colab")
-
-        # ═══════════════════════════════════════════════════════════
-        # COMPLETE!
-        # ═══════════════════════════════════════════════════════════
-        progress_state['status'] = 'complete'
+        progress_state['status'] = 'sent_to_colab'
         progress_state['progress'] = 100
-        progress_state['message'] = 'Complete!'
-        progress_state['video_path'] = output_filename
+        progress_state['message'] = 'Sent to Colab! Frontend will poll Colab directly for progress.'
 
         print(f"\n{'='*60}")
-        print(f"✅ GENERATION COMPLETE!")
+        print(f"✅ BACKEND COMPLETE!")
         print(f"{'='*60}")
-        print(f"   Video: {output_filename}")
-        print(f"   Size: {output_path.stat().st_size / 1024 / 1024:.1f} MB")
-        print(f"   Location: {output_path}")
+        print(f"   Script: Generated ✅")
+        print(f"   Image Prompts: Generated ✅")
+        print(f"   Sent to Colab: ✅")
+        print(f"   Job ID: {job_id}")
+        print(f"\n   ℹ️  Frontend will poll Colab directly:")
+        print(f"      GET {COLAB_URL}/status/{job_id}")
+        print(f"      GET {COLAB_URL}/download/{job_id}")
         print(f"{'='*60}\n")
 
     except Exception as e:
@@ -453,7 +410,8 @@ def generate_video():
         'message': 'Starting generation...',
         'video_path': None,
         'error': None,
-        'job_id': None
+        'job_id': None,
+        'colab_url': None
     }
 
     # Start background thread
@@ -467,7 +425,13 @@ def generate_video():
 
 @app.route('/api/progress', methods=['GET', 'OPTIONS'])
 def get_progress():
-    """Get current generation progress"""
+    """
+    Get current generation progress
+
+    When status is 'sent_to_colab', frontend should poll Colab directly:
+    - GET {colab_url}/status/{job_id} - Check video generation progress
+    - GET {colab_url}/download/{job_id} - Download completed video
+    """
     if request.method == 'OPTIONS':
         return '', 204
     return jsonify(progress_state), 200
@@ -529,10 +493,17 @@ if __name__ == '__main__':
     print(f"   🎨 Image Prompts: From script scenes (LOCAL - old backend)")
     print(f"   🎬 Video Processing: Google Colab (REMOTE)")
     print(f"")
-    print(f"📝 PROCESSING FLOW:")
+    print(f"📝 PROCESSING FLOW (ASYNC):")
+    print(f"   BACKEND (this server):")
     print(f"   1. Generate script + scenes (LOCAL - Gemini API)")
     print(f"   2. Extract image prompts from scenes (LOCAL)")
-    print(f"   3. Send to Google Colab for video processing (REMOTE):")
+    print(f"   3. Send to Google Colab → Returns job_id immediately")
+    print(f"")
+    print(f"   FRONTEND (polls Colab directly):")
+    print(f"   4. Poll Colab for progress: GET /status/{{job_id}}")
+    print(f"   5. Download video when done: GET /download/{{job_id}}")
+    print(f"")
+    print(f"   COLAB (processes independently):")
     print(f"      ├── SDXL image generation")
     print(f"      ├── Coqui TTS voice generation")
     print(f"      ├── FFmpeg video compilation")
@@ -555,13 +526,16 @@ if __name__ == '__main__':
         print(f"   Option 2: POST /api/set-colab-url with your ngrok URL")
         print(f"   Example: https://your-url.ngrok-free.dev")
     print(f"")
-    print(f"🔧 ENDPOINTS:")
+    print(f"🔧 BACKEND ENDPOINTS:")
     print(f"   POST /api/set-colab-url - Set Colab ngrok URL")
-    print(f"   POST /api/generate-video - Generate (Script+Prompts→Colab)")
-    print(f"   GET  /api/progress - Check progress")
-    print(f"   GET  /api/video/<file> - Download video")
+    print(f"   POST /api/generate-video - Generate script+prompts, send to Colab")
+    print(f"   GET  /api/progress - Get progress (includes job_id + colab_url)")
     print(f"   GET  /api/voices - List available voices")
     print(f"   GET  /health - System status")
+    print(f"")
+    print(f"📡 COLAB ENDPOINTS (frontend polls these):")
+    print(f"   GET  {{colab_url}}/status/{{job_id}} - Check video progress")
+    print(f"   GET  {{colab_url}}/download/{{job_id}} - Download video")
     print("="*70 + "\n")
 
     app.run(host='0.0.0.0', port=5000, debug=True)
