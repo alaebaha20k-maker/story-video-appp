@@ -1,14 +1,14 @@
 import { Mic2, Zap } from 'lucide-react';
 import { useVideoStore } from '../store/useVideoStore';
 
-// ✅ EDGE-TTS VOICES - FREE & UNLIMITED!
-const EDGE_VOICES = [
+// ✅ COQUI TTS VOICES (GOOGLE COLAB GPU) - HIGH QUALITY!
+const VOICES = [
   // FEMALE VOICES (4)
   { id: 'aria', name: 'Aria', gender: 'Female', style: 'Natural & Warm', icon: '👩', bestFor: 'General narration, storytelling' },
   { id: 'jenny', name: 'Jenny', gender: 'Female', style: 'Cheerful & Clear', icon: '👩', bestFor: 'Education, tutorials' },
   { id: 'sara', name: 'Sara', gender: 'Female', style: 'Young & Energetic', icon: '👩', bestFor: 'Adventure, action' },
   { id: 'nancy', name: 'Nancy', gender: 'Female', style: 'Professional', icon: '👩', bestFor: 'Business, formal content' },
-  
+
   // MALE VOICES (4)
   { id: 'guy', name: 'Guy', gender: 'Male', style: 'Natural & Clear', icon: '👨', bestFor: 'Documentaries, narration' },
   { id: 'andrew', name: 'Andrew', gender: 'Male', style: 'Professional', icon: '👨', bestFor: 'Business, formal content' },
@@ -20,8 +20,8 @@ export const VoiceSelector = () => {
   const { voiceId, setVoiceId } = useVideoStore();
 
   // Group by gender
-  const femaleVoices = EDGE_VOICES.filter(v => v.gender === 'Female');
-  const maleVoices = EDGE_VOICES.filter(v => v.gender === 'Male');
+  const femaleVoices = VOICES.filter(v => v.gender === 'Female');
+  const maleVoices = VOICES.filter(v => v.gender === 'Male');
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
@@ -30,18 +30,18 @@ export const VoiceSelector = () => {
           <Mic2 className="w-6 h-6 text-purple-600" />
           <span>Voice Selection</span>
         </h2>
-        <p className="text-gray-600">Choose your narrator's voice (Edge-TTS - FREE & Unlimited!)</p>
+        <p className="text-gray-600">Choose your narrator's voice (Coqui TTS - GPU Accelerated!)</p>
       </div>
 
-      {/* Edge-TTS Info */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border-2 border-blue-200">
+      {/* Coqui TTS (Colab GPU) Info */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border-2 border-green-200">
         <div className="flex items-center space-x-2 mb-2">
-          <Zap className="w-5 h-5 text-blue-600" />
-          <span className="font-bold text-gray-900">EDGE-TTS (Microsoft) - FREE & UNLIMITED!</span>
-          <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded">$0 FOREVER</span>
+          <Zap className="w-5 h-5 text-green-600" />
+          <span className="font-bold text-gray-900">COQUI TTS (Google Colab GPU)</span>
+          <span className="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded">⚡ GPU POWERED</span>
         </div>
         <p className="text-sm text-gray-600">
-          Professional Microsoft voices - NO API key - Unlimited usage - Reliable & Fast!
+          Professional AI voices powered by Google Colab T4 GPU - High quality, fast generation!
         </p>
       </div>
 
@@ -113,13 +113,13 @@ export const VoiceSelector = () => {
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-4 text-white">
         <p className="text-sm font-medium mb-1">Currently Selected:</p>
         <p className="text-lg font-bold">
-          {EDGE_VOICES.find((v) => v.id === voiceId)?.name || 'Guy'}
+          {VOICES.find((v) => v.id === voiceId)?.name || 'Guy'}
         </p>
         <p className="text-sm opacity-90">
-          {EDGE_VOICES.find((v) => v.id === voiceId)?.style || 'Natural & Clear'}
+          {VOICES.find((v) => v.id === voiceId)?.style || 'Natural & Clear'}
         </p>
         <p className="text-xs mt-2 opacity-80">
-          💰 FREE & Unlimited - Microsoft Edge-TTS!
+          ⚡ GPU Powered - Google Colab Coqui TTS!
         </p>
       </div>
     </div>
