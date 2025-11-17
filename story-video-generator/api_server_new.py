@@ -34,12 +34,98 @@ progress_state = {
     'job_id': None
 }
 
-# Colab URL (must be set by user)
+# Colab URL (auto-loaded from file or set via API)
 COLAB_URL = None
 
 # Output directory
 OUTPUT_DIR = Path("output/videos")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ═══════════════════════════════════════════════════════════════
+# AUTO-LOAD COLAB URL FROM FILE
+# ═══════════════════════════════════════════════════════════════
+
+def extract_clean_url(url_string: str) -> str:
+    """
+    Extract clean ngrok URL from various formats:
+    - "https://contemplable-suzy-unfussing.ngrok-free.dev" → as-is
+    - "NgrokTunnel: "https://..." -> "http://..." → extract https URL
+    - Lines from file with markdown → extract URL
+    """
+    import re
+
+    # Remove markdown formatting
+    url_string = url_string.replace('**', '').strip()
+
+    # If it looks like the NgrokTunnel format, extract the https URL
+    if 'NgrokTunnel:' in url_string or '->' in url_string:
+        # Extract https URL from: NgrokTunnel: "https://..." -> "http://..."
+        match = re.search(r'https://[a-zA-Z0-9\-\.]+\.ngrok-free\.dev', url_string)
+        if match:
+            return match.group()
+
+    # If it's already a clean URL
+    if url_string.startswith('http'):
+        return url_string
+
+    # Try to find any ngrok URL in the string
+    match = re.search(r'https://[a-zA-Z0-9\-\.]+\.ngrok-free\.dev', url_string)
+    if match:
+        return match.group()
+
+    return url_string
+
+
+def load_colab_url_from_file():
+    """
+    Try to auto-load Colab URL from COLAB_NGROK_URL.txt
+    This runs at startup to avoid manual configuration
+    """
+    global COLAB_URL
+
+    # Try multiple possible locations
+    possible_paths = [
+        Path(__file__).parent.parent / "COLAB_NGROK_URL.txt",
+        Path("../COLAB_NGROK_URL.txt"),
+        Path("COLAB_NGROK_URL.txt"),
+    ]
+
+    for file_path in possible_paths:
+        try:
+            if file_path.exists():
+                content = file_path.read_text()
+
+                # Extract URL from file (handles markdown, comments, etc.)
+                lines = content.split('\n')
+                for line in lines:
+                    line = line.strip()
+
+                    # Skip empty lines and comments
+                    if not line or line.startswith('#'):
+                        continue
+
+                    # Extract clean URL
+                    clean_url = extract_clean_url(line)
+
+                    # Validate it's a proper URL
+                    if clean_url.startswith('http'):
+                        COLAB_URL = clean_url
+                        colab_client.set_url(clean_url)
+
+                        # Test connection
+                        is_connected = colab_client.check_health()
+
+                        print(f"✅ Auto-loaded Colab URL from: {file_path.name}")
+                        print(f"   URL: {clean_url}")
+                        print(f"   Connected: {'✅ Yes' if is_connected else '❌ No (might be down)'}")
+                        return True
+        except Exception as e:
+            continue
+
+    print(f"⚠️  Colab URL not found in file")
+    print(f"   You'll need to set it via: POST /api/set-colab-url")
+    return False
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -64,28 +150,44 @@ def health():
 
 @app.route('/api/set-colab-url', methods=['POST', 'OPTIONS'])
 def set_colab_url():
-    """Set Colab ngrok URL"""
+    """
+    Set Colab ngrok URL
+    Accepts various formats:
+    - Clean URL: https://your-url.ngrok-free.dev
+    - NgrokTunnel format: NgrokTunnel: "https://..." -> "http://..."
+    """
     if request.method == 'OPTIONS':
         return '', 204
 
     global COLAB_URL
 
     data = request.json
-    url = data.get('url', '').strip()
+    raw_url = data.get('url', '').strip()
 
-    if not url:
+    if not raw_url:
         return jsonify({'error': 'URL required'}), 400
 
+    # Extract clean URL from various formats
+    clean_url = extract_clean_url(raw_url)
+
+    if not clean_url.startswith('http'):
+        return jsonify({
+            'error': 'Invalid URL format',
+            'received': raw_url,
+            'tip': 'Use format: https://your-url.ngrok-free.dev'
+        }), 400
+
     # Set URL
-    colab_client.set_url(url)
-    COLAB_URL = url
+    colab_client.set_url(clean_url)
+    COLAB_URL = clean_url
 
     # Test connection
     is_connected = colab_client.check_health()
 
     return jsonify({
         'success': True,
-        'url': url,
+        'raw_input': raw_url if raw_url != clean_url else None,
+        'clean_url': clean_url,
         'connected': is_connected,
         'message': 'Connected to Colab!' if is_connected else 'URL set but cannot connect'
     }), 200
@@ -475,10 +577,17 @@ if __name__ == '__main__':
     print(f"   ✅ Configurable zoom percentage")
     print(f"   ✅ TikTok-style auto-captions")
     print(f"")
-    print(f"⚠️  IMPORTANT:")
-    print(f"   1. Run your Colab notebook first")
-    print(f"   2. Get the ngrok URL from Colab")
-    print(f"   3. Set it via: POST /api/set-colab-url")
+
+    # Auto-load Colab URL from file
+    print(f"🔍 Checking for Colab URL...")
+    url_loaded = load_colab_url_from_file()
+
+    if not url_loaded:
+        print(f"")
+        print(f"⚠️  COLAB URL NOT SET:")
+        print(f"   Option 1: Add to COLAB_NGROK_URL.txt in project root")
+        print(f"   Option 2: POST /api/set-colab-url with your ngrok URL")
+        print(f"   Example: https://your-url.ngrok-free.dev")
     print(f"")
     print(f"🔧 ENDPOINTS:")
     print(f"   POST /api/set-colab-url - Set Colab ngrok URL")
