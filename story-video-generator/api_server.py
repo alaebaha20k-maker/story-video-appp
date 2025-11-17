@@ -721,7 +721,7 @@ if __name__ == '__main__':
     print("\n" + "="*60)
     print("🔥 PROFESSIONAL YOUTUBE VIDEO GENERATOR!")
     print("="*60)
-    print("📍 URL: http://localhost:5001")
+    print("📍 URL: http://localhost:5000")
     print("✨ Features: High Quality + Speed + FREE!")
     print("")
     print("📝 SCRIPT: Gemini AI (10/10 QUALITY!)")
@@ -766,4 +766,4 @@ if __name__ == '__main__':
     print("🎬 Quality: 10/10 - Professional YouTube content!")
     print("="*60 + "\n")
     
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
