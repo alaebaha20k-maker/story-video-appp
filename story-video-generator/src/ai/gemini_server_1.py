@@ -105,7 +105,7 @@ class GeminiServer1:
         """
         # Build prompt
         prompt = self._build_script_prompt(
-            topic, story_type, template, target_words, num_scenes
+            topic, story_type, template, target_words, num_scenes, duration_minutes
         )
 
         try:
@@ -167,6 +167,7 @@ class GeminiServer1:
                 template,
                 beginning_words,
                 beginning_scenes,
+                duration_minutes,
                 "beginning",
                 "Start with a powerful hook and establish the setup. End at a point where tension is building.",
                 None  # No previous chunk
@@ -180,6 +181,7 @@ class GeminiServer1:
                 template,
                 middle_words,
                 middle_scenes,
+                duration_minutes,
                 "middle",
                 "Continue from the setup, build rising action and tension. Move toward the climax.",
                 chunk_beginning[-300:]  # Last 300 chars for context
@@ -193,6 +195,7 @@ class GeminiServer1:
                 template,
                 end_words,
                 end_scenes,
+                duration_minutes,
                 "end",
                 "Deliver the climax and provide a satisfying resolution. End the story powerfully.",
                 chunk_middle[-300:]  # Last 300 chars for context
@@ -223,6 +226,7 @@ class GeminiServer1:
         template: Optional[Dict],
         target_words: int,
         num_scenes: int,
+        duration_minutes: int,
         chunk_position: str,
         special_instruction: str,
         previous_chunk_context: Optional[str]
@@ -230,8 +234,11 @@ class GeminiServer1:
         """
         Generate a single chunk of a long script
         """
+        # Calculate duration for this chunk proportionally
+        chunk_duration = int(duration_minutes * (target_words / (duration_minutes * 150)))
+
         prompt = self._build_script_prompt(
-            topic, story_type, template, target_words, num_scenes
+            topic, story_type, template, target_words, num_scenes, chunk_duration
         )
 
         # Add chunk-specific instructions
@@ -277,7 +284,8 @@ Continue naturally from this point. DO NOT repeat this text.
         story_type: str,
         template: Optional[Dict],
         target_words: int,
-        num_scenes: int
+        num_scenes: int,
+        duration_minutes: int
     ) -> str:
         """Build the prompt for script generation"""
 
@@ -362,9 +370,6 @@ OUTPUT FORMAT:
 [Start directly with the hook - no title, no labels, just the story]
 
 Write the {target_words}-word script now:"""
-
-        # Fix: duration_minutes not in scope
-        prompt = prompt.replace("{duration_minutes}", str(duration_minutes))
 
         return prompt
 
