@@ -1,6 +1,8 @@
 import { useVideoStore } from '../store/useVideoStore';
 
-const API_URL = 'https://contemplable-suzy-unfussing.ngrok-free.dev';
+// ✅ BACKEND URL (NOT Colab!)
+// Backend will handle Colab communication internally
+const API_URL = 'http://localhost:5000';
 
 // ✅ HEALTH CHECK
 export const checkHealth = async (): Promise<boolean> => {
@@ -17,7 +19,7 @@ export const checkHealth = async (): Promise<boolean> => {
 
 interface GenerateVideoRequest {
   topic: string;
-  storytype: string;
+  story_type: string;  // ✅ Fixed: was "storytype"
   duration: number;
   image_style: string;
   image_mode: string;
@@ -28,6 +30,16 @@ interface GenerateVideoRequest {
   pacing: string;
   characters?: any[];
   stock_keywords?: string[];
+  // ✅ Additional options (sent to backend → Colab)
+  color_filter?: string;
+  zoom_effect?: boolean;
+  auto_captions?: boolean;
+  caption?: {
+    text: string;
+    style: string;
+    position: string;
+    animation: string;
+  };
 }
 
 // ✅ GENERATE VIDEO
